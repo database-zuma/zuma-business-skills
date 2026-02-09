@@ -10,184 +10,196 @@
 <h1 align="center">Zuma Business Skills</h1>
 
 <p align="center">
-  <strong>AI Skills Library for Zuma Indonesia</strong>
+  <strong>AI Skills Library untuk Zuma Indonesia</strong>
   <br/>
-  Plug-and-play knowledge modules that give Claude Code (and other AI agents) deep understanding of Zuma's business — products, stores, warehouses, data, and operations.
+  Kumpulan modul pengetahuan bisnis yang bikin Claude Code (dan AI agent lainnya) langsung paham konteks Zuma — mulai dari produk, toko, gudang, sampai data analytics.
   <br/><br/>
-  <em>New skills are always being added. Existing skills are always being upgraded.<br/>Always pull the latest version.</em>
+  <em>Skill baru terus ditambahkan. Skill yang ada terus di-upgrade.<br/>Pastikan selalu pull versi terbaru.</em>
 </p>
 
 ---
 
-## What Is This?
+## Apa Ini?
 
-This repo contains **Claude Code skill files** (`.md` files with YAML frontmatter) that teach AI assistants everything about Zuma Indonesia's business context. When installed, any Claude Code session automatically loads relevant skills based on what you're working on.
+Repo ini berisi **skill files untuk Claude Code** (file `.md` dengan YAML frontmatter) yang ngajarin AI semua hal tentang bisnis Zuma Indonesia. Begitu di-install, Claude Code otomatis load skill yang relevan sesuai konteks pertanyaan.
 
-**Think of it as:** Zuma's institutional knowledge, packaged for AI consumption.
-
-```
-You:     "Analyze Classic Jet Black sales in Bali for the last 3 months
-          and check current stock in each store"
-
-Claude:  *automatically loads zuma-data-ops + zuma-sku-context + zuma-branch*
-         *knows the DB connection, correct SQL joins, Kode Mix versioning,
-          Bali's 3 sub-areas, and presents business-accurate results*
-```
-
----
-
-## How It Works
+**Analoginya:** Pengetahuan institusional Zuma, dikemas supaya bisa dikonsumsi AI.
 
 ```
-                         YOUR QUESTION
-                              |
-                              v
-                   +--------------------+
-                   |   Claude Code CLI  |
-                   |  detects context   |
-                   +--------------------+
-                              |
-                    auto-loads matching skills
-                              |
-          +-------+-------+-------+-------+-------+
-          |       |       |       |       |       |
-          v       v       v       v       v       v
-      +-------+-------+-------+-------+-------+-------+
-      |COMPANY|  SKU  |BRANCH |WARE-  | DATA  |FUTURE |
-      |CONTEXT|CONTEXT|       |HOUSE  |  OPS  |SKILLS |
-      +-------+-------+-------+-------+-------+-------+
-      |Brand  |Kode   |6      |WHS/   |Postgre|Finance|
-      |tone,  |Mix,   |branch-|WHJ/   |SQL VPS|HRGA,  |
-      |colors,|tiers, |es,    |WHB,   |5 sche-|Market-|
-      |4 PTs  |assort-|stores,|RO     |mas,   |place, |
-      |       |ment   |areas  |system |SQL    |etc.   |
-      +-------+-------+-------+-------+-------+-------+
-          |       |       |       |       |
-          +-------+-------+-------+-------+
-                          |
-                          v
-              +------------------------+
-              |   AI writes correct    |
-              |   SQL, understands     |
-              |   business context,    |
-              |   returns accurate     |
-              |   analysis             |
-              +------------------------+
-                          |
-                          v
-              ACCURATE, CONTEXTUAL ANSWER
+Kamu:    "Analisa penjualan Classic Jet Black di Bali 3 bulan terakhir
+          dan cek stok terkini di tiap toko"
+
+Claude:  *otomatis load zuma-data-ops + zuma-sku-context + zuma-branch*
+         *tau koneksi DB, SQL join yang bener, sistem Kode Mix versioning,
+          3 sub-area Bali, dan kasih hasil analisis yang akurat*
 ```
 
 ---
 
-## Repository Structure
+## Cara Kerjanya
+
+```
+                      PERTANYAAN KAMU
+                            |
+                            v
+                 +--------------------+
+                 |   Claude Code CLI  |
+                 |   deteksi konteks  |
+                 +--------------------+
+                            |
+                  otomatis load skill yg cocok
+                            |
+        +-------+-------+-------+-------+-------+
+        |       |       |       |       |       |
+        v       v       v       v       v       v
+    +-------+-------+-------+-------+-------+-------+
+    |COMPANY|  SKU  |BRANCH |GUDANG | DATA  |FUTURE |
+    |CONTEXT|CONTEXT|       |& STOK |  OPS  |SKILLS |
+    +-------+-------+-------+-------+-------+-------+
+    |Brand, |Kode   |6      |WHS/   |Postgre|Finance|
+    |tone,  |Mix,   |cabang,|WHJ/   |SQL VPS|HRGA,  |
+    |warna, |tier,  |toko,  |WHB,   |5 sche-|Market-|
+    |4 PT   |assort.|area   |RO sys |ma, SQL|place  |
+    +-------+-------+-------+-------+-------+-------+
+        |       |       |       |       |
+        +-------+-------+-------+-------+
+                        |
+                        v
+            +------------------------+
+            |  AI nulis SQL yang     |
+            |  bener, paham konteks  |
+            |  bisnis, kasih hasil   |
+            |  analisis akurat       |
+            +------------------------+
+                        |
+                        v
+            JAWABAN YANG AKURAT & KONTEKSTUAL
+```
+
+---
+
+## Penting: Transaksi Affiliasi
+
+> **Skills di repo ini sudah otomatis meng-exclude transaksi affiliasi (inter-company) dari semua analisis.**
+
+Zuma punya 4 entitas (DDD, MBB, UBB, LJBB) yang kadang saling "jual" di atas kertas untuk keperluan perpajakan. Transaksi ini **bukan penjualan nyata** — kalau ikut dihitung, revenue jadi double-counting.
+
+**Contoh:** Di tabel penjualan DDD, ada transaksi ke "CV Makmur Besar Bersama" (= MBB). Ini bukan jualan ke customer beneran, ini transfer antar entitas.
+
+Skill `zuma-data-ops` sudah mendokumentasikan daftar lengkap nama pelanggan inter-company dan cara filter-nya. Semua tabel `mart.*` (yang dipakai buat dashboard & analisis) sudah exclude transaksi ini secara default.
+
+**Kalau kamu butuh data termasuk transaksi affiliasi**, bilang secara eksplisit ke AI: *"include transaksi affiliasi"* — baru dia akan query dari `core.*` tanpa filter.
+
+---
+
+## Struktur Repo
 
 ```
 zuma-business-skills/
 |
-|-- general/                              CROSS-DEPARTMENT (brand, identity)
+|-- general/                              LINTAS DEPARTEMEN (brand, identitas)
 |   +-- zuma-company-context/
-|       |-- SKILL.md                        Brand identity, 4 entities, data sources
-|       +-- brand-guidelines.md             Colors, typography, Japandi aesthetic
+|       |-- SKILL.md                        Brand identity, 4 entitas, data sources
+|       +-- brand-guidelines.md             Warna, tipografi, estetika Japandi
 |
-|-- ops/                                  OPERATIONS DEPARTMENT
+|-- ops/                                  DEPARTEMEN OPERASIONAL
 |   |-- zuma-sku-context/
-|   |   +-- SKILL.md                        Product hierarchy, Kode Mix, tiers, assortment
+|   |   +-- SKILL.md                        Hierarki produk, Kode Mix, tier, assortment
 |   |-- zuma-branch/
-|   |   +-- SKILL.md                        6 branches, store network, retail operations
+|   |   +-- SKILL.md                        6 cabang, jaringan toko, operasional retail
 |   |-- zuma-warehouse-and-stocks/
-|   |   +-- SKILL.md                        3 warehouses, stock stages, RO system
+|   |   +-- SKILL.md                        3 gudang, tahapan stok, sistem RO
 |   +-- zuma-data-ops/
-|       +-- SKILL.md                        PostgreSQL VPS, schemas, SQL cookbook, analysis
+|       +-- SKILL.md                        PostgreSQL VPS, schema, SQL cookbook, analisis
 |
-|-- finance/                              FINANCE DEPARTMENT (coming soon)
+|-- finance/                              DEPARTEMEN FINANCE (segera hadir)
 |   +-- README.md
 |
-|-- hrga/                                 HR & GA DEPARTMENT (coming soon)
+|-- hrga/                                 DEPARTEMEN HR & GA (segera hadir)
 |   +-- README.md
 |
-|-- README.md                             This file
-+-- CHANGELOG.md                          Version history
+|-- README.md                             File ini
++-- CHANGELOG.md                          Riwayat perubahan
 ```
 
-### Why This Structure?
+### Kenapa Dipisah per Folder?
 
-| Folder | Purpose | Who Uses It |
-|--------|---------|-------------|
-| `general/` | Knowledge that applies across ALL departments — brand, entity structure | Everyone |
-| `ops/` | Operational knowledge — products, stores, warehouses, data analytics | Ops team, data analysts, AI agents |
-| `finance/` | Financial knowledge — P&L, margins, COGS, tax structure | Finance team (planned) |
-| `hrga/` | HR & GA knowledge — org structure, policies, facilities | HR team (planned) |
+| Folder | Fungsi | Siapa yang Pakai |
+|--------|--------|------------------|
+| `general/` | Pengetahuan lintas departemen — brand, struktur entitas | Semua orang |
+| `ops/` | Pengetahuan operasional — produk, toko, gudang, data analytics | Tim ops, data analyst, AI agent |
+| `finance/` | Pengetahuan keuangan — P&L, margin, COGS, pajak | Tim finance (planned) |
+| `hrga/` | Pengetahuan HR & GA — struktur organisasi, kebijakan | Tim HR (planned) |
 
-New department folders will be added as Zuma's AI automation expands.
+Folder departemen baru akan ditambahkan seiring ekspansi automasi AI Zuma.
 
 ---
 
-## Skill Overview
+## Daftar Skill
 
-### General (Cross-Department)
+### General (Lintas Departemen)
 
-| Skill | Lines | What It Knows |
-|-------|-------|---------------|
-| **zuma-company-context** | 137 | Brand tonality (witty/casual/confident), visual identity (Japandi, Zuma Teal `#002A3A`, Zuma Green `#00E273`), 4 business entities (DDD, MBB, UBB, LJBB), data sources (Accurate, iSeller, Ginee) |
+| Skill | Baris | Apa yang Diketahui |
+|-------|-------|--------------------|
+| **zuma-company-context** | 137 | Brand tone (witty/casual/confident), visual identity (Japandi, Zuma Teal `#002A3A`, Zuma Green `#00E273`), 4 entitas bisnis (DDD, MBB, UBB, LJBB), sumber data (Accurate, iSeller, Ginee) |
 
 ### Operations
 
-| Skill | Lines | What It Knows |
-|-------|-------|---------------|
-| **zuma-sku-context** | 376 | Product hierarchy (Type > Gender > Series > Article > Size), Kode Mix versioning system, assortment patterns (12 pairs/box), 6-tier classification (T1-T5 + T8), naming conventions |
-| **zuma-branch** | 575 | 6 branches (Jatim, Jakarta, Sumatra, Sulawesi, Batam, Bali), store categories (RETAIL/NON-RETAIL/EVENT), mall vs Ruko formats, Area Supervisors, stock capacity, replenishment from store POV |
-| **zuma-warehouse-and-stocks** | 385 | 3 physical warehouses (WHS/WHJ/WHB), stock formula (ready = whs - queue - picked - ...), full RO status flow (QUEUE > APPROVED > PICKING > ... > COMPLETED), variance tracking |
-| **zuma-data-ops** | 708 | PostgreSQL VPS connection details, 5 schemas (raw/portal/core/mart/public), all table/view column definitions, 6 critical SQL rules, 9 ready-to-use query templates, analysis methodology, ETL schedule, common pitfalls |
+| Skill | Baris | Apa yang Diketahui |
+|-------|-------|--------------------|
+| **zuma-sku-context** | 376 | Hierarki produk (Type > Gender > Series > Article > Size), sistem versioning Kode Mix, pola assortment (12 pasang/box), klasifikasi 6 tier (T1-T5 + T8) |
+| **zuma-branch** | 575 | 6 cabang (Jatim, Jakarta, Sumatra, Sulawesi, Batam, Bali), kategori toko (RETAIL/NON-RETAIL/EVENT), format mall vs Ruko, Area Supervisor, kapasitas stok |
+| **zuma-warehouse-and-stocks** | 385 | 3 gudang fisik (WHS/WHJ/WHB), formula stok (ready = whs - queue - picked - ...), alur status RO lengkap, variance tracking |
+| **zuma-data-ops** | 760+ | Koneksi PostgreSQL VPS, 5 schema (raw/portal/core/mart/public), definisi semua tabel/view, 7 aturan SQL kritikal (termasuk filter transaksi affiliasi), 9 template query, metodologi analisis, jadwal ETL |
 
 ---
 
-## Installation
+## Instalasi
 
-### Prerequisites
+### Prasyarat
 
-- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed
-- Git access to this private repo
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) sudah ter-install
+- Akses Git ke repo private ini
 
-### Option 1: Quick Install (Recommended)
+### Cara Cepat (Recommended)
 
-Clone this repo, then copy skills into Claude's skills directory:
+Clone repo, lalu copy skill ke direktori Claude:
 
 **Windows (PowerShell):**
 ```powershell
-# Clone the repo
+# Clone repo
 git clone https://github.com/database-zuma/zuma-business-skills.git "$env:USERPROFILE\.claude\skills-repo"
 
-# Copy general skills
+# Copy skill general
 Copy-Item -Recurse "$env:USERPROFILE\.claude\skills-repo\general\*" "$env:USERPROFILE\.claude\skills\" -Force
 
-# Copy ops skills
+# Copy skill ops
 Copy-Item -Recurse "$env:USERPROFILE\.claude\skills-repo\ops\*" "$env:USERPROFILE\.claude\skills\" -Force
 ```
 
 **macOS / Linux:**
 ```bash
-# Clone the repo
+# Clone repo
 git clone https://github.com/database-zuma/zuma-business-skills.git ~/.claude/skills-repo
 
-# Copy all skills (general + ops + future departments)
+# Copy semua skill
 cp -r ~/.claude/skills-repo/general/* ~/.claude/skills/
 cp -r ~/.claude/skills-repo/ops/* ~/.claude/skills/
 ```
 
-### Option 2: Selective Install
+### Install Pilihan
 
-Only install skills you need:
+Cuma mau install skill tertentu? Bisa:
 
 ```bash
-# Example: Only install data-ops and sku-context
+# Contoh: cuma data-ops dan sku-context
 cp -r ~/.claude/skills-repo/ops/zuma-data-ops ~/.claude/skills/
 cp -r ~/.claude/skills-repo/ops/zuma-sku-context ~/.claude/skills/
 ```
 
-### After Installation
+### Setelah Install
 
-Your `~/.claude/skills/` directory should look like:
+Direktori `~/.claude/skills/` kamu harusnya jadi kayak gini:
 
 ```
 ~/.claude/skills/
@@ -204,26 +216,26 @@ Your `~/.claude/skills/` directory should look like:
     +-- SKILL.md
 ```
 
-Restart Claude Code. Skills are loaded automatically based on context — no manual invocation needed.
+Restart Claude Code. Skill otomatis ter-load sesuai konteks — ga perlu invoke manual.
 
-### Verify Installation
+### Verifikasi
 
-In any Claude Code session:
+Di Claude Code session manapun, ketik:
 ```
 /zuma-data-ops
 ```
-If the skill loads and shows database info, you're good.
+Kalau skill ke-load dan nampil info database, berarti udah beres.
 
 ---
 
-## Keeping Skills Updated
+## Update Skill
 
-> **Skills in this repo are actively maintained and improved.**
-> Existing skills get upgraded with new columns, better query patterns, and corrected business rules.
-> New skills are added as Zuma's AI automation scope expands.
-> **Always pull the latest version.**
+> **Skill di repo ini aktif di-maintain dan di-improve.**
+> Skill yang udah ada terus di-upgrade — kolom baru, query pattern baru, business rule yang dikoreksi.
+> Skill baru ditambahkan seiring cakupan automasi AI Zuma meluas.
+> **Selalu pull versi terbaru.**
 
-### Quick Update
+### Cara Update
 
 **Windows (PowerShell):**
 ```powershell
@@ -231,9 +243,8 @@ cd "$env:USERPROFILE\.claude\skills-repo"
 git pull origin main
 Copy-Item -Recurse .\general\* "$env:USERPROFILE\.claude\skills\" -Force
 Copy-Item -Recurse .\ops\* "$env:USERPROFILE\.claude\skills\" -Force
-# Add future departments as they become available:
+# Tambahkan departemen baru kalau udah tersedia:
 # Copy-Item -Recurse .\finance\* "$env:USERPROFILE\.claude\skills\" -Force
-# Copy-Item -Recurse .\hrga\* "$env:USERPROFILE\.claude\skills\" -Force
 ```
 
 **macOS / Linux:**
@@ -243,90 +254,89 @@ cp -r general/* ~/.claude/skills/
 cp -r ops/* ~/.claude/skills/
 ```
 
-### What Gets Updated?
+### Apa Aja yang Di-update?
 
-| Update Type | Frequency | Examples |
-|-------------|-----------|---------|
-| Schema changes | When DB structure changes | New tables, columns, views added |
-| Business rules | When operations evolve | New branches, changed tier criteria |
-| Query patterns | As common analyses emerge | New cookbook queries, optimized joins |
-| Bug fixes | As issues are found | Corrected column names, updated match rates |
-| **New skills** | **As automation scope expands** | **Finance, HRGA, Marketplace, Creative** |
+| Jenis Update | Kapan | Contoh |
+|-------------|-------|--------|
+| Perubahan schema | Saat struktur DB berubah | Tabel/kolom/view baru |
+| Aturan bisnis | Saat operasi berkembang | Cabang baru, kriteria tier berubah |
+| Pattern query | Saat analisis umum teridentifikasi | Query cookbook baru, join dioptimasi |
+| Bug fix | Saat masalah ditemukan | Nama kolom dikoreksi, match rate di-update |
+| **Skill baru** | **Saat cakupan automasi meluas** | **Finance, HRGA, Marketplace, Creative** |
 
 ---
 
 ## Roadmap
 
-### Planned Skills (New Departments)
+### Skill yang Direncanakan
 
-| Department | Skill | What It Will Cover | Status |
-|------------|-------|--------------------|--------|
-| **Finance** | `zuma-financial-analysis` | P&L structure, margin analysis, BPP/COGS calculations, entity-level reporting | Planned |
-| **HRGA** | `zuma-org-structure` | Organization chart, roles, decision hierarchy, policies | Planned |
-| **Ops** | `zuma-marketplace-ops` | Shopee/Tokopedia/TikTok Shop operations, listing management | Planned |
-| **Ops** | `zuma-supply-chain` | Supplier relationships (HJS/Ando), PO management, production planning | Planned |
-| **General** | `zuma-customer-insights` | Customer segmentation, purchase patterns, retention analysis | Planned |
-| **Creative** | `zuma-creative-hub` | AI creative workflows — product photography, VM design | Planned |
+| Departemen | Skill | Cakupan | Status |
+|------------|-------|---------|--------|
+| **Finance** | `zuma-financial-analysis` | Struktur P&L, analisis margin, kalkulasi BPP/COGS | Planned |
+| **HRGA** | `zuma-org-structure` | Struktur organisasi, jabatan, hierarki keputusan | Planned |
+| **Ops** | `zuma-marketplace-ops` | Operasional Shopee/Tokopedia/TikTok Shop | Planned |
+| **Ops** | `zuma-supply-chain` | Hubungan supplier (HJS/Ando), manajemen PO | Planned |
+| **Creative** | `zuma-creative-hub` | Workflow AI creative — foto produk, VM design | Planned |
 
-### Existing Skills — Upgrade Roadmap
+### Upgrade yang Direncanakan
 
-| Skill | Planned Improvements |
-|-------|---------------------|
-| `zuma-data-ops` | iSeller integration docs, mart table templates, automated report queries |
-| `zuma-sku-context` | Complete assortment patterns for all series, seasonal launch calendar |
-| `zuma-branch` | Individual store profiles, performance benchmarks, staffing structure |
-| `zuma-warehouse-and-stocks` | Inter-warehouse transfer rules, stock count reconciliation workflows |
-| `zuma-company-context` | Org chart, decision-making hierarchy, vendor contacts |
+| Skill | Improvement |
+|-------|-------------|
+| `zuma-data-ops` | Integrasi iSeller, template tabel mart, query report otomatis |
+| `zuma-sku-context` | Pola assortment lengkap tiap series, kalender launch musiman |
+| `zuma-branch` | Profil toko individual, benchmark performa, struktur staffing |
+| `zuma-warehouse-and-stocks` | Aturan transfer antar gudang, workflow rekonsiliasi stock count |
+| `zuma-company-context` | Org chart, hierarki keputusan, kontak vendor |
 
 ---
 
-## The Vision
+## Visi ke Depan
 
 ```
-  TODAY (v1.0)                              FUTURE
-  ============                              ======
+  SEKARANG (v1.0)                           NANTI
+  ===============                           ====
 
   +----------+                    +----------+----------+----------+
   | general/ |                    | general/ | finance/ |  hrga/   |
-  |   1 skill|                    |   2+     |   2+     |   2+     |
+  |  1 skill |                    |   2+     |   2+     |   2+     |
   +----------+                    +----------+----------+----------+
   |  ops/    |                    |  ops/    |creative/ |  sales/  |
-  |   4 skill|                    |   8+     |   3+     |   3+     |
+  |  4 skill |                    |   8+     |   3+     |   3+     |
   +----------+                    +----------+----------+----------+
 
-  5 skills                        20+ skills across all departments
-  covering ops                    covering the entire business
-  & brand context                 = Complete Zuma AI Brain
+  5 skills                        20+ skills lintas departemen
+  covering ops                    covering seluruh bisnis
+  & brand context                 = Otak AI Zuma yang Lengkap
 ```
 
-Every new skill makes every AI agent smarter about Zuma's business.
-Every upgrade makes existing analysis more accurate.
+Setiap skill baru bikin setiap AI agent makin pinter soal bisnis Zuma.
+Setiap upgrade bikin analisis yang ada makin akurat.
 
-**This repo is the single source of truth for Zuma's AI knowledge.**
+**Repo ini adalah single source of truth untuk pengetahuan AI Zuma.**
 
 ---
 
-## Contributing
+## Kontribusi
 
-To add or update skills:
+Mau nambah atau update skill:
 
-1. Create a branch: `feat/skill-name` or `update/skill-name`
-2. Add/edit `SKILL.md` in the appropriate department folder
-3. Follow the frontmatter format:
+1. Bikin branch: `feat/nama-skill` atau `update/nama-skill`
+2. Tambah/edit `SKILL.md` di folder departemen yang sesuai
+3. Ikutin format frontmatter:
    ```yaml
    ---
-   name: skill-name-here
-   description: One-line description. Use when [trigger conditions].
+   name: nama-skill-disini
+   description: Deskripsi satu baris. Use when [kondisi trigger].
    user-invocable: false
    ---
    ```
 4. Update `CHANGELOG.md`
-5. Open a PR for review
+5. Buka PR buat review
 
 ---
 
 <p align="center">
-  <sub>Built by Zuma Indonesia's AI team</sub>
+  <sub>Dibangun oleh tim AI Zuma Indonesia</sub>
   <br/>
-  <sub>Skills that make AI actually understand the business.</sub>
+  <sub>Skills yang bikin AI beneran paham bisnis.</sub>
 </p>
