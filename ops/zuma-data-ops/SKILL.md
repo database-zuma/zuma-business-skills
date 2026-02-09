@@ -1,0 +1,708 @@
+---
+name: zuma-data-ops
+description: Zuma Indonesia data operations, database querying, and business analysis. Covers PostgreSQL database on VPS (schemas, tables, views, ETL), SQL query patterns, connection details, and data analysis methodology for sales, stock, and product performance. Use when analyzing Zuma business data, querying the database, building reports, or creating mart tables.
+user-invocable: false
+---
+
+# Zuma Data Operations & Analysis
+
+You have access to Zuma Indonesia's centralized PostgreSQL data warehouse. Use this knowledge to connect to the database, understand the schema structure, write correct SQL queries, and perform business-accurate data analysis.
+
+**Combine with other Zuma skills for full context:**
+- `zuma-sku-context` — Product categorization, versioning, Kode Mix, assortment, tiering
+- `zuma-branch` — Store network, branches, areas, store categories
+- `zuma-warehouse-and-stocks` — Warehouse operations, RO system, stock stages
+- `zuma-company-context` — Brand identity, entity structure, data sources
+
+---
+
+## 1. Database Connection
+
+### VPS Server
+
+| Field | Value |
+|-------|-------|
+| **Host** | `76.13.194.120` |
+| **Port** | `5432` |
+| **Database** | `openclaw_ops` |
+| **User** | `openclaw_app` |
+| **Password** | `Zuma-0psCl4w-2026!` |
+| **SSH Access** | `ssh root@76.13.194.120` |
+
+### Connection Methods
+
+**Direct PostgreSQL (from any tool/app):**
+```
+postgresql://openclaw_app:Zuma-0psCl4w-2026!@76.13.194.120:5432/openclaw_ops
+```
+
+**psql CLI (from VPS via SSH):**
+```bash
+ssh root@76.13.194.120
+psql -U openclaw_app -d openclaw_ops
+```
+
+**psql CLI (remote with password):**
+```bash
+PGPASSWORD='Zuma-0psCl4w-2026!' psql -h 76.13.194.120 -U openclaw_app -d openclaw_ops
+```
+
+**Looker Studio / BI Tools:**
+- Use host, port, database, user, password above
+- For Looker Studio: connect to `public` schema (mirrors of core views are there)
+- Custom Query mode supports any schema
+
+### Connection Notes
+- VPS is always on (dedicated server, not serverless)
+- No SSL required for connections from trusted networks
+- `openclaw_app` has read/write on all schemas
+- For heavy analytical queries, prefer off-peak hours (outside 03:00-06:00 WIB when ETL runs)
+
+---
+
+## 2. Schema Architecture
+
+```
+openclaw_ops database
+├── raw          — Source data from Accurate Online API (auto-updated daily by cron)
+├── portal       — Reference/master data from Google Sheets (manually maintained)
+├── core         — Transformed views joining raw + portal (auto-computed, read-only)
+├── mart         — Ad-hoc analysis tables (created on demand per user request, always changing)
+└── public       — Convenience mirrors of core views (for Looker Studio / BI tools)
+```
+
+### Schema Stability
+
+| Schema | Stability | Update Frequency | Who Maintains |
+|--------|-----------|------------------|---------------|
+| `raw` | Stable structure, data changes daily | Auto: cron jobs pull from Accurate API daily | Cron scripts on VPS |
+| `portal` | Stable structure, data changes occasionally | Manual: updated when master data changes in Google Sheets | User (Wayan) via N8N or manual |
+| `core` | Stable structure (views) | Auto: views recompute on query | Views auto-reflect raw + portal changes |
+| `mart` | **UNSTABLE** — tables come and go | On demand | Created per analysis request, may be dropped/recreated |
+| `public` | Mirrors core | Auto: views reference core views | Mirrors update when core updates |
+
+---
+
+## 3. Schema: `raw` (Source Data)
+
+Raw data pulled from Accurate Online API. Each entity (DDD, MBB, UBB, LJBB) has separate tables.
+
+### Sales Tables
+
+| Table | Entity | Size | Rows | Date Range | Description |
+|-------|--------|------|------|------------|-------------|
+| `raw.accurate_sales_ddd` | DDD | ~563 MB | ~1.3M | 2022-01-01 → present | Main entity retail + wholesale sales |
+| `raw.accurate_sales_mbb` | MBB | ~101 MB | ~197K | 2024-04-18 → present | Online marketplace sales |
+| `raw.accurate_sales_ubb` | UBB | ~27 MB | ~41K | 2023-02-11 → present | Wholesale + consignment sales |
+
+**Sales table columns (all 3 tables share same structure):**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | serial | Auto-increment PK |
+| `source_entity` | text | 'DDD', 'MBB', or 'UBB' |
+| `nomor_invoice` | text | Invoice number from Accurate |
+| `transaction_date` | date | Sale date |
+| `kode_barang` / `kode_produk` | text | = `kode_besar` (article+size code from Accurate) |
+| `nama_barang` | text | Product name from Accurate |
+| `quantity` | numeric | Pairs sold |
+| `unit_price` | numeric | Selling price per pair |
+| `total_amount` | numeric | quantity * unit_price |
+| `cost_of_goods` | numeric | BPP/COGS (may be 0 from API, backfilled from cookie export) |
+| `warehouse_code` | text | Which warehouse fulfilled the sale |
+| `snapshot_date` | date | When this data was pulled |
+| `loaded_at` | timestamptz | ETL load timestamp |
+
+### Stock Tables
+
+| Table | Entity | Description |
+|-------|--------|-------------|
+| `raw.accurate_stock_ddd` | DDD | ~142K rows, latest snapshot only (overwrites daily) |
+| `raw.accurate_stock_ljbb` | LJBB | ~128 rows (Baby & Kids PO receiving entity) |
+| `raw.accurate_stock_mbb` | MBB | Minimal/empty (online entity, stock managed elsewhere) |
+| `raw.accurate_stock_ubb` | UBB | Minimal/empty (wholesale entity) |
+
+**Stock table columns:**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | serial | Auto-increment PK |
+| `source_entity` | text | 'DDD', 'LJBB', 'MBB', or 'UBB' |
+| `kode_barang` / `kode_produk` | text | = `kode_besar` |
+| `nama_barang` | text | Product name |
+| `nama_gudang` | text | Warehouse/store name in Accurate (e.g., "Warehouse Pusat", "Zuma Tunjungan Plaza") |
+| `quantity` | numeric | Current stock in pairs |
+| `unit_price` | numeric | Unit cost |
+| `warehouse_code` | text | Entity warehouse code |
+| `snapshot_date` | date | Date of this stock snapshot |
+| `loaded_at` | timestamptz | ETL load timestamp |
+
+### Other Raw Tables
+
+| Table | Description |
+|-------|-------------|
+| `raw.iseller_sales` | POS sales from iSeller (real-time retail). Structure may change as integration evolves. |
+| `raw.load_history` | ETL audit trail — logs every data pull with entity, table, row counts, timestamps |
+
+---
+
+## 4. Schema: `portal` (Reference/Master Data)
+
+Manually maintained reference tables synced from Google Sheets. These are the "bridge" tables that enrich raw data with business classifications.
+
+### `portal.kodemix` (~5,464 rows)
+
+**The critical product bridge table.** Maps version-specific Accurate codes to unified Kode Mix codes.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `no_urut` | integer | Sort order (lower = more recent/preferred) |
+| `kode_besar` | text | Accurate code (article+size), **MIXED CASE** |
+| `kode` | text | Accurate code (article only, kode kecil) |
+| `kode_mix` | text | Unified article code (version-agnostic) |
+| `kode_mix_size` | text | Unified article+size code (version-agnostic) |
+| `article` | text | Article name (e.g., "JET BLACK") |
+| `version` | text | V0, V1, V2, V3, V4 |
+| `tipe` | text | Product type (Fashion / Jepit) |
+| `gender` | text | Men, Ladies, Kids, Junior, etc. |
+| `seri` | text | Series in Indonesian |
+| `series` | text | Series in English (Classic, Slide, Airmove, etc.) |
+| `color` | text | Color name |
+| `ukuran` | text | Size |
+| `nama_variant` | text | Full variant name |
+| `size` | text | Size value |
+| `group_warna` | text | Color group |
+| `assortment` | text | Size assortment pattern (e.g., "1-2-2-3-2-2") |
+| `count_by_assortment` | integer | Pairs per box for this size |
+| `v` | text | Version indicator |
+| `status` | text | 'Aktif' or 'Tidak Aktif' (DO NOT filter on this for joins — see Critical Rules) |
+| `tier_lama` | text | Previous tier |
+| `tier_baru` | text | Current tier |
+| `season` | text | Season designation |
+| `product_status` | text | Product lifecycle status |
+
+### `portal.hpprsp` (Pricing)
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `kode` | text | Article code (kode kecil) |
+| `nama_barang` | text | Product name |
+| `harga_beli` | numeric | Purchase price (HPP) |
+| `price_taq` | numeric | Price tag |
+| `rsp` | numeric | Recommended selling price |
+
+### `portal.store` (Store Master)
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `nama_accurate` | text | Store name as it appears in Accurate, **MIXED CASE** |
+| `branch` | text | Branch (Jatim, Jakarta, Bali, Sumatra, Sulawesi, Batam) |
+| `area` | text | Area (Jatim, Jakarta, Bali 1, Bali 2, Bali 3, Lombok, etc.) |
+| `category` | text | RETAIL, NON-RETAIL, EVENT |
+| `stock_filter` | text | Stock filter category |
+| `as_name` | text | Area Supervisor name |
+| `bm_name` | text | Branch Manager name |
+
+### `portal.stock_capacity` (Warehouse/Store Capacity)
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `stock_location` | text | Store/warehouse name, **MIXED CASE** |
+| `branch` | text | Branch |
+| `area` | text | Area |
+| `category` | text | Category |
+
+---
+
+## 5. Schema: `core` (Transformed Views)
+
+All objects in `core` are **views** (not tables). They auto-recompute when queried.
+
+### Dimension Views
+
+| View | Source | Description |
+|------|--------|-------------|
+| `core.dim_product` | portal.kodemix + portal.hpprsp | Deduplicated product dimension (DISTINCT ON kode_besar) |
+| `core.dim_store` | portal.store | Store dimension |
+| `core.dim_warehouse` | Hardcoded mapping | Entity code → name mapping (DDD, LJBB, MBB, UBB) |
+| `core.dim_date` | Generated | Date dimension (date_key, year, month, day, quarter, etc.) |
+
+### Fact Views
+
+| View | Source | Description |
+|------|--------|-------------|
+| `core.fact_sales_unified` | UNION ALL of raw.accurate_sales_ddd + mbb + ubb | All sales from all entities, unified. Adds `matched_kode_besar` (TRIM LOWER) and `matched_store_name` (TRIM LOWER) |
+| `core.fact_stock_unified` | UNION ALL of raw.accurate_stock_ddd + ljbb + mbb + ubb | All stock from all entities, latest snapshot. Adds `matched_kode_besar` and matched store name |
+
+### Main Analysis Views (USE THESE)
+
+#### `core.sales_with_product` (46 columns) — PRIMARY SALES VIEW
+
+**This is your go-to view for ALL sales analysis.** Joins fact_sales_unified with portal.kodemix (product enrichment), portal.hpprsp (pricing), and portal.store (store enrichment).
+
+| Column Group | Columns |
+|-------------|---------|
+| **Transaction** | source_entity, nomor_invoice, transaction_date, date_key, kode_besar, matched_kode_besar, kode, store_name_raw, matched_store_name, nama_barang, quantity, unit_price, total_amount, cost_of_goods, vendor_price, dpp_amount, tax_amount, warehouse_code, snapshot_date, loaded_at |
+| **Product IDs** | kode_mix, kode_mix_size, article, version |
+| **Product Attrs** | product_name, product_type, tipe, series, gender, tier, color, assortment, nama_variant, size, group_warna |
+| **Pricing** | harga_beli, price_taq, rsp |
+| **Store** | branch, area, store_category, stock_filter, as_name, bm_name |
+| **Technical** | v, count_by_assortment |
+
+**Row count:** ~1.55M rows (matches fact_sales_unified exactly, no duplicates)
+**Kodemix match rate:** ~94.1% (unmatched = kode_besar not in portal.kodemix)
+**Store match rate:** ~86.2%
+
+#### `core.stock_with_product` (38 columns) — PRIMARY STOCK VIEW
+
+**This is your go-to view for ALL stock/inventory analysis.**
+
+| Column Group | Columns |
+|-------------|---------|
+| **Stock** | source_entity, snapshot_date, date_key, kode_besar, matched_kode_besar, kode, nama_gudang, quantity, unit_price, vendor_price, warehouse_code, loaded_at |
+| **Product IDs** | kode_mix, kode_mix_size, article, version |
+| **Product Attrs** | product_name, product_type, tipe, series, gender, tier, color, ukuran, assortment, season, product_status, nama_variant, size, group_warna |
+| **Pricing** | harga_beli, price_taq, rsp |
+| **Warehouse** | gudang_branch, gudang_area, gudang_category |
+| **Technical** | v, count_by_assortment |
+
+**Row count:** ~142K rows (matches fact_stock_unified exactly, no duplicates)
+**Kodemix match rate:** ~99.9%
+**Capacity match rate:** ~96.4%
+
+### Legacy / Supporting Views
+
+| View | Description |
+|------|-------------|
+| `core.sales_with_store` | Older sales view (less enriched, kept for backward compat) |
+| `core.fact_sales_ddd` / `_mbb` / `_ubb` | Per-entity sales views |
+| `core.fact_stock_ddd` / `_ljbb` / `_mbb` / `_ubb` | Per-entity stock views |
+
+---
+
+## 6. Schema: `mart` (Ad-hoc Analysis)
+
+**Tables in this schema always change based on user requests.** The mart schema is a workspace for creating summary tables, aggregations, and analysis-specific materializations.
+
+**Current state:** Schema exists but tables are created and dropped as needed. Do not assume any specific table exists — always check first:
+
+```sql
+SELECT table_name FROM information_schema.tables WHERE table_schema = 'mart';
+```
+
+**Common mart table patterns:**
+- `mart.monthly_sales_summary` — aggregated monthly sales by article/store
+- `mart.article_performance` — article-level KPIs
+- `mart.store_performance` — store-level KPIs
+- `mart.tier_analysis` — sales/stock by tier breakdown
+
+**Creating mart tables:** Always use `CREATE TABLE mart.{name} AS SELECT ...` from core views.
+
+---
+
+## 7. Schema: `public` (BI Tool Mirrors)
+
+Convenience views that mirror core views. Exist because Looker Studio and some BI tools can only see the `public` schema without custom queries.
+
+| View | Mirrors |
+|------|---------|
+| `public.sales_with_product` | → `core.sales_with_product` |
+| `public.stock_with_product` | → `core.stock_with_product` |
+
+---
+
+## 8. ETL / Auto-Update Schedule
+
+Cron jobs on the VPS pull data from Accurate Online API daily.
+
+| Time (WIB) | Job | Description |
+|-------------|-----|-------------|
+| **02:00** | Database backup | Full `pg_dump` of `openclaw_ops` |
+| **03:00** | Stock pull | All 4 entities (DDD, LJBB, MBB, UBB) — overwrites stock tables with latest snapshot |
+| **05:00** | Sales pull | 3 entities (DDD, MBB, UBB) — incremental, pulls last 3 days to catch late-arriving invoices |
+
+**No LJBB sales pull** — LJBB is a PO receiving entity only, no direct sales.
+
+**ETL audit trail:**
+```sql
+SELECT * FROM raw.load_history ORDER BY loaded_at DESC LIMIT 20;
+```
+
+**iSeller data:** Currently minimal (`raw.iseller_sales`). Integration still evolving — structure may change.
+
+---
+
+## 9. CRITICAL Query Rules
+
+### Rule 1: ALWAYS use TRIM(LOWER()) for portal joins
+
+Raw tables store codes in lowercase. Portal tables store codes in mixed case. **Every join to portal must normalize:**
+
+```sql
+-- CORRECT
+LEFT JOIN portal.kodemix km ON TRIM(LOWER(km.kode_besar)) = s.matched_kode_besar
+
+-- WRONG (will miss matches due to case mismatch)
+LEFT JOIN portal.kodemix km ON km.kode_besar = s.kode_besar
+```
+
+### Rule 2: ALWAYS deduplicate portal tables in joins
+
+portal.kodemix has multiple rows per kode_besar (one per version: V0, V1, V2...). Joining directly causes row inflation (duplicates).
+
+```sql
+-- CORRECT: Deduplicated subquery
+LEFT JOIN (
+    SELECT DISTINCT ON (TRIM(LOWER(kode_besar)))
+        TRIM(LOWER(kode_besar)) AS kode_besar,
+        kode_mix, kode_mix_size, article, version, tipe,
+        nama_variant, size, count_by_assortment, group_warna, v
+    FROM portal.kodemix
+    ORDER BY TRIM(LOWER(kode_besar)), no_urut
+) km ON s.matched_kode_besar = km.kode_besar
+
+-- CORRECT: Deduplicated store
+LEFT JOIN (
+    SELECT DISTINCT ON (TRIM(LOWER(nama_accurate)))
+        TRIM(LOWER(nama_accurate)) AS nama_accurate,
+        branch, area, category, stock_filter, as_name, bm_name
+    FROM portal.store
+    ORDER BY TRIM(LOWER(nama_accurate))
+) st ON s.matched_store_name = st.nama_accurate
+
+-- WRONG (causes row duplication)
+LEFT JOIN portal.kodemix km ON s.matched_kode_besar = TRIM(LOWER(km.kode_besar))
+```
+
+### Rule 3: NEVER filter portal.kodemix by status
+
+Do NOT add `WHERE status = 'Aktif'` or any status filter when joining kodemix. The user explicitly requires ALL products to be matched regardless of active/discontinued status.
+
+```sql
+-- CORRECT: No status filter
+FROM portal.kodemix
+
+-- WRONG: Excludes ~50% of kodemix rows
+FROM portal.kodemix WHERE status = 'Aktif'
+```
+
+### Rule 4: ALWAYS verify row counts after creating views/tables
+
+After any view or table creation that involves joins, verify no row inflation:
+
+```sql
+-- Check: view rows must equal fact table rows
+SELECT COUNT(*) FROM core.fact_sales_unified;   -- e.g., 1,545,304
+SELECT COUNT(*) FROM core.sales_with_product;    -- must be exactly 1,545,304
+```
+
+### Rule 5: Use core views, not raw tables
+
+For analysis, ALWAYS use `core.sales_with_product` and `core.stock_with_product`. They already have all the enrichment (product names, series, gender, tier, store branch/area, pricing). Only go to raw tables if you need something not in the core views.
+
+### Rule 6: Use Kode Mix for year-over-year analysis
+
+Different product versions (V0-V4) have different kode_besar codes but represent the same physical product. Use `kode_mix` (article level) or `kode_mix_size` (SKU level) for any comparison across time periods. See `zuma-sku-context` skill for full explanation.
+
+---
+
+## 10. Query Cookbook
+
+### Sales Performance of an Article in a Specific Area (Last 3 Months)
+
+```sql
+SELECT
+    DATE_TRUNC('month', transaction_date) AS month,
+    article,
+    series,
+    gender,
+    area,
+    SUM(quantity) AS total_pairs,
+    SUM(total_amount) AS total_revenue,
+    COUNT(DISTINCT nomor_invoice) AS num_transactions,
+    COUNT(DISTINCT matched_store_name) AS num_stores_selling
+FROM core.sales_with_product
+WHERE kode_mix = 'M1CA02CA01'  -- Use kode_mix for version-agnostic
+  AND area = 'Jatim'
+  AND transaction_date >= CURRENT_DATE - INTERVAL '3 months'
+GROUP BY 1, 2, 3, 4, 5
+ORDER BY month;
+```
+
+### Current Stock by Store for an Article
+
+```sql
+SELECT
+    nama_gudang AS store_or_warehouse,
+    gudang_branch AS branch,
+    gudang_area AS area,
+    gudang_category AS category,
+    kode_mix,
+    article,
+    SUM(quantity) AS total_pairs
+FROM core.stock_with_product
+WHERE kode_mix = 'M1CA02CA01'
+GROUP BY 1, 2, 3, 4, 5, 6
+ORDER BY branch, area, total_pairs DESC;
+```
+
+### Stock by Warehouse Only (exclude stores)
+
+```sql
+SELECT
+    nama_gudang,
+    source_entity,
+    kode_mix,
+    article,
+    SUM(quantity) AS total_pairs
+FROM core.stock_with_product
+WHERE nama_gudang ILIKE '%warehouse%'
+   OR nama_gudang ILIKE '%gudang%'
+GROUP BY 1, 2, 3, 4
+ORDER BY total_pairs DESC;
+```
+
+### Top 20 Best-Selling Articles (Current Month)
+
+```sql
+SELECT
+    kode_mix,
+    article,
+    series,
+    gender,
+    tier,
+    SUM(quantity) AS total_pairs,
+    SUM(total_amount) AS total_revenue,
+    ROUND(AVG(unit_price), 0) AS avg_selling_price
+FROM core.sales_with_product
+WHERE transaction_date >= DATE_TRUNC('month', CURRENT_DATE)
+GROUP BY 1, 2, 3, 4, 5
+ORDER BY total_pairs DESC
+LIMIT 20;
+```
+
+### Sales by Branch (Month-over-Month)
+
+```sql
+SELECT
+    branch,
+    DATE_TRUNC('month', transaction_date) AS month,
+    SUM(quantity) AS total_pairs,
+    SUM(total_amount) AS total_revenue,
+    COUNT(DISTINCT kode_mix) AS unique_articles
+FROM core.sales_with_product
+WHERE branch IS NOT NULL
+  AND transaction_date >= CURRENT_DATE - INTERVAL '6 months'
+GROUP BY 1, 2
+ORDER BY branch, month;
+```
+
+### Tier Performance Analysis
+
+```sql
+SELECT
+    tier,
+    COUNT(DISTINCT kode_mix) AS num_articles,
+    SUM(quantity) AS total_pairs,
+    SUM(total_amount) AS total_revenue,
+    ROUND(SUM(total_amount) / NULLIF(SUM(quantity), 0), 0) AS avg_price_per_pair
+FROM core.sales_with_product
+WHERE transaction_date >= DATE_TRUNC('month', CURRENT_DATE)
+  AND tier IS NOT NULL
+GROUP BY 1
+ORDER BY total_pairs DESC;
+```
+
+### Stock Value by Entity and Warehouse
+
+```sql
+SELECT
+    source_entity,
+    nama_gudang,
+    COUNT(DISTINCT kode_mix) AS unique_articles,
+    SUM(quantity) AS total_pairs,
+    SUM(quantity * unit_price) AS total_stock_value
+FROM core.stock_with_product
+GROUP BY 1, 2
+ORDER BY source_entity, total_pairs DESC;
+```
+
+### Series Sell-Through Rate (Sales vs Stock Ratio)
+
+```sql
+WITH sales AS (
+    SELECT series, SUM(quantity) AS sold_pairs
+    FROM core.sales_with_product
+    WHERE transaction_date >= CURRENT_DATE - INTERVAL '30 days'
+    GROUP BY series
+),
+stock AS (
+    SELECT series, SUM(quantity) AS stock_pairs
+    FROM core.stock_with_product
+    GROUP BY series
+)
+SELECT
+    COALESCE(sa.series, st.series) AS series,
+    COALESCE(sa.sold_pairs, 0) AS sold_last_30d,
+    COALESCE(st.stock_pairs, 0) AS current_stock,
+    CASE
+        WHEN st.stock_pairs > 0
+        THEN ROUND(sa.sold_pairs::numeric / st.stock_pairs * 100, 1)
+        ELSE NULL
+    END AS sell_through_pct
+FROM sales sa
+FULL OUTER JOIN stock st ON sa.series = st.series
+ORDER BY sold_last_30d DESC NULLS LAST;
+```
+
+### Find Unmatched Products (no kodemix mapping)
+
+```sql
+-- Sales with no kodemix match
+SELECT
+    kode_besar,
+    nama_barang,
+    SUM(quantity) AS total_pairs,
+    COUNT(*) AS num_transactions
+FROM core.sales_with_product
+WHERE kode_mix IS NULL
+GROUP BY 1, 2
+ORDER BY total_pairs DESC
+LIMIT 30;
+```
+
+---
+
+## 11. Analysis Methodology
+
+When the user asks for business analysis, follow this structured approach:
+
+### Step 1: Clarify Scope
+- **What product?** → Use kode_mix (article level) or series/gender for broader scope
+- **What time period?** → Default to last 3 months if unspecified
+- **What geography?** → Branch, area, or specific store
+- **What metric?** → Pairs sold, revenue, stock level, sell-through
+
+### Step 2: Choose the Right View
+- **Sales analysis** → `core.sales_with_product`
+- **Stock/inventory analysis** → `core.stock_with_product`
+- **Combined (sell-through, coverage)** → Join both on `kode_mix`
+
+### Step 3: Apply Business Context
+- **Entity context:** DDD = retail/wholesale, MBB = online, UBB = wholesale/consignment
+- **Store context:** Use branch/area for geographic analysis (see `zuma-branch` skill)
+- **Product context:** Use kode_mix for version-agnostic analysis (see `zuma-sku-context` skill)
+- **Tier context:** Tier 1 = fast moving (top 50%), Tier 8 = new launch (see `zuma-sku-context` skill)
+- **Pricing context:** `rsp` = recommended selling price, `harga_beli` = purchase cost, `price_taq` = price tag
+
+### Step 4: Interpret Results
+- **Sales per store:** Higher in Bali (tourist area) and Jatim (home base) is normal
+- **Stock distribution:** DDD holds most stock, LJBB holds Baby & Kids receiving stock
+- **Tier 8 articles:** New launches — don't compare against established Tier 1 without noting this
+- **Missing data:** `kode_mix IS NULL` means product not in portal.kodemix bridge table — flag but don't exclude
+- **BPP/COGS:** May be 0 for some transactions (API limitation) — use `harga_beli` from portal.hpprsp as proxy
+- **Assortment:** 1 box = 12 pairs always. Use `count_by_assortment` for size-level box calculation
+
+### Step 5: Present Findings
+- Lead with the key insight, not the SQL
+- Use tables for comparisons
+- Note data quality caveats (match rates, missing BPP, etc.)
+- Suggest actionable next steps when relevant
+
+---
+
+## 12. Common Pitfalls (Avoid These)
+
+| Pitfall | Why It Happens | Correct Approach |
+|---------|----------------|------------------|
+| Duplicate rows after JOIN | portal.kodemix has multiple versions per kode_besar | Use DISTINCT ON subquery (Rule 2) |
+| Missing product enrichment | Case mismatch between raw (lowercase) and portal (mixed case) | Use TRIM(LOWER()) on portal side (Rule 1) |
+| Wrong YoY comparison | Different kode_besar codes across product versions | Use kode_mix instead of kode_besar (Rule 6) |
+| Excluding valid products | Filtering kodemix by `status = 'Aktif'` | Never filter by status in joins (Rule 3) |
+| Empty BPP/COGS | Accurate API doesn't return cost data | Use portal.hpprsp.harga_beli as cost proxy |
+| Stock seems low | Only looking at one entity | UNION ALL entities or use fact_stock_unified |
+| Slow query | Querying raw tables with complex joins | Use pre-enriched core views instead (Rule 5) |
+| Mart table not found | Mart tables are ephemeral | Always check `information_schema.tables` first |
+
+---
+
+## 13. Database Administration Quick Reference
+
+### Check ETL Status
+```sql
+SELECT entity, table_name, row_count, loaded_at
+FROM raw.load_history
+ORDER BY loaded_at DESC
+LIMIT 10;
+```
+
+### Check Data Freshness
+```sql
+-- Latest sales date per entity
+SELECT source_entity, MAX(transaction_date) AS latest_sale
+FROM core.fact_sales_unified
+GROUP BY 1;
+
+-- Latest stock snapshot
+SELECT source_entity, MAX(snapshot_date) AS latest_snapshot
+FROM core.fact_stock_unified
+GROUP BY 1;
+```
+
+### Check Match Rates
+```sql
+-- Sales kodemix match rate
+SELECT
+    COUNT(*) AS total_rows,
+    COUNT(kode_mix) AS matched,
+    ROUND(COUNT(kode_mix)::numeric / COUNT(*) * 100, 1) AS match_pct
+FROM core.sales_with_product;
+
+-- Stock kodemix match rate
+SELECT
+    COUNT(*) AS total_rows,
+    COUNT(kode_mix) AS matched,
+    ROUND(COUNT(kode_mix)::numeric / COUNT(*) * 100, 1) AS match_pct
+FROM core.stock_with_product;
+```
+
+### List All Tables/Views in a Schema
+```sql
+SELECT table_schema, table_name, table_type
+FROM information_schema.tables
+WHERE table_schema IN ('raw', 'portal', 'core', 'mart', 'public')
+ORDER BY table_schema, table_name;
+```
+
+### Table Row Counts
+```sql
+SELECT schemaname, relname, n_live_tup AS estimated_rows
+FROM pg_stat_user_tables
+WHERE schemaname IN ('raw', 'portal', 'core', 'mart', 'public')
+ORDER BY n_live_tup DESC;
+```
+
+---
+
+## 14. When to Use This Skill
+
+**Always use this skill when:**
+- User asks to "analyze", "query", "check", "look into" any Zuma business data
+- User mentions sales, stock, inventory, performance, revenue, pairs sold
+- User asks about specific articles, series, stores, branches, warehouses
+- User wants to create mart/summary tables
+- User asks to connect to or query the database
+- User asks about data freshness, ETL status, or data quality
+- User says "pull data", "run a query", "check the numbers"
+
+**Combine with other skills when:**
+- Product details needed → load `zuma-sku-context`
+- Store/branch details needed → load `zuma-branch`
+- Warehouse operations details needed → load `zuma-warehouse-and-stocks`
+- Brand/entity context needed → load `zuma-company-context`
+
+---
+
+**Status:** Complete
+**Last Updated:** 9 Feb 2026
+**Covers:** Database connection, schema architecture, all tables/views, ETL schedule, query rules, SQL cookbook, analysis methodology, common pitfalls, admin reference
