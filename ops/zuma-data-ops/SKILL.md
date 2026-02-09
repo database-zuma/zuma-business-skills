@@ -404,6 +404,57 @@ For analysis, ALWAYS use `core.sales_with_product` and `core.stock_with_product`
 
 Different product versions (V0-V4) have different kode_besar codes but represent the same physical product. Use `kode_mix` (article level) or `kode_mix_size` (SKU level) for any comparison across time periods. See `zuma-sku-context` skill for full explanation.
 
+### Rule 7: ALWAYS exclude intercompany transactions (Transaksi Affiliasi)
+
+Zuma operates 4 entities (DDD, MBB, UBB, LJBB) that sometimes "sell" to each other on paper for tax minimization. These are **fake transactions** — not real sales to customers. If you include them, you'll double-count revenue and inflate metrics.
+
+**How to detect:** The `nama_pelanggan` (customer name) in the raw sales tables contains the OTHER entity's legal name. The `is_intercompany` flag in `core.sales_with_product` marks these rows.
+
+**Complete list of intercompany transactions (exact `nama_pelanggan` matches):**
+
+| Source Entity | Fake Customer (`nama_pelanggan`) | Is Actually | Pairs | Revenue |
+|---|---|---|---|---|
+| DDD | `CV MAKMUR BESAR BERSAMA` | MBB | 163,809 | Rp 9.53Bn |
+| DDD | `CV. UNTUNG BESAR BERSAMA` | UBB | 120,238 | Rp 5.65Bn |
+| DDD | `CV Lancar Jaya Besar Bersama` | LJBB | 288 | Rp 0.02Bn |
+| MBB | `PT Dream Dare Discover` | DDD | 87 | Rp 0.01Bn |
+| UBB | `CV. Makmur Besar Bersama` | MBB | 12 | Rp 0.00Bn |
+
+**Total fake: ~284K pairs, ~Rp 15.2Bn revenue across all time.**
+
+**Detection logic (used in core views):**
+
+```sql
+CASE WHEN (
+  (source_entity = 'DDD' AND TRIM(LOWER(nama_pelanggan)) IN (
+    'cv makmur besar bersama',
+    'cv. untung besar bersama',
+    'cv lancar jaya besar bersama'
+  ))
+  OR (source_entity = 'MBB' AND TRIM(LOWER(nama_pelanggan)) IN (
+    'pt dream dare discover'
+  ))
+  OR (source_entity = 'UBB' AND TRIM(LOWER(nama_pelanggan)) IN (
+    'cv. makmur besar bersama'
+  ))
+) THEN TRUE ELSE FALSE END AS is_intercompany
+```
+
+**CRITICAL:** Use exact full-name match only. Do NOT use fuzzy/LIKE matching — words like "makmur", "bersama", "untung" are common in Indonesian company names and you'll accidentally exclude real wholesale customers.
+
+```sql
+-- CORRECT: Filter out intercompany
+SELECT * FROM core.sales_with_product WHERE is_intercompany = FALSE;
+
+-- CORRECT: All mart tables exclude intercompany by default
+CREATE TABLE mart.xxx AS SELECT ... WHERE is_intercompany = FALSE;
+
+-- WRONG: Fuzzy match catches real customers
+WHERE LOWER(nama_pelanggan) LIKE '%makmur%'  -- catches PT. Unggul Sukses Makmur (real customer!)
+```
+
+**Note:** `nama_pelanggan` column is available in `core.sales_with_product`. Mart tables pre-filter intercompany out so you don't need to worry about it when querying mart.
+
 ---
 
 ## 10. Query Cookbook
