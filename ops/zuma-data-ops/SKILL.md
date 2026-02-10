@@ -455,6 +455,39 @@ WHERE LOWER(nama_pelanggan) LIKE '%makmur%'  -- catches PT. Unggul Sukses Makmur
 
 **Note:** `nama_pelanggan` column is available in `core.sales_with_product`. Mart tables pre-filter intercompany out so you don't need to worry about it when querying mart.
 
+### Rule 8: ALWAYS exclude non-product items from product analysis
+
+The sales data contains accessory/packaging items that inflate article counts and skew metrics. Filter them out in any product-level analysis (rankings, planograms, performance reports).
+
+```sql
+-- Exclusion list (match against article name, case-insensitive)
+WHERE UPPER(article) NOT LIKE '%SHOPPING BAG%'
+  AND UPPER(article) NOT LIKE '%HANGER%'
+  AND UPPER(article) NOT LIKE '%PAPER BAG%'
+  AND UPPER(article) NOT LIKE '%THERMAL%'
+  AND UPPER(article) NOT LIKE '%BOX LUCA%'
+```
+
+**Pandas equivalent:**
+```python
+NON_PRODUCT = ["SHOPPING BAG", "HANGER", "PAPER BAG", "THERMAL", "BOX LUCA"]
+df = df[~df["article"].str.upper().apply(lambda x: any(p in str(x) for p in NON_PRODUCT))]
+```
+
+### Rule 9: Store name matching — exact vs ILIKE
+
+`nama_gudang` in stock tables may have slight naming variations. Use the right strategy:
+
+```sql
+-- PREFERRED: Exact match on normalized name (when name is clean)
+WHERE LOWER(nama_gudang) = 'zuma royal plaza'
+
+-- FALLBACK: ILIKE pattern match (when name has variations or extra text)
+WHERE LOWER(nama_gudang) ILIKE '%tunjungan plaza%'
+```
+
+**When to use which:** Check `SELECT DISTINCT nama_gudang FROM core.stock_with_product WHERE nama_gudang ILIKE '%your_store%'` first. If only 1 result, use exact. If multiple similar results, use ILIKE with the most specific pattern.
+
 ---
 
 ## 10. Query Cookbook
@@ -624,7 +657,80 @@ LIMIT 30;
 
 ---
 
-## 11. Analysis Methodology
+## 11. Data Processing Patterns
+
+Reusable patterns for cleaning and transforming Zuma data. Apply these whenever building reports, planograms, or any product-level analysis.
+
+### 11.1 Gender-Type Business Grouping
+
+The raw `gender` field has 5+ values. Zuma's business operates on **4 consumer segments**. Always map before grouping:
+
+| Raw `gender` value | Business Segment |
+|---|---|
+| `Men` | **Men** |
+| `Ladies` | **Ladies** |
+| `Baby`, `Boys`, `Girls`, `Junior` | **Baby & Kids** (all collapse into one) |
+
+Combine with `tipe` (Fashion/Jepit) for display-level grouping: `"Men Fashion"`, `"Ladies Jepit"`, `"Baby & Kids"`.
+
+```python
+def map_gender_type(gender, tipe):
+    g = gender.upper()
+    if g == "MEN":       return f"Men {tipe}"
+    if g == "LADIES":    return f"Ladies {tipe}"
+    if g in ("BABY", "BOYS", "GIRLS", "JUNIOR"): return "Baby & Kids"
+    return f"{gender} {tipe}"
+```
+
+### 11.2 Tier-Aware Adjusted Average
+
+Raw monthly average penalizes fast sellers (zero months = OOS, not low demand). Use tier-aware logic:
+
+| Tier | Zero-Month Treatment | Why |
+|------|---------------------|-----|
+| **T1** (fast moving) | Exclude ALL zero months | Zeros = out-of-stock, not demand drop |
+| **T8** (new launch) | Exclude leading zeros + post-launch zeros | Leading zeros = not yet launched; post-launch zeros = OOS |
+| **T2/T3** (mid-tier) | Contextual: exclude zero if surrounding months have decent sales (>50% of overall avg); include zero if genuine decline | Distinguishes OOS from real demand decay |
+| **T4/T5/other** | Include all months (simple average) | Low movers — zeros likely genuine |
+
+```python
+# T1: only count months where it actually sold
+nonzero = [v for v in monthly_values if v > 0]
+adj_avg = sum(nonzero) / len(nonzero) if nonzero else 0
+
+# T8: skip pre-launch, skip post-launch OOS
+first_sale = next((i for i, v in enumerate(monthly_values) if v > 0), None)
+if first_sale is not None:
+    active = [v for v in monthly_values[first_sale:] if v > 0]
+    adj_avg = sum(active) / len(active) if active else 0
+```
+
+**When to use:** Sales velocity rankings, planogram scoring, replenishment prioritization — any context where "average monthly sales" is a key input.
+
+### 11.3 Turnover (TO) Metric — AMBIGUITY WARNING
+
+Zuma uses "TO" in two conflicting ways. **Always clarify which one you're computing:**
+
+| Metric | Formula | Interpretation | Used By |
+|--------|---------|----------------|---------|
+| **Stock Coverage** | `current_stock / avg_monthly_sales` | "How many months will stock last?" High = slow mover | User/Management ("TO 4.5 = can hold 4.5 months") |
+| **Turnover Rate** | `avg_monthly_sales / current_stock` | "How fast does stock sell?" High = fast seller | SKILL.md distribution-flow ("TO terendah = dead stock") |
+
+**Safe approach:** Output BOTH metrics with explicit labels. For surplus/pull decisions, sort by `avg_monthly_sales ASC` (slowest sellers first) — this is unambiguous regardless of TO definition.
+
+### 11.4 Tier NULL Default
+
+When `tier` is NULL (kodemix not fully maintained), default to **T3** as conservative fallback:
+
+```python
+df["tier"] = df["tier"].fillna("3").astype(str)
+```
+
+This prevents NULL tiers from being silently dropped in tier-based filtering (`WHERE tier IN ('1','2','3','8')`).
+
+---
+
+## 12. Analysis Methodology
 
 When the user asks for business analysis, follow this structured approach:
 
@@ -662,7 +768,7 @@ When the user asks for business analysis, follow this structured approach:
 
 ---
 
-## 12. Common Pitfalls (Avoid These)
+## 13. Common Pitfalls (Avoid These)
 
 | Pitfall | Why It Happens | Correct Approach |
 |---------|----------------|------------------|
@@ -674,10 +780,15 @@ When the user asks for business analysis, follow this structured approach:
 | Stock seems low | Only looking at one entity | UNION ALL entities or use fact_stock_unified |
 | Slow query | Querying raw tables with complex joins | Use pre-enriched core views instead (Rule 5) |
 | Mart table not found | Mart tables are ephemeral | Always check `information_schema.tables` first |
+| Accessories inflate article counts | SHOPPING BAG, HANGER etc. in sales data | Exclude non-product items (Rule 8) |
+| Unfair sales average across tiers | T1 zeros = OOS, T8 zeros = pre-launch | Use tier-aware adjusted average (Section 11.2) |
+| NULL tier silently dropped | kodemix not fully maintained for all products | Default `tier` NULL → "3" (Section 11.4) |
+| Ambiguous "TO" metric | Two competing definitions in Zuma | Output BOTH stock_coverage + turnover_rate (Section 11.3) |
+| Store stock query returns 0 | `nama_gudang` has naming variations | Check with ILIKE first, then pick exact or pattern (Rule 9) |
 
 ---
 
-## 13. Database Administration Quick Reference
+## 14. Database Administration Quick Reference
 
 ### Check ETL Status
 ```sql
@@ -735,7 +846,7 @@ ORDER BY n_live_tup DESC;
 
 ---
 
-## 14. When to Use This Skill
+## 15. When to Use This Skill
 
 **Always use this skill when:**
 - User asks to "analyze", "query", "check", "look into" any Zuma business data
@@ -755,5 +866,5 @@ ORDER BY n_live_tup DESC;
 ---
 
 **Status:** Complete
-**Last Updated:** 9 Feb 2026
-**Covers:** Database connection, schema architecture, all tables/views, ETL schedule, query rules, SQL cookbook, analysis methodology, common pitfalls, admin reference
+**Last Updated:** 11 Feb 2026
+**Covers:** Database connection, schema architecture, all tables/views, ETL schedule, query rules, data processing patterns, SQL cookbook, analysis methodology, common pitfalls, admin reference
