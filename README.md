@@ -3,7 +3,7 @@
   <br/>
   <img src="https://img.shields.io/badge/Claude_Code-Skills_Library-7C3AED?style=flat-square" alt="Claude Code"/>
   <img src="https://img.shields.io/badge/Status-Active-00E273?style=flat-square" alt="Active"/>
-  <img src="https://img.shields.io/badge/Skills-5_Installed-FF6B35?style=flat-square" alt="5 Skills"/>
+  <img src="https://img.shields.io/badge/Skills-8_Installed-FF6B35?style=flat-square" alt="8 Skills"/>
   <img src="https://img.shields.io/badge/Updated-Feb_2026-blue?style=flat-square" alt="Updated"/>
 </p>
 
@@ -109,8 +109,24 @@ zuma-business-skills/
 |   |   +-- SKILL.md                        6 cabang, jaringan toko, operasional retail
 |   |-- zuma-warehouse-and-stocks/
 |   |   +-- SKILL.md                        3 gudang, tahapan stok, sistem RO
-|   +-- zuma-data-ops/
-|       +-- SKILL.md                        PostgreSQL VPS, schema, SQL cookbook, analisis
+|   |-- zuma-data-ops/
+|   |   +-- SKILL.md                        PostgreSQL VPS, schema, SQL cookbook, analisis
+|   +-- zuma-plano-and-ro/                PLANOGRAM & RO REQUEST PIPELINE
+|       |-- PROMPT_new_planogram.md         Prompt template: generate planogram baru
+|       |-- PROMPT_ro_request.md            Prompt template: generate RO Request (single/multi store)
+|       |-- step1-planogram/                Step 1: Planogram generation
+|       |   |-- SKILL_planogram_zuma_v3.md    Skill planogram v3.2 (1400+ baris)
+|       |   |-- SKILL_planogram_zuma_v2.md    Skill planogram v2 (legacy)
+|       |   |-- build_royal_planogram.py      Script: Royal Plaza planogram
+|       |   +-- build_tunjungan_planogram.py  Script: Tunjungan Plaza planogram
+|       |-- step2-visualizations/           Step 2: Visual planogram
+|       |   |-- SKILL_visualized-plano_zuma_v1.md  Skill visualisasi v1.2
+|       |   |-- visualize_planogram.py        Script: Royal Plaza visual
+|       |   +-- visualize_tunjungan_planogram.py  Script: Tunjungan visual
+|       +-- step3-ro-request/               Step 3: RO Request & Surplus
+|           |-- SKILL.md                      Distribution flow skill (surplus/restock rules)
+|           |-- section-for-planogram.md      Planogram reference section
+|           +-- build_ro_royal_plaza.py       Script: Royal Plaza RO Request
 |
 |-- finance/                              DEPARTEMEN FINANCE (segera hadir)
 |   +-- README.md
@@ -121,6 +137,12 @@ zuma-business-skills/
 |-- README.md                             File ini
 +-- CHANGELOG.md                          Riwayat perubahan
 ```
+
+> **Pipeline Flow:**
+> ```
+> Pre-Planogram → Step 1: Planogram → Step 2: Visual Planogram → Step 3: RO Request
+> ```
+> Setiap step punya skill `.md` + script `.py` sendiri. Prompt template tersedia untuk generate planogram baru maupun RO Request mingguan.
 
 ### Kenapa Dipisah per Folder?
 
@@ -152,6 +174,16 @@ Folder departemen baru akan ditambahkan seiring ekspansi automasi AI Zuma.
 | **zuma-warehouse-and-stocks** | 385 | 3 gudang fisik (WHS/WHJ/WHB), formula stok (ready = whs - queue - picked - ...), alur status RO lengkap, variance tracking |
 | **zuma-data-ops** | 760+ | Koneksi PostgreSQL VPS, 5 schema (raw/portal/core/mart/public), definisi semua tabel/view, 7 aturan SQL kritikal (termasuk filter transaksi affiliasi), 9 template query, metodologi analisis, jadwal ETL |
 
+### Planogram & RO Pipeline (`zuma-plano-and-ro/`)
+
+| Skill / File | Baris | Apa yang Diketahui |
+|--------------|-------|--------------------|
+| **SKILL_planogram_zuma_v3** | 1400+ | Full planogram generation: tier assignment, capacity allocation, size-level target, assortment rules, DB queries, Excel output format. Versi terbaru (v3.2) |
+| **SKILL_visualized-plano_zuma_v1** | 700+ | Planogram visualization: heatmap per tier, stock vs target comparison, color coding, openpyxl styling. Versi v1.2 |
+| **zuma-distribution-flow** (SKILL.md) | 283 | Surplus & restock rules: RO Protol (<50% empty), RO Box (>=50% empty), surplus sort (slowest seller first), same-day restock+pull, WH Pusat source rules (DDD+LJBB for Box, DDD only for Protol) |
+| **PROMPT_new_planogram.md** | — | Template prompt untuk generate planogram baru (single store) |
+| **PROMPT_ro_request.md** | 172 | Template prompt untuk generate RO Request mingguan: single store, multi-store (region), custom (protol-only/box-only/surplus-only). Termasuk store name reference table |
+
 ---
 
 ## Instalasi
@@ -160,6 +192,18 @@ Folder departemen baru akan ditambahkan seiring ekspansi automasi AI Zuma.
 
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) sudah ter-install
 - Akses Git ke repo private ini
+- **Python 3.8+** dengan library berikut (untuk generate planogram & RO Request):
+
+```bash
+pip install psycopg2-binary openpyxl
+```
+
+| Library | Versi Tested | Fungsi |
+|---------|-------------|--------|
+| `openpyxl` | 3.1.5 | Baca/tulis Excel (.xlsx) — planogram, RO Request, visualisasi. Library ini yang bikin output Excel rapi dengan formatting, merged cells, conditional coloring, dll. |
+| `psycopg2-binary` | 2.9.11 | Koneksi ke PostgreSQL VPS (openclaw_ops) — query stock, sales, warehouse data |
+
+> **Tanpa `openpyxl`**, AI agent tidak bisa generate file Excel yang rapi. Pastikan sudah ter-install.
 
 ### Cara Cepat (Recommended)
 
@@ -293,7 +337,7 @@ cp -r ops/* ~/.claude/skills/
 ## Visi ke Depan
 
 ```
-  SEKARANG (v1.0)                           NANTI
+  SEKARANG (v1.1)                           NANTI
   ===============                           ====
 
   +----------+                    +----------+----------+----------+
@@ -301,12 +345,12 @@ cp -r ops/* ~/.claude/skills/
   |  1 skill |                    |   2+     |   2+     |   2+     |
   +----------+                    +----------+----------+----------+
   |  ops/    |                    |  ops/    |creative/ |  sales/  |
-  |  4 skill |                    |   8+     |   3+     |   3+     |
+  |  8 skill |                    |  12+     |   3+     |   3+     |
   +----------+                    +----------+----------+----------+
 
-  5 skills                        20+ skills lintas departemen
-  covering ops                    covering seluruh bisnis
-  & brand context                 = Otak AI Zuma yang Lengkap
+  8 skills + 2 prompts            20+ skills lintas departemen
+  covering ops, planogram,        covering seluruh bisnis
+  RO request & brand context      = Otak AI Zuma yang Lengkap
 ```
 
 Setiap skill baru bikin setiap AI agent makin pinter soal bisnis Zuma.

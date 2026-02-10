@@ -1,5 +1,10 @@
-[Uploading SKILL.md…]()
-# Flow Distribusi: Surplus & Restock
+---
+name: zuma-distribution-flow
+description: Zuma store distribution flow — surplus pull, restock (RO Protol/Box), and weekly RO Request generation. Covers decision logic, tier rules, output format, and Python script reference. Use when generating RO Request, calculating surplus, or working with store replenishment.
+user-invocable: false
+---
+
+# Flow Distribusi: Surplus & Restock + RO Request Generation
 
 ## Overview
 
@@ -280,3 +285,251 @@ Restock prioritas berdasarkan sales contribution: T1 → T2 → T3. T4/T5 hanya 
 
 ### 8. T8 di toko over-capacity parah
 Manual override oleh Planner. Documented: alasan, expected impact. T8 yang ditarik → gudang protol → redistribute ke toko lain yang masih dalam protection period.
+
+---
+
+## RO REQUEST GENERATION (Weekly Document)
+
+### Apa Itu RO Request?
+
+RO Request adalah dokumen mingguan yang dihasilkan oleh sistem (atau AI agent) dan diserahkan dari **Area Supervisor** ke **Warehouse Supervisor**. Dokumen ini berisi:
+1. Daftar barang yang perlu dikirim ke toko (RO Protol + RO Box)
+2. Daftar barang yang perlu ditarik dari toko (Surplus Pull)
+3. Cover page + signature block sebagai dokumen resmi handover
+
+### Pipeline
+
+```
+Pre-Planogram → Planogram (Step 1) → Visual Planogram (Step 2) → RO Request (Step 3)
+```
+
+RO Request **membutuhkan planogram** sebagai input. Tanpa planogram, tidak ada target per artikel per ukuran, sehingga RO Request tidak bisa dihitung.
+
+### Data Sources
+
+| Data | Source | Query |
+|------|--------|-------|
+| Store stock | `core.stock_with_product` | `WHERE LOWER(nama_gudang) LIKE '%{store_pattern}%'` |
+| WH Pusat Box | `core.stock_with_product` | `WHERE LOWER(nama_gudang) = 'warehouse pusat'` (DDD + LJBB) |
+| WH Pusat Protol | `core.stock_with_product` | `WHERE LOWER(nama_gudang) = 'warehouse pusat protol'` (DDD only) |
+| Sales (3 month) | `core.sales_with_product` | `WHERE tanggal >= NOW() - INTERVAL '3 months'` + exclude intercompany |
+| Planogram targets | Excel file | `RO Input {Region}.xlsx` → sheet "Planogram" |
+
+### RO Type Decision Logic
+
+```python
+assortment_sizes = number of sizes in planogram for this article
+empty_sizes = sizes where store stock = 0
+pct_empty = empty_sizes / assortment_sizes
+
+if pct_empty >= 0.50:
+    ro_type = "RO_BOX"    # Send full box (12 pairs, all sizes) from Gudang Box
+else:
+    ro_type = "RO_PROTOL"  # Send individual pairs only for empty sizes from Gudang Protol
+```
+
+### Surplus Detection Logic
+
+```python
+# Only check articles in tier T1, T2, T3
+# Skip T4 (clearance), T5 (slow moving), T8 (new launch protection 3 months)
+
+for each article on planogram where tier in [1, 2, 3]:
+    if article NOT in store stock (completely absent):
+        → NOT surplus (needs restock)
+    if article has sizes with stock > target:
+        excess_pairs = stock - target (per size)
+        if excess_pairs > 0:
+            → SURPLUS CANDIDATE
+
+# Sort surplus candidates by avg_monthly_sales ASC (slowest sellers pulled first)
+# This is UNAMBIGUOUS regardless of TO definition used
+```
+
+### WH Source Rules
+
+| Type | Warehouse | Entities | Notes |
+|------|-----------|----------|-------|
+| RO Box | Warehouse Pusat (Box) | DDD + LJBB | LJBB exclusive for Box only |
+| RO Protol | Warehouse Pusat Protol | DDD only | No LJBB for protol |
+| Surplus destination | Warehouse Pusat Protol | — | All surplus goes to protol gudang |
+
+**IMPORTANT**: RO Box only from Warehouse Pusat — NOT from WHJ or WHB.
+
+### Output Format: Excel (.xlsx) — 5 Sheets
+
+The output is an official document format with cover page and signature block.
+
+#### Sheet 1: "RO Request" (Cover Page)
+
+```
+Row 2:  WEEKLY RO REQUEST                          (bold, 16pt, green fill)
+Row 3:  {Store Name}                               (bold, 14pt)
+Row 5:  Week of:          {date}
+Row 6:  Stock Snapshot:   {date}
+Row 7:  Storage Capacity: {N} boxes
+Row 9:  From:  Area Supervisor     ___________________________
+Row 10: To:    Warehouse Supervisor ___________________________
+
+Row 12: REQUEST SUMMARY                            (bold, green fill)
+Row 13: Type | Articles | Total | Source/Destination | See Sheet  (header row, bold)
+Row 14: RO PROTOL | {N} | {N} pairs | FROM: WH Pusat Protol | Daftar RO Protol
+Row 15: RO BOX   | {N} | {N} boxes | FROM: WH Pusat Box    | Daftar RO Box
+Row 16: SURPLUS  | {N} | {N} pairs | TO: WH Pusat Protol   | Daftar Surplus
+
+Row 19: INSTRUCTIONS
+Row 20-24: (numbered instructions — restock+surplus same day, priority protol first)
+
+Row 27: SIGNATURES
+Row 28: [Prepared by] [Approved by] [Received by]
+Row 29-31: Name/Date/Signature lines
+```
+
+#### Sheet 2: "Daftar RO Protol" (One Row Per Article)
+
+```
+Header rows 1-4: title, store, date, source info
+Row 6 (header): No | Article | Kode Mix | Tier | Sizes Needed (size:qty) | Total Pairs
+Row 7+: numbered data rows
+
+Example row:
+  1 | LADIES FLO 1, BLACK | L1FL0LV101 | 1 | 36:1, 37:2, 38:4, 39:3, 40:2 | 12
+
+Last row: TOTAL PAIRS = {sum}
+```
+
+**Key format**: Sizes Needed uses `size:qty` format, comma-separated. This shows the WH picker exactly which sizes and how many pairs to pick.
+
+**Sorting**: By Tier ASC, then by Article name ASC within each tier.
+
+#### Sheet 3: "Daftar RO Box" (One Row Per Article, 1 Box)
+
+```
+Header rows 1-4: title, store, date, source info + "Total: {N} boxes"
+Row 6 (header): No | Article | Kode Mix | Tier | Box Qty | WH Available
+Row 7+: numbered data rows
+
+Example row:
+  1 | LADIES CLASSIC 1, JET BLACK | SJ2ACAV201 | 1 | 1 | NO
+
+Last row: TOTAL BOXES = {sum}
+```
+
+**Key format**: Box Qty is always 1 (1 box = 12 pairs, all sizes). WH Available shows YES/NO based on warehouse stock check.
+
+**Sorting**: By Tier ASC, then by Article name ASC within each tier.
+
+#### Sheet 4: "Daftar Surplus" (Size-Level Detail)
+
+```
+Header rows 1-4: title, store, date, destination info + "Total: {N} articles, {N} pairs"
+Row 6 (header): No | Article | Kode Mix | Size | Pairs to Pull
+Row 7+: numbered data rows (one row per article+size combination)
+
+Example rows:
+  1 | MEN STRIPE 1, BLACK BLUE RED | M1SP0PV201 | 40 | 3
+  2 | MEN STRIPE 1, BLACK BLUE RED | M1SP0PV201 | 42 | 3
+
+Last row: TOTAL PAIRS = {sum}
+```
+
+**Key format**: Size-level detail because WH pickers need exact size to pull from display. Same article appears multiple times if multiple sizes are surplus.
+
+**Sorting**: By avg_monthly_sales ASC (slowest sellers first — these get pulled first).
+
+#### Sheet 5: "Reference" (Internal Use Only)
+
+```
+Row 1: REFERENCE DATA (Internal Use)
+
+Section 1 — Tier Capacity Analysis:
+  Tier | Ideal (Planogram) | Ideal % | Actual (Stock) | Actual % | Diff | Status
+
+Section 2 — Full Article Status:
+  Article | Kode Mix | Gender | Series | Tier | Target | Actual | Gap | % Kosong | RO Type | Avg Monthly Sales | Stock Coverage
+
+Section 3 — Off-Planogram Articles (if any):
+  Articles found in store stock but NOT in planogram — flagged for review.
+```
+
+### Script Reference
+
+**File**: `build_ro_royal_plaza.py` (in `step3-ro-request/` folder)
+
+**Dependencies** (must be installed):
+```bash
+pip install psycopg2-binary openpyxl
+```
+
+**Key Config Variables** (top of script):
+```python
+STORE_NAME = "Zuma Royal Plaza"          # Display name
+STORE_DB_PATTERN = "zuma royal plaza"     # For ILIKE match in DB
+STORAGE_CAPACITY = 0                      # Number of storage boxes (0 = no storage)
+RO_BOX_THRESHOLD = 0.50                   # >=50% sizes empty → RO Box
+SURPLUS_CHECK_TIERS = [1, 2, 3]           # Only T1/T2/T3 checked for surplus
+PLANOGRAM_FILE = "../RO Input Jatim.xlsx" # Relative path to planogram
+PLANOGRAM_SHEET = "Planogram"             # Sheet name in planogram file
+```
+
+**DB Connection** (in script):
+```python
+DB_HOST = "76.13.194.120"
+DB_PORT = 5432
+DB_NAME = "openclaw_ops"
+DB_USER = "openclaw_app"
+DB_PASS = "Zuma-0psCl4w-2026!"
+```
+
+**To generate for a different store**: Copy the script, change `STORE_NAME`, `STORE_DB_PATTERN`, `STORAGE_CAPACITY`, and ensure the planogram file has rows for that store.
+
+### Known Limitations & Pending Clarifications
+
+1. **TO Metric** — Two definitions coexist in Zuma:
+   - (a) Stock Coverage = stock / monthly_sales (months of stock remaining). High = slow.
+   - (b) Turnover Rate = monthly_sales / stock (sales velocity). Low = slow.
+   Script outputs both. Surplus sorts by `avg_monthly_sales ASC` which is unambiguous.
+   → **PENDING**: Ask Allocation Planner team which label to standardize on.
+
+2. **Ideal Tier Capacity %** — No official per-store tier targets exist yet. Script derives ideal from planogram article count per tier.
+   → **PENDING**: Ask Planner for real per-store tier capacity targets.
+
+3. **RO Protol Total Pairs accuracy** — Some `Total Pairs` show 0 because WH Protol stock for those sizes is 0. The "Sizes Needed" column still shows what's needed, but total reflects what can actually be fulfilled.
+
+4. **Storage = 0 stores** — Every RO Box creates immediate surplus for sizes already in stock. The Allocation Planner must pre-plan redistribution before approving.
+
+### Example Output (Royal Plaza, 10 Feb 2026)
+
+| Metric | Count |
+|--------|-------|
+| RO Protol articles | 47 |
+| RO Protol total pairs | 208 |
+| RO Box articles | 42 |
+| RO Box total boxes | 42 |
+| Surplus articles | 24 |
+| Surplus total pairs | 179 |
+| Off-Planogram articles | 41 |
+
+### Styling Reference (openpyxl)
+
+The Excel output uses consistent branding:
+
+| Element | Style |
+|---------|-------|
+| Title row | Font 16pt bold, fill `#00E273` (Zuma Green), white text |
+| Store name | Font 14pt bold |
+| Section headers | Font 12pt bold, fill `#00E273` |
+| Table headers | Font 10pt bold, fill `#2E7D32` (dark green), white text |
+| Data rows | Font 10pt, alternating white/`#E8F5E9` (light green) |
+| Borders | Thin borders on all data cells |
+| Column widths | Auto-fit with min/max constraints |
+| Summary values | Bold, right-aligned |
+| Total row | Bold, top border |
+
+### How to Use This Skill (For AI Agents)
+
+1. **Load dependencies**: `zuma-data-ops` (DB connection), `zuma-sku-context` (tier system, Kode Mix), `zuma-warehouse-and-stocks` (WH names, RO flow)
+2. **Check planogram exists**: RO Request requires planogram. If none exists, generate one first using `SKILL_planogram_zuma_v3.md`
+3. **Run script or generate equivalent**: Either execute `build_ro_royal_plaza.py` directly, or replicate its logic in a new script for a different store
+4. **Output validation**: Check that all 5 sheets are populated, totals match, WH availability is checked
+5. **Hand to user**: The Excel is ready to print and hand from AS to WH Supervisor

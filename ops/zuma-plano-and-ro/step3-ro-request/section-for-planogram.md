@@ -1,6 +1,6 @@
-## 1.11 Distribution Flow: Restock & Surplus
+## 1.11 Distribution Flow: Restock & Surplus → RO Request
 
-Sistem distribusi terdiri dari 2 flow utama, keduanya di-trigger otomatis oleh sistem dengan kontrol eksekusi oleh **Allocation Planner**.
+Sistem distribusi terdiri dari 2 flow utama, keduanya di-trigger otomatis oleh sistem dengan kontrol eksekusi oleh **Allocation Planner**. Output akhir dari flow ini adalah **RO Request** — dokumen resmi mingguan yang diserahkan dari Area Supervisor ke Warehouse Supervisor.
 
 ### 1.11.1 Gudang & Tipe RO
 
@@ -188,3 +188,27 @@ RECLASSIFICATION (Bulan ke-4)
 6. **Gudang box kosong**: Flag procurement untuk PO. Cek gudang protol untuk rakit assortment sementara
 7. **Semua tier under-capacity**: Restock prioritas: T1 → T2 → T3 berdasarkan sales contribution
 8. **T8 reclassified ke T4/T5**: Masuk clearance, tidak ditarik surplus, biarkan habis atau markdown
+
+### 1.11.7 RO Request Output (Step 3)
+
+Semua logic di atas menghasilkan **RO Request** — dokumen Excel 5 sheet:
+
+| Sheet | Isi | Format |
+|-------|-----|--------|
+| RO Request | Cover page, summary (protol/box/surplus count), instructions, signature block | Dokumen resmi AS → WH Supervisor |
+| Daftar RO Protol | 1 row per artikel: No, Article, Kode Mix, Tier, Sizes Needed (size:qty), Total Pairs | Grouped by size — WH picker tau size mana aja yang perlu diambil |
+| Daftar RO Box | 1 row per artikel: No, Article, Kode Mix, Tier, Box Qty (always 1), WH Available (YES/NO) | 1 box = 12 pairs all sizes |
+| Daftar Surplus | 1 row per artikel+size: No, Article, Kode Mix, Size, Pairs to Pull | Size-level detail untuk WH picker tarik dari display |
+| Reference | Tier capacity analysis + full article status + off-planogram articles | Internal use (tidak dicetak) |
+
+**Pipeline dependency**: RO Request membutuhkan planogram sebagai input.
+
+```
+Pre-Planogram → Planogram (Step 1) → Visual Planogram (Step 2) → RO Request (Step 3)
+```
+
+**Script**: `build_ro_{store}.py` — configurable per store via `STORE_NAME`, `STORE_DB_PATTERN`, `STORAGE_CAPACITY`.
+
+**Dependencies**: `pip install psycopg2-binary openpyxl`
+
+Lihat `SKILL.md` (zuma-distribution-flow) untuk dokumentasi lengkap format output, styling, dan script reference.
