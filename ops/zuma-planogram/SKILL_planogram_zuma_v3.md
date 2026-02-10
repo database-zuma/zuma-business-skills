@@ -53,6 +53,19 @@ Jika user belum memberikan info berikut, tanyakan:
 - Jumlah hooks per unit bervariasi per toko — SELALU lihat dari denah
 - Gender-type mana masuk ke unit mana BISA direkomendasikan oleh AI (bukan fix)
 
+**MIXED-HOOK BACKWALL (beberapa store):**
+
+Beberapa toko punya 1 backwall fisik yang dibagi menjadi 2+ section dengan gender-type/HPA berbeda. Contoh: Tunjungan Plaza BW-4 kanan = Elsa (fashion, 3 hpa) + Classic (jepit, 2 hpa) di satu unit fisik.
+
+```
+Handling:
+1. SPLIT menjadi sub-unit logis: BW-4a-Elsa, BW-4a-Classic
+2. Setiap sub-unit diperlakukan sebagai backwall terpisah
+3. Setiap sub-unit punya hooks, HPA, dan series filter sendiri
+4. Dalam XLSX output, buat sheet terpisah per sub-unit
+5. Dalam visual output, render sebagai satu blok fisik tapi dengan divider
+```
+
 ### 1.3.2 Hook Capacity per Article Type
 
 Setiap tipe artikel punya **full box mode** (default) dan **compact mode** (untuk maximize variety).
@@ -160,7 +173,41 @@ Contoh rak 3 layer:
 - Availability VM tools beda per toko — harus ditanyakan
 - Display mode: 1-2 pairs per artikel, sisanya ke storage
 
-### 1.3.7 Luca/Luna/Airmove Special Rules
+### 1.3.7 Shelving Display
+
+- Rak/shelf standalone atau terintegrasi dalam backwall (bukan hook)
+- Bisa standalone (unit terpisah di lantai) atau bagian dari backwall (1-2 kolom di BW dikonversi jadi shelf)
+- Kapasitas: **VARIABLE per toko** — biasanya 1-5 artikel per unit
+- Display mode: **sample display** (1-2 pairs per artikel ditunjukkan, sisa ke storage)
+- Storage impact: **~10 pairs per artikel** (1 box = 12 pairs, display 2, storage 10)
+- Biasa dipakai untuk: Airmove, Puffy, atau series lain yang butuh display shelf bukan hook
+
+**Contoh:**
+```
+Tunjungan Plaza:
+  - Airmove Shelving (terintegrasi di BW-1): 3 artikel Airmove
+  - Puffy Shelving (terintegrasi di BW-2): 1 artikel Puffy
+  - Storage impact: (3+1) × ~10 pairs = ~40 pairs ≈ 4 box
+```
+
+**Rule:** Artikel di shelving TIDAK mengurangi hook count backwall induknya. Shelving dihitung sebagai unit terpisah.
+
+### 1.3.8 Table Baby
+
+- Meja datar (BUKAN rak bertingkat) khusus untuk display artikel Baby & Kids
+- Berbeda dari Rak Baby: Table = flat surface, Rak = multi-layer shelving
+- Kapasitas: **VARIABLE per toko** — biasanya 4-8 artikel
+- Display mode: **sample display** (~6 pairs per artikel di meja, sisa ke storage)
+- Storage impact: **~6 pairs per artikel** (setengah box)
+
+```
+Perbedaan Table Baby vs Rak Baby:
+  - TABLE BABY: Meja datar, 1 layer, 4-8 artikel, 6 pairs/artikel di display
+  - RAK BABY: Rak bertingkat, 2-3 layer, 1-2 artikel/layer, 6 pairs/layer
+  - Toko bisa punya salah satu atau keduanya — TANYAKAN
+```
+
+### 1.3.9 Luca/Luna/Airmove Special Rules
 
 **CRITICAL RULES:**
 ```
@@ -179,7 +226,7 @@ Contoh: Toko A punya storage 10 box, assign 3 artikel Luca/Luna/Airmove
   → Sisa 7 box untuk fast moving articles lainnya
 ```
 
-### 1.3.8 Ketersediaan Display per Toko
+### 1.3.10 Ketersediaan Display per Toko
 
 PENTING: Tidak semua toko punya semua tipe display. Contoh:
 - Toko A: hanya backwall + gondola (no table, no rak)
@@ -190,7 +237,74 @@ PENTING: Tidak semua toko punya semua tipe display. Contoh:
 
 ---
 
-## 1.4 Tier System & Sales Logic
+## 1.4 Series Reference List (dari DB, updated Feb 2026)
+
+**CRITICAL: Sebelum membuat planogram, SELALU query distinct series dari DB untuk store target.** List di bawah ini sebagai REFERENSI, bukan sumber kebenaran — series baru bisa muncul kapan saja.
+
+### Series per Gender-Type
+
+**MEN FASHION:**
+AIRMOVE (3), CAMO (4), CLOUD (6), DALLAS (12), GUDETAMA (1), HANZO (3), LEON (3), LOONEY (1), LUCA (8), ONYX (13), POWERMAX (2), ROCKY (5), SLIDE (18), SUMMER (12), XANDER (7), ZORRO (6)
+
+**MEN JEPIT:**
+BLACKSERIES (21), CAMO (3), CLASSIC (31), CLASSICEARTH (4), LAYERSOLE (3), PILLOW (20), SOLID (1), STRIPE (17), SUMMER (4), TWOTONE (1)
+
+**LADIES FASHION:**
+AYANG (4), CAMO (5), ELSA (14), ELSA SURFERGRIL (4), FLO (10), FREYA (6), GUDETAMA (3), IRIS (4), JOVIEV (3), KIM (5), LOONEY (2), LUNA (7), MERCI (5), PUFFY (10), STITCH (2), STRAPP (6), SUMMER (12), SURFERGRIL (3), TROPICAL (2), WEDGES (12)
+
+**LADIES JEPIT:**
+CLASSIC (36), CLASSIC METALIC (9), CLASSICEARTH (5), DOUGH DARLINGS (1), HELLO KITTY (1), LAYERSOLE (1), PILLOW (19), SOLID (3), STRIPE (12), SUMMER (4), TWOTONE (2)
+
+**BABY FASHION:**
+COCOMELON (3), DISNEY (4), LOTSO (1), MICKEY (1), MILTON (3), MINNIE (3), OXFORD (3), POOH (3), PRINCESS (4), STITCH (2), TOY STORY (3), VELCRO (6), WBB (3)
+
+**BABY JEPIT:**
+BATMAN (2), CLASSIC (12), HELLOKITTY (4), MICKEY (1), MICKEY & FRIENDS (3), WBB (2)
+
+**BOYS FASHION:**
+DOVER (1), ONYX (3), SLIDE (3), SPIDER-MAN (3), STITCH (1), VELCRO (3)
+
+**BOYS JEPIT:**
+BATMAN (2), CLASSIC (6), DISNEY (3), GUDETAMA (2), MICKEY (5), SPACEJAM (4), STRIPE (6), TOY STORY (2)
+
+**GIRLS FASHION:**
+DOVER (1), STITCH (1), VELCRO (3)
+
+**GIRLS JEPIT:**
+CLASSIC (7), DISNEY (3), GUDETAMA (2), MINNIE (5), STRIPE (6)
+
+**JUNIOR JEPIT:**
+CLASSIC (4)
+
+**KIDS JEPIT:**
+LEEVIERRA (3)
+
+### Series Naming Gotchas (FILTER TRAPS)
+
+**CRITICAL WARNING:** Beberapa series punya nama yang overlap. Jika filter pakai exact match "CLASSIC", akan MISS series "CLASSIC METALIC" dan "CLASSICEARTH".
+
+| Parent Series | Sub-variants yang JUGA ADA di DB | Impact jika terlewat |
+|---|---|---|
+| `CLASSIC` | `CLASSIC METALIC`, `CLASSICEARTH` | Miss T1 articles, CRITICAL |
+| `ELSA` | `ELSA SURFERGRIL` | Miss fashion articles |
+| `MICKEY` | `MICKEY & FRIENDS` | Miss baby articles |
+
+**SOLUSI:**
+```
+JANGAN: series_filter = ["CLASSIC"]
+LAKUKAN: series_filter = ["CLASSIC", "CLASSIC METALIC", "CLASSICEARTH"]
+
+Atau lebih aman — query dulu:
+SELECT DISTINCT series FROM core.sales_with_product
+WHERE matched_store_name = '{store}'
+  AND gender = '{gender}' AND tipe = '{tipe}'
+  AND series IS NOT NULL
+→ Gunakan SEMUA series dari hasil query sebagai filter
+```
+
+---
+
+## 1.5 Tier System & Sales Logic
 
 ### 1.4.1 Tier Definitions (recap)
 
@@ -253,7 +367,7 @@ DO NOT DISPLAY:
 
 ---
 
-## 1.5 Zone Optimization
+## 1.6 Zone Optimization
 
 Jika data SPG insight tersedia (customer flow, hot/cold zone), gunakan untuk optimasi penempatan:
 
@@ -285,7 +399,7 @@ Jika artikel di cold zone punya sales tinggi → kemungkinan artikel kuat, tapi 
 
 ---
 
-## 1.6 Storage Allocation Rules
+## 1.7 Storage Allocation Rules
 
 ### Priority Order:
 ```
@@ -352,7 +466,7 @@ SEBELUM memutuskan compact mode, HITUNG DULU:
 
 ---
 
-## 1.7 Baby & Kids Special Handling
+## 1.8 Baby & Kids Special Handling
 
 Artikel Baby & Kids punya display components khusus (rak & keranjang) selain backwall/gondola.
 
@@ -368,7 +482,7 @@ Assignment logic:
 
 ---
 
-## 1.8 Output Format
+## 1.9 Output Format
 
 ### 1.8.1 Planogram Sheet
 
@@ -413,7 +527,7 @@ Wajib sertakan:
 
 ---
 
-## 1.9 Gender-Type Assignment ke Display Unit
+## 1.10 Gender-Type Assignment ke Display Unit
 
 Ketika merekomendasikan gender-type mana masuk ke backwall/gondola mana, pertimbangkan:
 
@@ -436,7 +550,7 @@ Ketika merekomendasikan gender-type mana masuk ke backwall/gondola mana, pertimb
 
 ---
 
-## 1.10 Edge Cases & Fallbacks
+## 1.11 Edge Cases & Fallbacks
 
 ### Slot lebih banyak dari artikel eligible
 - Isi dengan T3 untuk variety
@@ -1544,9 +1658,15 @@ Cara jalankan:
 
 ---
 
-*Version: 3.1 — Section 4 (Step 2 Denah Planogram reference) added*
+*Version: 3.2 — Added mixed-hook BW, shelving, table baby, complete series reference*
 *Last Updated: 10 February 2026*
 *Changelog:*
+- *v3.2: Added Section 1.3.1 mixed-hook backwall guidance (split sub-units)*
+- *v3.2: Added Section 1.3.7 Shelving Display (standalone/integrated, ~10 pairs storage/article)*
+- *v3.2: Added Section 1.3.8 Table Baby (flat table vs rak baby distinction)*
+- *v3.2: Added Section 1.4 Complete series reference list from DB (all gender-type combos)*
+- *v3.2: Added Series naming gotchas (CLASSIC/CLASSIC METALIC/CLASSICEARTH trap)*
+- *v3.2: Fixed section numbering (1.5-1.11)*
 - *v3.1: Added Section 4 (Step 2 — Denah Planogram reference with "ask user first" protocol)*
 - *v3.0: Added Section 3 (AI Agent Gotchas, Reference Implementation, Execution Order, Extended Checklist)*
 - *v3.0: Added DB data source (Option A) to Section 2.1.1 with column mapping and connection details*
