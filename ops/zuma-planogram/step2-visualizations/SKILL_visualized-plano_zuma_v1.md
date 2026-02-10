@@ -1,6 +1,6 @@
 ---
 name: visualized-planogram-zuma
-description: Tool untuk membuat VISUALISASI planogram (bird's-eye floor plan) toko Zuma dari output XLSX planogram Step 1. Menghasilkan gambar layout fisik toko dengan penempatan artikel per hook, color-coded per series/tier. Gunakan setelah SKILL_planogram_zuma_v2.md selesai menghasilkan XLSX.
+description: Tool untuk membuat VISUALISASI planogram (bird's-eye floor plan) toko Zuma dari output XLSX planogram Step 1. Menghasilkan gambar layout fisik toko dengan penempatan artikel per hook, color-coded per series/tier. Gunakan setelah SKILL_planogram_zuma_v3.md selesai menghasilkan XLSX.
 user-invocable: true
 ---
 
@@ -8,7 +8,7 @@ user-invocable: true
 
 Kamu adalah PLANOGRAM VISUALIZER untuk ZUMA Footwear Retail. Tugasmu mengubah output data planogram (XLSX dari Step 1) menjadi **gambar visual bird's-eye floor plan** yang menunjukkan penempatan fisik setiap artikel di toko.
 
-**Prerequisite:** Step 1 harus sudah selesai — yaitu XLSX planogram dari `SKILL_planogram_zuma_v2.md` / `build_royal_planogram.py` sudah dihasilkan.
+**Prerequisite:** Step 1 harus sudah selesai — yaitu XLSX planogram dari `SKILL_planogram_zuma_v3.md` / `build_*_planogram.py` sudah dihasilkan.
 
 ---
 
@@ -97,17 +97,60 @@ Selain color-by-series, bisa juga color-by-tier:
 | T2 | Yellow | `#FFFFCC` |
 | T3 | Grey | `#D9D9D9` |
 
-### 1.3.3 Non-Display Elements
+### 1.3.3 Shelving & Table Display Elements
+
+| Element | Style | Notes |
+|---------|-------|-------|
+| SHELVING (Airmove, Puffy, etc.) | Light blue/green bg, dashed border | Label: "SHELVING [SERIES]", list articles inside |
+| TABLE LUCA LUNA | White bg, thick border, centered | Label: "TABLE LUCA LUNA", list articles |
+| TABLE BABY | Light yellow bg, thick border | Label: "TABLE BABY", list articles |
+| MIXED-HOOK BW | Single block, internal divider line | Split sections with different colors per section |
+
+**Rendering:**
+- Shelving terintegrasi di BW: render sebagai kolom terakhir di BW dengan warna/style berbeda + label "SHELVING"
+- Shelving standalone: render sebagai blok terpisah di layout
+- Table: render sebagai rectangle dengan list artikel di dalamnya
+- Mixed BW (e.g., BW-4a Elsa + Classic): render sebagai satu blok fisik, tapi beri garis pemisah antara section dan label per section
+
+### 1.3.4 Non-Display Elements
 
 | Element | Style |
 |---------|-------|
 | KASIR (Cashier) | White bg, black border, centered text |
-| AIRMOVE/LUCA/LUNA display | White bg, black border, centered text |
-| ENTRANCE | Arrow/text marker |
+| KURSI (Chair/Seating) | White bg, thin border, centered text |
+| ENTRANCE / Depan | Arrow/text marker |
 | EMPTY HOOKS | Dotted border or light fill |
 | WALLS | Thick black border on exterior |
 
 ## 1.4 Dimensi & Grid System
+
+### Portal Layout Interpretation Guide
+
+**Cara membaca layout dari portal_planogram_[region].xlsx:**
+
+Portal planogram punya layout visual di kolom tinggi (biasanya AX-BW). Beberapa konvensi:
+
+```
+"7 BARIS" = 7 rows of hooks (kedalaman/tinggi backwall), BUKAN jumlah artikel
+"8X7"     = 8 kolom artikel × 7 baris hook = display 8 artikel, setiap artikel menempati 7 hook vertikal
+
+Merged cells = satu display unit (backwall/landmark)
+Warna cell   = series assignment existing
+Text di cell = series name atau label landmark
+```
+
+**Estimasi hooks dari layout portal:**
+```
+Jika layout menunjukkan N kolom artikel:
+  Fashion (3 hook/artikel): total hooks = N × 7 (baris) — tapi yg relevan = N artikel × 3 hpa
+  Jepit (2 hook/artikel):   total hooks = N × 7 (baris) — tapi yg relevan = N artikel × 2 hpa
+
+Actual capacity (artikel) = jumlah kolom di layout visual
+  → Bukan dihitung dari total hooks ÷ hpa
+  → Karena layout sudah menunjukkan berapa artikel muat
+
+Jika ragu: tanyakan user, atau hitung dari denah fisik
+```
 
 ### Backwall/Gondola Dimensions
 
@@ -867,6 +910,12 @@ Jawab berdasarkan Section 1-3 di atas. Jangan mengarang format baru — ikuti ex
 
 ---
 
-*Version: 1.1 — Updated with implementation reference and verified output specs*
+*Version: 1.2 — Updated v3 references, added shelving/table/mixed-BW visual elements, portal interpretation guide*
 *Last Updated: 10 February 2026*
-*Prerequisite: SKILL_planogram_zuma_v2.md v3.0 (Step 1 must complete first)*
+*Prerequisite: SKILL_planogram_zuma_v3.md v3.2 (Step 1 must complete first)*
+*Changelog:*
+- *v1.2: Fixed v2→v3 reference in description/prerequisite*
+- *v1.2: Added Section 1.3.3 Shelving & Table display visual elements*
+- *v1.2: Added Section 1.3.4 KURSI to non-display elements*
+- *v1.2: Added Portal Layout Interpretation Guide (how to read "7 BARIS", "8X7")*
+- *v1.1: Implementation reference and verified output specs*
