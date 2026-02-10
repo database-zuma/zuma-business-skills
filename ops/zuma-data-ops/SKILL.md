@@ -47,6 +47,19 @@ psql -U openclaw_app -d openclaw_ops
 PGPASSWORD='Zuma-0psCl4w-2026!' psql -h 76.13.194.120 -U openclaw_app -d openclaw_ops
 ```
 
+**Python (psycopg2 + pandas) — used by all Zuma scripts:**
+```python
+import psycopg2
+import pandas as pd
+
+DB = dict(host="76.13.194.120", port=5432, dbname="openclaw_ops",
+          user="openclaw_app", password="Zuma-0psCl4w-2026!")
+
+conn = psycopg2.connect(**DB)
+df = pd.read_sql("SELECT * FROM core.sales_with_product LIMIT 10", conn)
+conn.close()
+```
+
 **Looker Studio / BI Tools:**
 - Use host, port, database, user, password above
 - For Looker Studio: connect to `public` schema (mirrors of core views are there)
