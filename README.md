@@ -3,7 +3,7 @@
   <br/>
   <img src="https://img.shields.io/badge/Claude_Code-Skills_Library-7C3AED?style=flat-square" alt="Claude Code"/>
   <img src="https://img.shields.io/badge/Status-Active-00E273?style=flat-square" alt="Active"/>
-  <img src="https://img.shields.io/badge/Skills-8_Installed-FF6B35?style=flat-square" alt="8 Skills"/>
+  <img src="https://img.shields.io/badge/Skills-10_Installed-FF6B35?style=flat-square" alt="8 Skills"/>
   <img src="https://img.shields.io/badge/Updated-Feb_2026-blue?style=flat-square" alt="Updated"/>
 </p>
 
@@ -111,9 +111,13 @@ zuma-business-skills/
 |   |   +-- SKILL.md                        3 gudang, tahapan stok, sistem RO
 |   |-- zuma-data-ops/
 |   |   +-- SKILL.md                        PostgreSQL VPS, schema, SQL cookbook, analisis
+|   |-- notion-metrics/                   STORE PERFORMANCE METRICS
+|   |   +-- SKILL_ff_fa_fs.md               FF/FA/FS fill rate calculation (1300+ baris)
 |   +-- zuma-plano-and-ro/                PLANOGRAM & RO REQUEST PIPELINE
 |       |-- PROMPT_new_planogram.md         Prompt template: generate planogram baru
 |       |-- PROMPT_ro_request.md            Prompt template: generate RO Request (single/multi store)
+|       |-- step0.5-pre-planogram/          Step 0.5: Pre-planogram data generation
+|       |   +-- SKILL_pre_planogram.md        Pre-planogram skill (1050+ baris)
 |       |-- step1-planogram/                Step 1: Planogram generation
 |       |   |-- SKILL_planogram_zuma_v3.md    Skill planogram v3.2 (1400+ baris)
 |       |   |-- SKILL_planogram_zuma_v2.md    Skill planogram v2 (legacy)
@@ -140,9 +144,11 @@ zuma-business-skills/
 
 > **Pipeline Flow:**
 > ```
-> Pre-Planogram → Step 1: Planogram → Step 2: Visual Planogram → Step 3: RO Request
+> Pre-Planogram (0.5) → Step 1: Planogram → Step 2: Visual Planogram → Step 3: RO Request
+>                                                                          ↓
+>                                                              notion-metrics: FF/FA/FS Report
 > ```
-> Setiap step punya skill `.md` + script `.py` sendiri. Prompt template tersedia untuk generate planogram baru maupun RO Request mingguan.
+> Setiap step punya skill `.md` + script `.py` sendiri. Prompt template tersedia untuk generate planogram baru maupun RO Request mingguan. Output Pre-Planogram juga jadi input untuk kalkulasi FF/FA/FS metric.
 
 ### Kenapa Dipisah per Folder?
 
@@ -174,10 +180,17 @@ Folder departemen baru akan ditambahkan seiring ekspansi automasi AI Zuma.
 | **zuma-warehouse-and-stocks** | 385 | 3 gudang fisik (WHS/WHJ/WHB), formula stok (ready = whs - queue - picked - ...), alur status RO lengkap, variance tracking |
 | **zuma-data-ops** | 760+ | Koneksi PostgreSQL VPS, 5 schema (raw/portal/core/mart/public), definisi semua tabel/view, 7 aturan SQL kritikal (termasuk filter transaksi affiliasi), 9 template query, metodologi analisis, jadwal ETL |
 
+### Notion Metrics (`notion-metrics/`)
+
+| Skill / File | Baris | Apa yang Diketahui |
+|--------------|-------|--------------------|
+| **SKILL_ff_fa_fs** | 1300+ | Fill Factor (size-level), Fill Article (article-level), Fill Stock (quantity depth). Kalkulasi dari VPS DB + planogram file input. Includes complete Python script, SQL templates, store name mapping (Jatim), Excel output with conditional formatting. ST (Sell-Through) documented tapi belum aktif — butuh Ringkasan Mutasi dari Accurate Online. |
+
 ### Planogram & RO Pipeline (`zuma-plano-and-ro/`)
 
 | Skill / File | Baris | Apa yang Diketahui |
 |--------------|-------|--------------------|
+| **SKILL_pre_planogram** | 1050+ | Pre-planogram data generation: analisis sales + stock → target quantity per size per store per article. 7-step pipeline. Output jadi input Step 1 (planogram layout) dan FF/FA/FS metrics. |
 | **SKILL_planogram_zuma_v3** | 1400+ | Full planogram generation: tier assignment, capacity allocation, size-level target, assortment rules, DB queries, Excel output format. Versi terbaru (v3.2) |
 | **SKILL_visualized-plano_zuma_v1** | 700+ | Planogram visualization: heatmap per tier, stock vs target comparison, color coding, openpyxl styling. Versi v1.2 |
 | **zuma-distribution-flow** (SKILL.md) | 283 | Surplus & restock rules: RO Protol (<50% empty), RO Box (>=50% empty), surplus sort (slowest seller first), same-day restock+pull, WH Pusat source rules (DDD+LJBB for Box, DDD only for Protol) |
@@ -195,11 +208,13 @@ Folder departemen baru akan ditambahkan seiring ekspansi automasi AI Zuma.
 - **Python 3.8+** dengan library berikut (untuk generate planogram & RO Request):
 
 ```bash
-pip install psycopg2-binary openpyxl
+pip install psycopg2-binary openpyxl pandas python-dotenv
 ```
 
 | Library | Versi Tested | Fungsi |
 |---------|-------------|--------|
+| `pandas` | 2.0+ | Data manipulation & SQL query results — dipakai di pre-planogram dan FF/FA/FS metric calculator |
+| `python-dotenv` | 1.0+ | Load environment variables dari .env file |
 | `openpyxl` | 3.1.5 | Baca/tulis Excel (.xlsx) — planogram, RO Request, visualisasi. Library ini yang bikin output Excel rapi dengan formatting, merged cells, conditional coloring, dll. |
 | `psycopg2-binary` | 2.9.11 | Koneksi ke PostgreSQL VPS (openclaw_ops) — query stock, sales, warehouse data |
 
@@ -348,7 +363,7 @@ cp -r ops/* ~/.claude/skills/
   |  8 skill |                    |  12+     |   3+     |   3+     |
   +----------+                    +----------+----------+----------+
 
-  8 skills + 2 prompts            20+ skills lintas departemen
+  10 skills + 2 prompts            20+ skills lintas departemen
   covering ops, planogram,        covering seluruh bisnis
   RO request & brand context      = Otak AI Zuma yang Lengkap
 ```
