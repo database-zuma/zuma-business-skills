@@ -255,14 +255,14 @@ All objects in `core` are **views** (not tables). They auto-recompute when queri
 
 | Column Group | Columns |
 |-------------|---------|
-| **Transaction** | source_entity, nomor_invoice, transaction_date, date_key, kode_besar, matched_kode_besar, kode, store_name_raw, matched_store_name, nama_barang, quantity, unit_price, total_amount, cost_of_goods, vendor_price, dpp_amount, tax_amount, warehouse_code, snapshot_date, loaded_at |
+| **Transaction** | source_entity, nomor_invoice, transaction_date, date_key, kode_besar, matched_kode_besar, kode, store_name_raw, matched_store_name, nama_barang, nama_pelanggan, is_intercompany, quantity, unit_price, total_amount, cost_of_goods, vendor_price, dpp_amount, tax_amount, warehouse_code, snapshot_date, loaded_at |
 | **Product IDs** | kode_mix, kode_mix_size, article, version |
 | **Product Attrs** | product_name, product_type, tipe, series, gender, tier, color, assortment, nama_variant, size, group_warna |
 | **Pricing** | harga_beli, price_taq, rsp |
 | **Store** | branch, area, store_category, stock_filter, as_name, bm_name |
 | **Technical** | v, count_by_assortment |
 
-**Row count:** ~1.55M rows (matches fact_sales_unified exactly, no duplicates)
+**Row count:** ~1.55M rows (48 columns, matches fact_sales_unified exactly, no duplicates)
 **Kodemix match rate:** ~94.1% (unmatched = kode_besar not in portal.kodemix)
 **Store match rate:** ~86.2%
 
@@ -1075,7 +1075,118 @@ Sebelum bisa menjalankan script apapun, pastikan semua ini sudah OK:
 
 **MANDATORY: All AI agents (Atlas, Apollo, Iris) MUST use these templates when querying Zuma data.** Adjust columns, filters, and grouping per user request, but NEVER deviate from the mandatory filters, column aliases, and source tables defined here.
 
-### 15.1 Column Alias Conventions
+### 15.1 Question Pattern Framework
+
+Every Zuma data question follows this structure:
+
+```
+"Berapa [METRIC] dari [WHAT] di [WHERE] selama [WHEN]?"
+```
+
+**Step 1 — Identify METRIC (what to measure):**
+
+| User says | Sales metric | Stock metric |
+|-----------|-------------|-------------|
+| "berapa penjualan / sales" | `SUM(quantity) AS total_pairs` | — |
+| "berapa revenue / omzet" | `SUM(total_amount) AS total_revenue` | — |
+| "berapa stok / stock" | — | `SUM(quantity) AS total_pairs` |
+| "berapa nilai stok" | — | `SUM(quantity * unit_price) AS total_stock_value` |
+| "rata-rata harga jual" | `ROUND(SUM(total_amount) / NULLIF(SUM(quantity), 0), 0) AS avg_price_per_pair` | — |
+
+**Step 2 — Identify WHAT (product granularity):**
+
+Pick the **lowest granularity** the user mentions. If they say "Classic Jet Black" → article level. If they say "Classic" → series level. If they say "Men Jepit" → gender+tipe level.
+
+| User says | GROUP BY columns | Filter |
+|-----------|-----------------|--------|
+| Specific article ("Jet Black") | `kode_mix, article` | `AND article ILIKE '%jet black%'` |
+| Series ("Classic", "Stripe") | `series` | `AND series = 'Classic'` |
+| Gender ("Men", "Ladies") | `gender` | `AND gender = 'Men'` |
+| Gender + Tipe ("Men Jepit") | `gender, tipe` | `AND gender = 'Men' AND tipe = 'Jepit'` |
+| Tier ("T1 articles") | `tier` | `AND tier = '1'` |
+| All products | _(no product grouping)_ | _(no product filter)_ |
+
+> **IMPORTANT:** Read `zuma-sku-context` skill to understand the difference between `kode_mix` (version-agnostic article), `kode_mix_size` (article+size), `kode_besar` (version-specific), `series`, `gender`, `tipe`. Getting the wrong level = wrong numbers.
+
+**Step 3 — Identify WHERE (geography level):**
+
+⚠️ **Column names are DIFFERENT between sales and stock views.** This is a common mistake.
+
+| User says | Sales column (`core.sales_with_product`) | Stock column (`core.stock_with_product`) |
+|-----------|---|---|
+| Specific store ("Royal Plaza") | `AND matched_store_name ILIKE '%royal plaza%'` | `AND nama_gudang ILIKE '%royal plaza%'` |
+| Area ("Bali 1", "Jatim") | `AND area = 'Jatim'` | `AND gudang_area = 'Jatim'` |
+| Branch ("Bali", "Jakarta") | `AND branch = 'Bali'` | `AND gudang_branch = 'Bali'` |
+| Warehouse only | `AND matched_store_name ILIKE '%warehouse%'` | `AND nama_gudang ILIKE '%warehouse%'` |
+| National (all) | _(no geo filter)_ | _(no geo filter)_ |
+| Retail stores only | `AND store_category = 'RETAIL'` | `AND gudang_category = 'RETAIL'` |
+
+> **TRAP:** Using `branch` on stock view returns NULL — stock uses `gudang_branch`. Using `matched_store_name` on stock view doesn't exist — stock uses `nama_gudang`. Always check which view you're querying.
+
+**Step 4 — Identify WHEN (time period):**
+
+| User says | Sales filter | Stock filter |
+|-----------|-------------|-------------|
+| "bulan ini" | `AND transaction_date >= DATE_TRUNC('month', CURRENT_DATE)` | _(no filter — always latest snapshot)_ |
+| "3 bulan terakhir" | `AND transaction_date >= CURRENT_DATE - INTERVAL '3 months'` | N/A |
+| "YTD" / "tahun ini" | `AND transaction_date >= DATE_TRUNC('year', CURRENT_DATE)` | N/A |
+| "2024" | `AND transaction_date >= '2024-01-01' AND transaction_date < '2025-01-01'` | N/A |
+| "Jan-Mar 2025" | `AND transaction_date >= '2025-01-01' AND transaction_date < '2025-04-01'` | N/A |
+| Not specified | Default: `AND transaction_date >= CURRENT_DATE - INTERVAL '3 months'` | N/A |
+
+> **Stock has NO period filter.** Stock data is always the latest daily snapshot (overwrites every morning). There is no historical stock — only "stock right now."
+
+**Step 5 — Pick template and assemble:**
+
+```
+1. Sales question → Template A (Section 15.4)
+2. Stock question → Template B (Section 15.5)
+3. Sales + Stock combined (TO / coverage) → Template C (Section 15.6)
+```
+
+**Quick example — "Berapa penjualan series Classic di area Jatim 3 bulan terakhir?"**
+
+```sql
+SELECT
+    series,
+    DATE_TRUNC('month', transaction_date) AS month,
+    SUM(quantity) AS total_pairs,
+    SUM(total_amount) AS total_revenue
+FROM core.sales_with_product
+WHERE is_intercompany = FALSE
+  AND UPPER(article) NOT LIKE '%SHOPPING BAG%'
+  AND UPPER(article) NOT LIKE '%HANGER%'
+  AND UPPER(article) NOT LIKE '%PAPER BAG%'
+  AND UPPER(article) NOT LIKE '%THERMAL%'
+  AND UPPER(article) NOT LIKE '%BOX LUCA%'
+  AND series = 'Classic'                                    -- WHAT
+  AND area = 'Jatim'                                        -- WHERE
+  AND transaction_date >= CURRENT_DATE - INTERVAL '3 months' -- WHEN
+GROUP BY 1, 2
+ORDER BY month;
+```
+
+**Quick example — "Berapa stock Airmove di gudang pusat?"**
+
+```sql
+SELECT
+    article,
+    kode_mix,
+    nama_gudang,
+    SUM(quantity) AS total_pairs
+FROM core.stock_with_product
+WHERE UPPER(article) NOT LIKE '%SHOPPING BAG%'
+  AND UPPER(article) NOT LIKE '%HANGER%'
+  AND UPPER(article) NOT LIKE '%PAPER BAG%'
+  AND UPPER(article) NOT LIKE '%THERMAL%'
+  AND UPPER(article) NOT LIKE '%BOX LUCA%'
+  AND series = 'Airmove'                                    -- WHAT
+  AND nama_gudang ILIKE '%warehouse pusat%'                 -- WHERE (stock column!)
+GROUP BY 1, 2, 3
+ORDER BY total_pairs DESC;
+```
+
+### 15.2 Column Alias Conventions
 
 **RULE: Always English, always snake_case, always descriptive. Never Indonesian (no `jumlah`, no `stok`, no `penjualan`). Never abbreviations (no `qty`, no `rev`, no `txn`).**
 
@@ -1089,7 +1200,7 @@ Sebelum bisa menjalankan script apapun, pastikan semua ini sudah OK:
 | Average price per pair | `avg_price_per_pair` | `ROUND(SUM(total_amount) / NULLIF(SUM(quantity), 0), 0) AS avg_price_per_pair` |
 | Stock value | `total_stock_value` | `SUM(quantity * unit_price) AS total_stock_value` |
 | Simple average (N months) | `avg_{N}_months` | `AVG(monthly_pairs) AS avg_3_months` |
-| Tier-adjusted average (N months) | `adj_avg_{N}_months` | See Section 15.5 |
+| Tier-adjusted average (N months) | `adj_avg_{N}_months` | See Section 15.6 |
 | Current stock | `current_stock` | `SUM(quantity) AS current_stock` |
 | Stock coverage / TO in months | `stock_coverage_months` | `ROUND(current_stock / adj_avg_3_months, 1)` |
 | Monthly sales per period | `monthly_pairs` | Used in CTEs |
@@ -1105,7 +1216,7 @@ Adjusted  → adj_avg_{metric} (adj_avg_3_months, adj_avg_6_months)
 Coverage  → {metric}_{unit}  (stock_coverage_months)
 ```
 
-### 15.2 Mandatory Filters
+### 15.3 Mandatory Filters
 
 **Every sales query MUST include these filters unless explicitly told otherwise:**
 
@@ -1121,7 +1232,7 @@ WHERE is_intercompany = FALSE                          -- Rule 7: exclude fake i
 
 **Stock queries:** No intercompany filter needed (stock is per entity — DDD is DDD, MBB is MBB). Non-product exclusion still applies if doing product-level analysis.
 
-### 15.3 Template A — Sales Analysis
+### 15.4 Template A — Sales Analysis
 
 ```sql
 -- TEMPLATE: Sales Analysis
@@ -1167,7 +1278,7 @@ GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
 ORDER BY total_pairs DESC;
 ```
 
-### 15.4 Template B — Stock / Inventory Analysis
+### 15.5 Template B — Stock / Inventory Analysis
 
 ```sql
 -- TEMPLATE: Stock / Inventory Analysis
@@ -1212,7 +1323,7 @@ GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
 ORDER BY total_pairs DESC;
 ```
 
-### 15.5 Template C — Stock Coverage & Turnover (TO)
+### 15.6 Template C — Stock Coverage & Turnover (TO)
 
 ```sql
 -- TEMPLATE: Stock Coverage & Turnover Rate
@@ -1304,7 +1415,7 @@ ORDER BY stock_coverage_months ASC NULLS LAST;
 | > 6.0 | Dead stock — clearance candidate |
 | NULL | No sales data or no stock — flag to user |
 
-### 15.6 Entity & Data Warnings
+### 15.7 Entity & Data Warnings
 
 #### ⚠️ WARNING A: Online Sales Entity Migration (DDD → MBB)
 
