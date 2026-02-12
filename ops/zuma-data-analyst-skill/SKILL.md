@@ -720,16 +720,17 @@ if first_sale is not None:
 
 **When to use:** Sales velocity rankings, planogram scoring, replenishment prioritization — any context where "average monthly sales" is a key input.
 
-### 11.3 Turnover (TO) Metric — AMBIGUITY WARNING
+### 11.3 Turnover (TO) = Stock Coverage
 
-Zuma uses "TO" in two conflicting ways. **Always clarify which one you're computing:**
+At Zuma, **TO = Stock Coverage**. One formula, no ambiguity:
 
-| Metric | Formula | Interpretation | Used By |
-|--------|---------|----------------|---------|
-| **Stock Coverage** | `current_stock / avg_monthly_sales` | "How many months will stock last?" High = slow mover | User/Management ("TO 4.5 = can hold 4.5 months") |
-| **Turnover Rate** | `avg_monthly_sales / current_stock` | "How fast does stock sell?" High = fast seller | SKILL.md distribution-flow ("TO terendah = dead stock") |
+| Metric | Formula | Interpretation |
+|--------|---------|----------------|
+| **TO / Stock Coverage** | `current_stock / avg_monthly_sales` | "How many months will stock last?" High = slow mover, Low = fast mover |
 
-**Safe approach:** Output BOTH metrics with explicit labels. For surplus/pull decisions, sort by `avg_monthly_sales ASC` (slowest sellers first) — this is unambiguous regardless of TO definition.
+**Example:** TO 4.5 = stock can hold 4.5 months at current sales rate.
+
+**For surplus/pull decisions:** Sort by `avg_monthly_sales ASC` (slowest sellers pulled first). Do NOT sort by TO directly — use `avg_monthly_sales` which is unambiguous.
 
 ### 11.4 Tier NULL Default
 
@@ -796,7 +797,7 @@ When the user asks for business analysis, follow this structured approach:
 | Accessories inflate article counts | SHOPPING BAG, HANGER etc. in sales data | Exclude non-product items (Rule 8) |
 | Unfair sales average across tiers | T1 zeros = OOS, T8 zeros = pre-launch | Use tier-aware adjusted average (Section 11.2) |
 | NULL tier silently dropped | kodemix not fully maintained for all products | Default `tier` NULL → "3" (Section 11.4) |
-| Ambiguous "TO" metric | Two competing definitions in Zuma | Output BOTH stock_coverage + turnover_rate (Section 11.3) |
+| Misunderstanding "TO" metric | TO = Stock Coverage (`stock / avg_sales`), not turnover rate | Use `stock_coverage_months` only (Section 11.3) |
 | Store stock query returns 0 | `nama_gudang` has naming variations | Check with ILIKE first, then pick exact or pattern (Rule 9) |
 
 ---
@@ -1090,8 +1091,7 @@ Sebelum bisa menjalankan script apapun, pastikan semua ini sudah OK:
 | Simple average (N months) | `avg_{N}_months` | `AVG(monthly_pairs) AS avg_3_months` |
 | Tier-adjusted average (N months) | `adj_avg_{N}_months` | See Section 15.5 |
 | Current stock | `current_stock` | `SUM(quantity) AS current_stock` |
-| Stock coverage in months | `stock_coverage_months` | `ROUND(current_stock / adj_avg_3_months, 1)` |
-| Turnover rate | `turnover_rate` | `ROUND(adj_avg_3_months / current_stock, 2)` |
+| Stock coverage / TO in months | `stock_coverage_months` | `ROUND(current_stock / adj_avg_3_months, 1)` |
 | Monthly sales per period | `monthly_pairs` | Used in CTEs |
 | Monthly grouping | `month` | `DATE_TRUNC('month', transaction_date) AS month` |
 | Article ID | `kode_mix` | Never `sku`, never `article_code` |
@@ -1102,7 +1102,6 @@ Sums      → total_{unit}     (total_pairs, total_revenue, total_stock_value)
 Counts    → num_{thing}      (num_transactions, num_articles, num_stores)
 Averages  → avg_{metric}     (avg_3_months, avg_price_per_pair)
 Adjusted  → adj_avg_{metric} (adj_avg_3_months, adj_avg_6_months)
-Rates     → {metric}_rate    (turnover_rate)
 Coverage  → {metric}_{unit}  (stock_coverage_months)
 ```
 
@@ -1282,21 +1281,13 @@ SELECT
     COALESCE(s.adj_avg_3_months, 0) AS adj_avg_3_months,
     COALESCE(st.current_stock, 0) AS current_stock,
 
-    -- Stock Coverage (bulan): "Stok cukup berapa bulan?"
+    -- Stock Coverage / TO (bulan): "Stok cukup berapa bulan?"
     -- Tinggi = slow mover, Rendah = fast mover / mau habis
     CASE
         WHEN s.adj_avg_3_months > 0
         THEN ROUND(st.current_stock / s.adj_avg_3_months, 1)
         ELSE NULL  -- no sales data → cannot compute
-    END AS stock_coverage_months,
-
-    -- Turnover Rate: "Seberapa cepat stok terjual?"
-    -- Tinggi = fast seller, Rendah = slow mover
-    CASE
-        WHEN st.current_stock > 0
-        THEN ROUND(s.adj_avg_3_months / st.current_stock, 2)
-        ELSE NULL  -- no stock → cannot compute
-    END AS turnover_rate
+    END AS stock_coverage_months
 
 FROM adj_sales s
 FULL OUTER JOIN current_stock st ON s.kode_mix = st.kode_mix
@@ -1305,13 +1296,13 @@ ORDER BY stock_coverage_months ASC NULLS LAST;
 
 **Interpreting results:**
 
-| stock_coverage_months | turnover_rate | Meaning |
-|---|---|---|
-| < 1.0 | > 1.0 | Fast seller, stock running out — restock urgently |
-| 1.0 – 3.0 | 0.3 – 1.0 | Healthy — normal replenishment cycle |
-| 3.0 – 6.0 | 0.15 – 0.3 | Slow mover — monitor, consider markdown |
-| > 6.0 | < 0.15 | Dead stock — clearance candidate |
-| NULL | NULL | No sales data or no stock — flag to user |
+| stock_coverage_months | Meaning |
+|---|---|
+| < 1.0 | Fast seller, stock running out — restock urgently |
+| 1.0 – 3.0 | Healthy — normal replenishment cycle |
+| 3.0 – 6.0 | Slow mover — monitor, consider markdown |
+| > 6.0 | Dead stock — clearance candidate |
+| NULL | No sales data or no stock — flag to user |
 
 ### 15.6 Entity & Data Warnings
 
