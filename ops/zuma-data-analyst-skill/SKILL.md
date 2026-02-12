@@ -1,6 +1,6 @@
 ---
-name: zuma-data-ops
-description: Zuma Indonesia data operations, database querying, and business analysis. Covers PostgreSQL database on VPS (schemas, tables, views, ETL), SQL query patterns, connection details, and data analysis methodology for sales, stock, and product performance. Use when analyzing Zuma business data, querying the database, building reports, or creating mart tables.
+name: zuma-data-analyst-skill
+description: Zuma Indonesia data analyst skill — database querying, SQL templates, and business analysis. Covers PostgreSQL database on VPS (schemas, tables, views, ETL), standardized SQL query templates with mandatory filters and column conventions, connection details, and data analysis methodology for sales, stock, and product performance. Use when analyzing Zuma business data, querying the database, building reports, or running standardized SQL queries.
 user-invocable: false
 ---
 
@@ -1070,8 +1070,284 @@ Sebelum bisa menjalankan script apapun, pastikan semua ini sudah OK:
 
 ---
 
->>>>>>> 3d485f1 (feat: add non-technical setup guide to zuma-data-ops SKILL.md)
-## 15. When to Use This Skill
+## 15. Standardized SQL Templates
+
+**MANDATORY: All AI agents (Atlas, Apollo, Iris) MUST use these templates when querying Zuma data.** Adjust columns, filters, and grouping per user request, but NEVER deviate from the mandatory filters, column aliases, and source tables defined here.
+
+### 15.1 Column Alias Conventions
+
+**RULE: Always English, always snake_case, always descriptive. Never Indonesian (no `jumlah`, no `stok`, no `penjualan`). Never abbreviations (no `qty`, no `rev`, no `txn`).**
+
+| Semantic | Standard Alias | Example |
+|----------|---------------|---------|
+| Pairs sold/in stock | `total_pairs` | `SUM(quantity) AS total_pairs` |
+| Revenue | `total_revenue` | `SUM(total_amount) AS total_revenue` |
+| Transaction count | `num_transactions` | `COUNT(DISTINCT nomor_invoice) AS num_transactions` |
+| Unique article count | `num_articles` | `COUNT(DISTINCT kode_mix) AS num_articles` |
+| Store count | `num_stores` | `COUNT(DISTINCT matched_store_name) AS num_stores` |
+| Average price per pair | `avg_price_per_pair` | `ROUND(SUM(total_amount) / NULLIF(SUM(quantity), 0), 0) AS avg_price_per_pair` |
+| Stock value | `total_stock_value` | `SUM(quantity * unit_price) AS total_stock_value` |
+| Simple average (N months) | `avg_{N}_months` | `AVG(monthly_pairs) AS avg_3_months` |
+| Tier-adjusted average (N months) | `adj_avg_{N}_months` | See Section 15.5 |
+| Current stock | `current_stock` | `SUM(quantity) AS current_stock` |
+| Stock coverage in months | `stock_coverage_months` | `ROUND(current_stock / adj_avg_3_months, 1)` |
+| Turnover rate | `turnover_rate` | `ROUND(adj_avg_3_months / current_stock, 2)` |
+| Monthly sales per period | `monthly_pairs` | Used in CTEs |
+| Monthly grouping | `month` | `DATE_TRUNC('month', transaction_date) AS month` |
+| Article ID | `kode_mix` | Never `sku`, never `article_code` |
+
+**Pattern rules:**
+```
+Sums      → total_{unit}     (total_pairs, total_revenue, total_stock_value)
+Counts    → num_{thing}      (num_transactions, num_articles, num_stores)
+Averages  → avg_{metric}     (avg_3_months, avg_price_per_pair)
+Adjusted  → adj_avg_{metric} (adj_avg_3_months, adj_avg_6_months)
+Rates     → {metric}_rate    (turnover_rate)
+Coverage  → {metric}_{unit}  (stock_coverage_months)
+```
+
+### 15.2 Mandatory Filters
+
+**Every sales query MUST include these filters unless explicitly told otherwise:**
+
+```sql
+-- MANDATORY for ALL sales queries
+WHERE is_intercompany = FALSE                          -- Rule 7: exclude fake inter-entity transfers
+  AND UPPER(article) NOT LIKE '%SHOPPING BAG%'         -- Rule 8: exclude non-product items
+  AND UPPER(article) NOT LIKE '%HANGER%'
+  AND UPPER(article) NOT LIKE '%PAPER BAG%'
+  AND UPPER(article) NOT LIKE '%THERMAL%'
+  AND UPPER(article) NOT LIKE '%BOX LUCA%'
+```
+
+**Stock queries:** No intercompany filter needed (stock is per entity — DDD is DDD, MBB is MBB). Non-product exclusion still applies if doing product-level analysis.
+
+### 15.3 Template A — Sales Analysis
+
+```sql
+-- TEMPLATE: Sales Analysis
+-- Source: core.sales_with_product (ALWAYS use this, never raw tables)
+-- Adjust: columns, date range, grouping per user request
+-- Default: last 3 months if unspecified
+
+SELECT
+    -- Dimensions (pick what's needed)
+    kode_mix,
+    article,
+    series,
+    gender,
+    tipe,
+    tier,
+    branch,
+    area,
+    DATE_TRUNC('month', transaction_date) AS month,
+
+    -- Metrics (standard aliases only)
+    SUM(quantity) AS total_pairs,
+    SUM(total_amount) AS total_revenue,
+    COUNT(DISTINCT nomor_invoice) AS num_transactions,
+    COUNT(DISTINCT matched_store_name) AS num_stores,
+    ROUND(SUM(total_amount) / NULLIF(SUM(quantity), 0), 0) AS avg_price_per_pair
+
+FROM core.sales_with_product
+
+-- MANDATORY filters (never remove)
+WHERE is_intercompany = FALSE
+  AND UPPER(article) NOT LIKE '%SHOPPING BAG%'
+  AND UPPER(article) NOT LIKE '%HANGER%'
+  AND UPPER(article) NOT LIKE '%PAPER BAG%'
+  AND UPPER(article) NOT LIKE '%THERMAL%'
+  AND UPPER(article) NOT LIKE '%BOX LUCA%'
+
+  -- User-specific filters (adjust per request)
+  AND transaction_date >= CURRENT_DATE - INTERVAL '3 months'
+  -- AND branch = 'Jatim'
+  -- AND kode_mix = 'M1CA02CA01'
+
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
+ORDER BY total_pairs DESC;
+```
+
+### 15.4 Template B — Stock / Inventory Analysis
+
+```sql
+-- TEMPLATE: Stock / Inventory Analysis
+-- Source: core.stock_with_product (ALWAYS use this, never raw tables)
+-- Note: No intercompany filter needed for stock
+-- Note: Stock is latest snapshot only (overwrites daily)
+
+SELECT
+    -- Dimensions (pick what's needed)
+    kode_mix,
+    article,
+    series,
+    gender,
+    tipe,
+    tier,
+    source_entity,
+    nama_gudang,
+    gudang_branch,
+    gudang_area,
+    gudang_category,
+
+    -- Metrics (standard aliases only)
+    SUM(quantity) AS total_pairs,
+    COUNT(DISTINCT kode_mix) AS num_articles,
+    SUM(quantity * unit_price) AS total_stock_value
+
+FROM core.stock_with_product
+
+-- Non-product exclusion (for product-level analysis)
+WHERE UPPER(article) NOT LIKE '%SHOPPING BAG%'
+  AND UPPER(article) NOT LIKE '%HANGER%'
+  AND UPPER(article) NOT LIKE '%PAPER BAG%'
+  AND UPPER(article) NOT LIKE '%THERMAL%'
+  AND UPPER(article) NOT LIKE '%BOX LUCA%'
+
+  -- User-specific filters (adjust per request)
+  -- AND gudang_branch = 'Jatim'
+  -- AND kode_mix = 'M1CA02CA01'
+  -- AND nama_gudang ILIKE '%warehouse%'  -- warehouses only
+
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
+ORDER BY total_pairs DESC;
+```
+
+### 15.5 Template C — Stock Coverage & Turnover (TO)
+
+```sql
+-- TEMPLATE: Stock Coverage & Turnover Rate
+-- Combines sales (last N months) + current stock
+-- Default lookback: 3 months. Adjust INTERVAL per user request.
+-- Uses simplified tier-aware adjusted average:
+--   T1/T2/T3/T8: exclude zero months (zeros = OOS, not low demand)
+--   T4/T5: include zero months (zeros = genuine low demand)
+-- For full contextual T2/T3 logic (surrounding-month check), use Python compute_adjusted_avg()
+
+WITH monthly_sales AS (
+    SELECT
+        kode_mix,
+        article,
+        series,
+        gender,
+        tier,
+        DATE_TRUNC('month', transaction_date) AS month,
+        SUM(quantity) AS monthly_pairs
+    FROM core.sales_with_product
+    WHERE is_intercompany = FALSE
+      AND UPPER(article) NOT LIKE '%SHOPPING BAG%'
+      AND UPPER(article) NOT LIKE '%HANGER%'
+      AND UPPER(article) NOT LIKE '%PAPER BAG%'
+      AND UPPER(article) NOT LIKE '%THERMAL%'
+      AND UPPER(article) NOT LIKE '%BOX LUCA%'
+      AND transaction_date >= CURRENT_DATE - INTERVAL '3 months'
+      -- ↑ Lookback period. Change to '6 months', '12 months' etc. per request.
+    GROUP BY 1, 2, 3, 4, 5, 6
+),
+adj_sales AS (
+    SELECT
+        kode_mix,
+        article,
+        series,
+        gender,
+        tier,
+        -- Tier-aware adjusted average (simplified)
+        CASE
+            WHEN tier IN ('1','2','3','8')
+                THEN AVG(monthly_pairs) FILTER (WHERE monthly_pairs > 0)
+            ELSE AVG(monthly_pairs)
+        END AS adj_avg_3_months
+        -- ↑ Rename to adj_avg_6_months, adj_avg_12_months etc. if lookback changes
+    FROM monthly_sales
+    GROUP BY 1, 2, 3, 4, 5
+),
+current_stock AS (
+    SELECT
+        kode_mix,
+        SUM(quantity) AS current_stock
+    FROM core.stock_with_product
+    WHERE UPPER(article) NOT LIKE '%SHOPPING BAG%'
+      AND UPPER(article) NOT LIKE '%HANGER%'
+      AND UPPER(article) NOT LIKE '%PAPER BAG%'
+      AND UPPER(article) NOT LIKE '%THERMAL%'
+      AND UPPER(article) NOT LIKE '%BOX LUCA%'
+    GROUP BY 1
+)
+SELECT
+    COALESCE(s.kode_mix, st.kode_mix) AS kode_mix,
+    s.article,
+    s.series,
+    s.gender,
+    s.tier,
+    COALESCE(s.adj_avg_3_months, 0) AS adj_avg_3_months,
+    COALESCE(st.current_stock, 0) AS current_stock,
+
+    -- Stock Coverage (bulan): "Stok cukup berapa bulan?"
+    -- Tinggi = slow mover, Rendah = fast mover / mau habis
+    CASE
+        WHEN s.adj_avg_3_months > 0
+        THEN ROUND(st.current_stock / s.adj_avg_3_months, 1)
+        ELSE NULL  -- no sales data → cannot compute
+    END AS stock_coverage_months,
+
+    -- Turnover Rate: "Seberapa cepat stok terjual?"
+    -- Tinggi = fast seller, Rendah = slow mover
+    CASE
+        WHEN st.current_stock > 0
+        THEN ROUND(s.adj_avg_3_months / st.current_stock, 2)
+        ELSE NULL  -- no stock → cannot compute
+    END AS turnover_rate
+
+FROM adj_sales s
+FULL OUTER JOIN current_stock st ON s.kode_mix = st.kode_mix
+ORDER BY stock_coverage_months ASC NULLS LAST;
+```
+
+**Interpreting results:**
+
+| stock_coverage_months | turnover_rate | Meaning |
+|---|---|---|
+| < 1.0 | > 1.0 | Fast seller, stock running out — restock urgently |
+| 1.0 – 3.0 | 0.3 – 1.0 | Healthy — normal replenishment cycle |
+| 3.0 – 6.0 | 0.15 – 0.3 | Slow mover — monitor, consider markdown |
+| > 6.0 | < 0.15 | Dead stock — clearance candidate |
+| NULL | NULL | No sales data or no stock — flag to user |
+
+### 15.6 Entity & Data Warnings
+
+#### ⚠️ WARNING A: Online Sales Entity Migration (DDD → MBB)
+
+Online/marketplace sales migrated **gradually from DDD to MBB between Feb–Aug 2025:**
+
+| Period | DDD (`"zuma online"`) | MBB (`"online"`) | Status |
+|--------|---|---|---|
+| 2022-01 → 2025-01 | All online sales | — | 100% on DDD |
+| **2025-02** | 5,105 pairs | 1,194 pairs | Migration starts |
+| **2025-03** | 5,081 pairs | 11,920 pairs | MBB overtakes DDD |
+| 2025-04 → 2025-07 | Declining (2,374–3,947) | Growing (6,784–12,720) | Gradual shift |
+| **2025-08** | 3 pairs | 14,518 pairs | DDD online effectively dead |
+| 2025-08 → present | ~0 | 11,000–15,000/mo | 100% on MBB |
+
+**Store names are different per entity:** DDD = `"zuma online"`, MBB = `"online"`.
+
+**Rules:**
+- When analyzing **online sales trends across years**, combine both entities: `WHERE LOWER(store_name_raw) IN ('zuma online', 'online')` — do NOT filter by `source_entity`.
+- When filtering by `source_entity = 'DDD'` for any time range crossing 2025, **always note** that online sales moved to MBB and DDD numbers will appear to drop.
+- When filtering by `source_entity = 'MBB'`, **always note** that data before Feb 2025 will show near-zero (not because no sales existed, but because they were under DDD).
+- All **offline retail stores remain under DDD** — this migration only affects online channels.
+
+#### ⚠️ WARNING B: Cross-Entity Stock Discrepancies
+
+Stock data can show negative quantities in one entity when stock has been physically moved but not yet recorded in the system. Common pattern:
+
+- **LJBB** shows +N (stock received from supplier) while **DDD** shows -N for the same article → stock is physically at DDD, system transfer pending.
+- **MBB** can also show negative stock for the same reason (stock already at DDD but untransacted).
+
+**When you see negative stock for any entity:** Notify the user that this likely means the stock physically exists but the inter-entity system transfer hasn't been recorded yet. Suggest checking the same `kode_mix` across all entities to get the net real quantity.
+
+---
+
+## 16. When to Use This Skill
 
 **Always use this skill when:**
 - User asks to "analyze", "query", "check", "look into" any Zuma business data
@@ -1091,5 +1367,5 @@ Sebelum bisa menjalankan script apapun, pastikan semua ini sudah OK:
 ---
 
 **Status:** Complete
-**Last Updated:** 11 Feb 2026
-**Covers:** Database connection, schema architecture, all tables/views, ETL schedule, query rules, data processing patterns, SQL cookbook, analysis methodology, common pitfalls, admin reference, **setup guide for non-technical users** (Python, libraries, DB access, script execution, troubleshooting)
+**Last Updated:** 13 Feb 2026
+**Covers:** Database connection, schema architecture, all tables/views, ETL schedule, query rules, data processing patterns, SQL cookbook, analysis methodology, common pitfalls, admin reference, **standardized SQL templates** (sales, stock, TO/coverage, column conventions, entity warnings), **setup guide for non-technical users** (Python, libraries, DB access, script execution, troubleshooting)
