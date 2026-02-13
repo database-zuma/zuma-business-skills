@@ -655,6 +655,10 @@ DB_PASS = "Zuma-0psCl4w-2026!"
 | Surplus total pairs | 179 |
 | Off-Planogram articles | 41 |
 
+**Sample output file**: `sample_ro_request_royal_plaza.xlsx` (in this folder)
+
+⚠️ **Note**: This sample output is **experimental** and will be updated as the RO Request generation logic evolves. Use as reference for structure and styling, but expect metrics and logic to change.
+
 ### Styling Reference (openpyxl)
 
 The Excel output uses consistent branding:
