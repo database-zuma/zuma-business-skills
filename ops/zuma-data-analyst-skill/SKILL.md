@@ -468,6 +468,23 @@ WHERE LOWER(nama_pelanggan) LIKE '%makmur%'  -- catches PT. Unggul Sukses Makmur
 
 **Note:** `nama_pelanggan` column is available in `core.sales_with_product`. Mart tables pre-filter intercompany out so you don't need to worry about it when querying mart.
 
+**When to apply intercompany filter:**
+
+Intercompany transactions are between entities (DDD→MBB, UBB→DDD, LJBB→DDD), **NOT within a single store location**.
+
+✅ **Apply filter (`is_intercompany = FALSE`) for:**
+- **Aggregated queries** — Multi-store totals, nasional summaries, branch-level reports
+- **Cross-store comparisons** — Store rankings, regional performance
+- **Revenue reports** — Total sales by area, territory summaries
+
+❌ **NOT needed for:**
+- **Single store queries** — Sales for 1 specific toko (e.g., "Mega Mall Manado sales")
+- **Store-specific reports** — RO Request, planogram allocation, single store performance
+
+**Reason:** A single retail store can't have intercompany transactions — those only happen between warehouse/distribution entities. The filter prevents double-counting at aggregate level.
+
+**Clarified by:** Wayan (2026-02-13 14:20)
+
 ### Rule 8: ALWAYS exclude non-product items from product analysis
 
 The sales data contains accessory/packaging items that inflate article counts and skew metrics. Filter them out in any product-level analysis (rankings, planograms, performance reports).
