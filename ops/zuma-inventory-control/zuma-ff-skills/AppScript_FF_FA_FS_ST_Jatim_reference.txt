@@ -1,0 +1,1279 @@
+/**
+ * ========================================
+ * ZUMA INTEGRATED TOOLS - ALL IN ONE
+ * ========================================
+ * Menggabungkan:
+ * 1. Supabase Sync (Auto: 11:30)
+ * 2. Planogram & Stock Analysis (Auto: 12:00)
+ * 3. Daily Report Automation (Auto: 13:00)
+ * 
+ * Version: 1.1 - Enhanced Auto Schedule
+ * ========================================
+ */
+
+// ==================== KONFIGURASI GLOBAL ====================
+
+// Konfigurasi Supabase
+var SUPABASE_URL = 'https://rwctwnzckyepiwcufdlw.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3Y3R3bnpja3llcGl3Y3VmZGx3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTU3MDI5MywiZXhwIjoyMDc1MTQ2MjkzfQ.0amj_ztVNgHZdU-LAfk-QvDQATGy-dVezEg6HYHLrec';
+var SUPABASE_TABLE_NAME = 'dbjoin_stockmutasi_final_with_portal_nisa';
+
+// Target Spreadsheet & Sheet untuk hasil Supabase sync
+var TARGET_SPREADSHEET_ID = '1U0m-1mlQy1iJX2cqajeuHqZ7-hfZW6NwCqIIMrf4X1A'; // Ganti dengan Spreadsheet ID tujuan
+var TARGET_SHEET_NAME = 'Data'; // Ganti dengan nama sheet tujuan
+
+// Daftar kolom untuk Supabase sync
+var COLUMN_ORDER = [
+  'Store Name',
+  'kode mix size',
+  'kode mix',
+  'Kode Artikel',
+  'article',
+  'color',
+  'tier',
+  'gender',
+  'series',
+  'tipe',
+  'size',
+  'count_by_assortment',
+  'Kuantitas',
+  'Saldo Awal',
+  'Masuk',
+  'Keluar',
+  'Saldo Akhir'
+];
+
+// ==================== MENU UTAMA TERINTEGRASI ====================
+
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  
+  ui.createMenu('🎯 ZUMA TOOLS')
+    // Sub-menu 1: Supabase Sync
+    .addSubMenu(ui.createMenu('🔄 Supabase Sync')
+      .addItem('📥 Sync Data Sekarang', 'runDumpSupabaseRaw')
+      .addItem('🔍 Debug Sample Data', 'debugSupabaseData')
+      .addSeparator()
+      .addItem('⚙️ Set Auto Sync (11:30)', 'createSupabaseTrigger')
+      .addItem('❌ Hapus Auto Sync', 'deleteSupabaseTrigger')
+      .addSeparator()
+      .addItem('ℹ️ Info & Status', 'showSupabaseInfo'))
+    
+    .addSeparator()
+    
+    // Sub-menu 2: Planogram & Stock
+    .addSubMenu(ui.createMenu('🔗 Planogram & Stock')
+      .addItem('📊 Gabungkan Data Sekarang', 'gabungkanPlanogramStock')
+      .addSeparator()
+      .addItem('⚙️ Set Auto Gabung (12:00)', 'createPlanogramTrigger')
+      .addItem('❌ Hapus Auto Gabung', 'deletePlanogramTrigger')
+      .addSeparator()
+      .addItem('ℹ️ Petunjuk & Status', 'showPlanogramInfo'))
+    
+    .addSeparator()
+    
+    // Sub-menu 3: Daily Report
+    .addSubMenu(ui.createMenu('📈 Daily Report')
+      .addItem('▶️ Update Report Sekarang', 'updateDailyReport')
+      .addItem('📅 Update dengan Tanggal Custom', 'showDatePicker')
+      .addSeparator()
+      .addItem('⚙️ Set Auto Update (13:00)', 'setupDailyTrigger')
+      .addItem('❌ Hapus Auto Update', 'removeDailyTrigger')
+      .addSeparator()
+      .addItem('🧹 Clear Report Data', 'showClearConfirmation'))
+    
+    .addSeparator()
+    
+    // Menu untuk setup semua automasi sekaligus
+    .addItem('⚡ Setup Semua Automasi', 'setupAllAutomation')
+    .addItem('🛑 Hapus Semua Automasi', 'removeAllAutomation')
+    .addItem('📊 Cek Status Semua Automasi', 'checkAllAutomationStatus')
+    
+    .addToUi();
+}
+
+// ==================== BAGIAN 1: SUPABASE SYNC ====================
+
+/**
+ * Ambil data dari Supabase dengan pagination
+ * Filter: area = 'Jatim'
+ */
+function fetchAllRawFromSupabase() {
+  var endpoint = SUPABASE_URL + '/rest/v1/' + SUPABASE_TABLE_NAME;
+  var allData = [];
+  var pageSize = 1000;
+  var offset = 0;
+
+  while (true) {
+    var from = offset;
+    var to = offset + pageSize - 1;
+
+    var url = endpoint
+      + '?select=*'
+      + '&area=eq.' + encodeURIComponent('Jatim');
+
+    var options = {
+      method: 'get',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'Range-Unit': 'items',
+        'Range': from + '-' + to
+      },
+      muteHttpExceptions: true
+    };
+
+    var response = UrlFetchApp.fetch(url, options);
+    var statusCode = response.getResponseCode();
+    var text = response.getContentText();
+
+    if (statusCode !== 200 && statusCode !== 206) {
+      Logger.log('Error response: ' + text);
+      throw new Error('Gagal fetch data dari Supabase. HTTP Code: ' + statusCode);
+    }
+
+    var pageData = JSON.parse(text);
+    Logger.log('Page offset ' + offset + ' - jumlah baris: ' + pageData.length);
+
+    if (!pageData.length) break;
+
+    allData = allData.concat(pageData);
+
+    if (pageData.length < pageSize) break;
+
+    offset += pageSize;
+  }
+
+  Logger.log('TOTAL baris raw (area Jatim): ' + allData.length);
+  return allData;
+}
+
+/**
+ * Tulis data Supabase ke sheet
+ */
+function dumpSupabaseRawToSheet() {
+  var rawData = fetchAllRawFromSupabase();
+  if (!rawData || rawData.length === 0) {
+    Logger.log('Tidak ada data raw dari Supabase (area Jatim).');
+    return;
+  }
+
+  // Buka spreadsheet target berdasarkan ID
+  var targetSpreadsheet;
+  try {
+    if (TARGET_SPREADSHEET_ID === 'MASUKKAN_SPREADSHEET_ID_DISINI' || !TARGET_SPREADSHEET_ID) {
+      // Jika belum diisi, gunakan spreadsheet aktif
+      targetSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+      Logger.log('Menggunakan spreadsheet aktif (ID belum diset)');
+    } else {
+      targetSpreadsheet = SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
+      Logger.log('Menggunakan target spreadsheet: ' + TARGET_SPREADSHEET_ID);
+    }
+  } catch (e) {
+    throw new Error('Gagal membuka spreadsheet target. Pastikan ID benar dan Anda punya akses. Error: ' + e.message);
+  }
+
+  var sheet = targetSpreadsheet.getSheetByName(TARGET_SHEET_NAME);
+  if (!sheet) {
+    sheet = targetSpreadsheet.insertSheet(TARGET_SHEET_NAME);
+    Logger.log('Sheet "' + TARGET_SHEET_NAME + '" dibuat baru');
+  }
+
+  sheet.clearContents();
+  sheet.getRange(1, 1, 1, COLUMN_ORDER.length).setValues([COLUMN_ORDER]);
+
+  var rows = rawData.map(function (row) {
+    return COLUMN_ORDER.map(function (colName) {
+      var value = row[colName];
+      
+      if (colName === 'size') {
+        if (value === undefined || value === null || value === '') return '';
+        return "'" + value.toString();
+      }
+      
+      return value !== undefined ? value : '';
+    });
+  });
+
+  sheet.getRange(2, 1, rows.length, COLUMN_ORDER.length).setValues(rows);
+
+  var sizeColIndex = COLUMN_ORDER.indexOf('size') + 1;
+  if (sizeColIndex > 0) {
+    var sizeRange = sheet.getRange(2, sizeColIndex, rows.length, 1);
+    sizeRange.setNumberFormat('@');
+  }
+
+  Logger.log('Berhasil menulis ' + rows.length + ' baris ke sheet "' + TARGET_SHEET_NAME + '" di spreadsheet target');
+}
+
+/**
+ * Wrapper untuk run dengan UI feedback
+ */
+function runDumpSupabaseRaw() {
+  try {
+    SpreadsheetApp.getActiveSpreadsheet().toast('Mengambil data dari Supabase...', '⏳ Loading', -1);
+    
+    dumpSupabaseRawToSheet();
+    
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Data berhasil disinkronkan dari Supabase', 
+      '✅ Sync Berhasil!', 
+      5
+    );
+    
+    Logger.log('dumpSupabaseRawToSheet selesai tanpa error');
+  } catch (e) {
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Error: ' + e.message, 
+      '❌ Sync Gagal', 
+      10
+    );
+    Logger.log('ERROR di runDumpSupabaseRaw: ' + e.message);
+    throw e;
+  }
+}
+
+/**
+ * DEBUG: Test sample data dari Supabase
+ */
+function debugSupabaseData() {
+  var endpoint = SUPABASE_URL + '/rest/v1/' + SUPABASE_TABLE_NAME;
+  
+  var url = endpoint
+    + '?select=*'
+    + '&area=eq.' + encodeURIComponent('Jatim')
+    + '&Store Name=eq.' + encodeURIComponent('Zuma Tunjungan Plaza')
+    + '&limit=5';
+
+  var options = {
+    method: 'get',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json'
+    },
+    muteHttpExceptions: true
+  };
+
+  var response = UrlFetchApp.fetch(url, options);
+  var data = JSON.parse(response.getContentText());
+  
+  Logger.log('=== SAMPLE DATA FROM SUPABASE ===');
+  Logger.log('Total rows: ' + data.length);
+  
+  if (data.length > 0) {
+    Logger.log('First row columns:');
+    Logger.log(JSON.stringify(Object.keys(data[0]), null, 2));
+    
+    Logger.log('\nFirst row data:');
+    Logger.log(JSON.stringify(data[0], null, 2));
+    
+    Logger.log('\nKeluar values in sample:');
+    data.forEach((row, i) => {
+      Logger.log(`Row ${i}: Keluar = ${row['Keluar']}, Masuk = ${row['Masuk']}, Saldo Awal = ${row['Saldo Awal']}`);
+    });
+  }
+  
+  SpreadsheetApp.getUi().alert(
+    'Debug selesai! Cek execution log:\nExtensions → Apps Script → View → Executions'
+  );
+}
+
+/**
+ * Buat trigger Supabase sync jam 11:30
+ */
+function createSupabaseTrigger() {
+  // Hapus trigger lama jika ada
+  deleteSupabaseTrigger();
+
+  // Buat trigger baru jam 11:30
+  ScriptApp.newTrigger('runDumpSupabaseRaw')
+    .timeBased()
+    .everyDays(1)
+    .atHour(11)
+    .nearMinute(30)
+    .create();
+  
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    'Auto sync akan berjalan setiap hari jam 11:30', 
+    '✅ Auto Sync Aktif!', 
+    5
+  );
+}
+
+/**
+ * Hapus trigger Supabase sync
+ */
+function deleteSupabaseTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var deleted = 0;
+  
+  triggers.forEach(function(tr) {
+    if (tr.getHandlerFunction() === 'runDumpSupabaseRaw') {
+      ScriptApp.deleteTrigger(tr);
+      deleted++;
+    }
+  });
+  
+  if (deleted > 0) {
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Auto sync berhasil dihapus', 
+      '✅ Trigger Dihapus', 
+      3
+    );
+  }
+}
+
+/**
+ * Info status Supabase
+ */
+function showSupabaseInfo() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var hasTrigger = false;
+  var triggerTime = '';
+  
+  triggers.forEach(function(tr) {
+    if (tr.getHandlerFunction() === 'runDumpSupabaseRaw') {
+      hasTrigger = true;
+      triggerTime = 'Setiap hari jam 11:30';
+    }
+  });
+  
+  var status = hasTrigger ? 
+    '✅ Auto sync AKTIF\nJadwal: ' + triggerTime : 
+    '⚠️ Auto sync TIDAK AKTIF\nGunakan menu untuk mengaktifkan';
+  
+  var targetInfo = (TARGET_SPREADSHEET_ID === 'MASUKKAN_SPREADSHEET_ID_DISINI' || !TARGET_SPREADSHEET_ID) ?
+    '⚠️ Spreadsheet aktif (ID belum diset)' :
+    TARGET_SPREADSHEET_ID;
+  
+  var info = 
+    '🔄 SUPABASE SYNC STATUS\n\n' +
+    status + '\n\n' +
+    '📊 Konfigurasi:\n' +
+    '• Table: ' + SUPABASE_TABLE_NAME + '\n' +
+    '• Filter: area = Jatim\n' +
+    '• Target Spreadsheet: ' + targetInfo + '\n' +
+    '• Target Sheet: ' + TARGET_SHEET_NAME + '\n' +
+    '• Total Kolom: ' + COLUMN_ORDER.length;
+  
+  SpreadsheetApp.getUi().alert('Info Supabase Sync', info, SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+// ==================== BAGIAN 2: PLANOGRAM & STOCK ====================
+
+/**
+ * Fungsi utama untuk gabungkan Planogram dan Stock
+ */
+function gabungkanPlanogramStock() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  SpreadsheetApp.getActiveSpreadsheet().toast('Memproses data...', '⏳ Loading', -1);
+  
+  const planogramSheet = ss.getSheetByName('Planogram');
+  const stockSheet = ss.getSheetByName('Stock');
+  let hasilSheet = ss.getSheetByName('Hasil Gabungan');
+  
+  if (!planogramSheet || !stockSheet) {
+    SpreadsheetApp.getUi().alert('Error: Sheet "Planogram" atau "Stock" tidak ditemukan!');
+    return;
+  }
+  
+  if (!hasilSheet) {
+    hasilSheet = ss.insertSheet('Hasil Gabungan');
+  } else {
+    hasilSheet.clear();
+  }
+  
+  const planogramData = planogramSheet.getDataRange().getValues();
+  const planogramHeaders = planogramData[0];
+  
+  const stockData = stockSheet.getDataRange().getValues();
+  const stockHeaders = stockData[0];
+  
+  console.log('Stock Headers:', stockHeaders);
+  console.log('Planogram Headers:', planogramHeaders);
+  
+  // Index untuk kolom Stock
+  const stockIndexes = {};
+  stockHeaders.forEach((header, index) => {
+    const headerLower = header.toString().toLowerCase().trim();
+    
+    if (headerLower === 'store name' || headerLower === 'store') {
+      stockIndexes.storeName = index;
+    } else if (headerLower === 'kode mix') {
+      stockIndexes.kodeMix = index;
+    } else if (headerLower === 'size') {
+      stockIndexes.size = index;
+    } else if (headerLower === 'kuantitas' || headerLower === 'quantity' || headerLower === 'qty') {
+      stockIndexes.kuantitas = index;
+    }
+  });
+  
+  // Fallback ke index tetap jika tidak ditemukan
+  if (stockIndexes.storeName === undefined) stockIndexes.storeName = 0;
+  if (stockIndexes.kodeMix === undefined) stockIndexes.kodeMix = 1;
+  if (stockIndexes.size === undefined) stockIndexes.size = 2;
+  if (stockIndexes.kuantitas === undefined) stockIndexes.kuantitas = 3;
+  
+  console.log('Stock Indexes:', stockIndexes);
+  
+  // Index untuk kolom Planogram
+  let planogramTierIndex = -1;
+  let planogramArticleMixIndex = -1;
+  
+  planogramHeaders.forEach((header, index) => {
+    const headerStr = String(header || '');
+    const headerLower = headerStr.toLowerCase().trim();
+    
+    if (headerLower === 'tier') {
+      planogramTierIndex = index;
+    } else if (headerLower === 'article mix') {
+      planogramArticleMixIndex = index;
+    }
+  });
+  
+  if (planogramArticleMixIndex === -1) {
+    SpreadsheetApp.getUi().alert('Error: Kolom "article mix" tidak ditemukan di sheet Planogram');
+    return;
+  }
+  
+  // Buat map untuk stock data
+  const stockMap = new Map();
+  for (let i = 1; i < stockData.length; i++) {
+    const row = stockData[i];
+    
+    const storeName = row[stockIndexes.storeName] ? String(row[stockIndexes.storeName]).trim() : '';
+    const kodeMix = row[stockIndexes.kodeMix] ? String(row[stockIndexes.kodeMix]).trim() : '';
+    const size = row[stockIndexes.size] ? String(row[stockIndexes.size]).trim() : '';
+    const kuantitas = Number(row[stockIndexes.kuantitas]) || 0;
+    
+    if (storeName && kodeMix && size) {
+      const key = `${storeName}_${kodeMix}_${size}`;
+      stockMap.set(key, kuantitas);
+      
+      if (i <= 5) {
+        console.log(`Stock row ${i}: ${key} = ${kuantitas}`);
+      }
+    }
+  }
+  
+  console.log('Total stock entries loaded:', stockMap.size);
+  
+  // Identifikasi kolom size di Planogram
+  const sizeStartIndex = planogramArticleMixIndex + 1;
+  let sizeEndIndex = -1;
+  
+  for (let i = sizeStartIndex; i < planogramHeaders.length; i++) {
+    const header = String(planogramHeaders[i] || '');
+    if (header === '' || header.includes('AVG') || header.includes('Sales') || 
+        header.includes('Rekomendasi') || header.includes('%') || header.includes('Input')) {
+      sizeEndIndex = i - 1;
+      break;
+    }
+  }
+  
+  if (sizeEndIndex === -1 || sizeEndIndex < sizeStartIndex) {
+    sizeEndIndex = Math.min(sizeStartIndex + 20, planogramHeaders.length - 1);
+  }
+  
+  // Ambil list size yang valid
+  const sizeColumns = [];
+  for (let i = sizeStartIndex; i <= sizeEndIndex; i++) {
+    const sizeHeader = String(planogramHeaders[i] || '').trim();
+    if (sizeHeader) {
+      sizeColumns.push(sizeHeader);
+    }
+  }
+  
+  console.log('Size columns found:', sizeColumns);
+  
+  // Buat header untuk hasil pivot
+  const hasilHeader = [
+    'Store Name',
+    'Article Mix', 
+    'Gender',
+    'Series',
+    'Article',
+    'Tier'
+  ];
+  
+  sizeColumns.forEach(size => {
+    hasilHeader.push(`${size}_Plan`);
+  });
+  
+  sizeColumns.forEach(size => {
+    hasilHeader.push(`${size}_Stock`);
+  });
+  
+  hasilHeader.push('Total_Plan');
+  hasilHeader.push('Total_Stock');
+  hasilHeader.push('Count_Plan>0');
+  hasilHeader.push('Count_Stock>0');
+  hasilHeader.push('Count_Article_Plan');
+  hasilHeader.push('Count_Article_Stock');
+  
+  const hasil = [hasilHeader];
+  
+  // Process data per row
+  for (let i = 1; i < planogramData.length; i++) {
+    const row = planogramData[i];
+    const storeName = row[0];
+    const gender = row[1];
+    const series = row[2];
+    const article = row[3];
+    
+    const articleMix = planogramArticleMixIndex !== -1 ? (row[planogramArticleMixIndex] || '') : '';
+    const tierFromPlanogram = planogramTierIndex !== -1 ? (row[planogramTierIndex] || '') : '';
+    
+    if (!storeName || !articleMix) continue;
+    
+    const newRow = [
+      storeName,
+      articleMix,
+      gender,
+      series,
+      article,
+      tierFromPlanogram
+    ];
+    
+    let totalStock = 0;
+    let totalPlan = 0;
+    let countPlanPositive = 0;
+    let countStockPositive = 0;
+    let hasData = false;
+    
+    const planData = [];
+    const stockDataArray = [];
+    
+    for (let j = 0; j < sizeColumns.length; j++) {
+      const size = sizeColumns[j];
+      const planogramIndex = sizeStartIndex + j;
+      const cellValue = row[planogramIndex];
+      
+      let stockQty = 0;
+      let planQty = 0;
+      
+      if (cellValue !== undefined && cellValue !== null && cellValue !== '') {
+        planQty = Number(cellValue) || 0;
+        hasData = true;
+        
+        const stockKey = `${storeName}_${articleMix}_${size}`;
+        stockQty = stockMap.get(stockKey) || 0;
+        
+        totalStock += stockQty;
+        totalPlan += planQty;
+        
+        if (planQty > 0) {
+          countPlanPositive++;
+        }
+        
+        if (planQty > 0 && stockQty > 0) {
+          countStockPositive++;
+        }
+      }
+      
+      planData.push(planQty || '');
+      stockDataArray.push(stockQty || '');
+    }
+    
+    let countArticlePlan = 0;
+    let countArticleStock = 0;
+    
+    if (totalPlan > 0) {
+      countArticlePlan = 1;
+      if (totalStock > 0) {
+        countArticleStock = 1;
+      }
+    }
+    
+    newRow.push(...planData);
+    newRow.push(...stockDataArray);
+    newRow.push(totalPlan || '');
+    newRow.push(totalStock || '');
+    newRow.push(countPlanPositive);
+    newRow.push(countStockPositive);
+    newRow.push(countArticlePlan);
+    newRow.push(countArticleStock);
+    
+    if (hasData) {
+      hasil.push(newRow);
+    }
+  }
+  
+  // Output hasil ke sheet
+  if (hasil.length > 1) {
+    hasilSheet.getRange(1, 1, hasil.length, hasil[0].length).setValues(hasil);
+    
+    // Formatting
+    const headerRange = hasilSheet.getRange(1, 1, 1, hasil[0].length);
+    headerRange.setFontWeight('bold');
+    headerRange.setBackground('#4a90e2');
+    headerRange.setFontColor('#000000');
+    headerRange.setHorizontalAlignment('center');
+    
+    const planStartCol = 7;
+    const planEndCol = 6 + sizeColumns.length;
+    hasilSheet.getRange(1, planStartCol, hasil.length, sizeColumns.length).setBackground('#e3f2fd');
+    
+    const stockStartCol = planEndCol + 1;
+    const stockEndCol = stockStartCol + sizeColumns.length - 1;
+    hasilSheet.getRange(1, stockStartCol, hasil.length, sizeColumns.length).setBackground('#e8f5e9');
+    
+    const summaryStartCol = stockEndCol + 1;
+    hasilSheet.getRange(1, summaryStartCol, hasil.length, 2).setBackground('#f5f5f5');
+    hasilSheet.getRange(1, summaryStartCol, hasil.length, 2).setFontWeight('bold');
+    
+    const countSizeStartCol = summaryStartCol + 2;
+    hasilSheet.getRange(1, countSizeStartCol, hasil.length, 2).setBackground('#fff3e0');
+    
+    const countArticleStartCol = countSizeStartCol + 2;
+    hasilSheet.getRange(1, countArticleStartCol, hasil.length, 2).setBackground('#f3e5f5');
+    
+    for (let i = 1; i <= hasil[0].length; i++) {
+      hasilSheet.autoResizeColumn(i);
+    }
+    
+    hasilSheet.getRange(1, 1, hasil.length, hasil[0].length)
+      .setBorder(true, true, true, true, true, true);
+    
+    if (hasil.length > 1) {
+      hasilSheet.getRange(2, 7, hasil.length - 1, hasil[0].length - 6)
+        .setNumberFormat('#,##0');
+    }
+    
+    hasilSheet.setFrozenRows(1);
+    hasilSheet.setFrozenColumns(6);
+    
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      `Total baris: ${hasil.length - 1} | Total size: ${sizeColumns.length}`, 
+      '✅ Proses Selesai!', 
+      5
+    );
+  } else {
+    SpreadsheetApp.getUi().alert('Tidak ada data yang dapat digabungkan.');
+  }
+}
+
+/**
+ * Buat trigger Planogram jam 12:00
+ */
+function createPlanogramTrigger() {
+  // Hapus trigger lama jika ada
+  deletePlanogramTrigger();
+
+  // Buat trigger baru jam 12:00
+  ScriptApp.newTrigger('gabungkanPlanogramStock')
+    .timeBased()
+    .everyDays(1)
+    .atHour(12)
+    .nearMinute(0)
+    .create();
+  
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    'Auto gabung akan berjalan setiap hari jam 12:00', 
+    '✅ Auto Gabung Aktif!', 
+    5
+  );
+}
+
+/**
+ * Hapus trigger Planogram
+ */
+function deletePlanogramTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var deleted = 0;
+  
+  triggers.forEach(function(tr) {
+    if (tr.getHandlerFunction() === 'gabungkanPlanogramStock') {
+      ScriptApp.deleteTrigger(tr);
+      deleted++;
+    }
+  });
+  
+  if (deleted > 0) {
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Auto gabung berhasil dihapus', 
+      '✅ Trigger Dihapus', 
+      3
+    );
+  }
+}
+
+/**
+ * Info untuk Planogram dengan status trigger
+ */
+function showPlanogramInfo() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var hasTrigger = false;
+  var triggerTime = '';
+  
+  triggers.forEach(function(tr) {
+    if (tr.getHandlerFunction() === 'gabungkanPlanogramStock') {
+      hasTrigger = true;
+      triggerTime = 'Setiap hari jam 12:00';
+    }
+  });
+  
+  var status = hasTrigger ? 
+    '✅ Auto gabung AKTIF\nJadwal: ' + triggerTime : 
+    '⚠️ Auto gabung TIDAK AKTIF\nGunakan menu untuk mengaktifkan';
+  
+  const htmlContent = `
+    <div style="font-family: Arial; padding: 20px;">
+      <h2>📖 Petunjuk Planogram & Stock</h2>
+      
+      <div style="background: #f0f0f0; padding: 10px; border-radius: 5px; margin: 10px 0;">
+        <strong>Status Automasi:</strong><br>
+        ${status.replace(/\n/g, '<br>')}
+      </div>
+      
+      <h3>Persiapan:</h3>
+      <ul>
+        <li>Sheet "Planogram" dengan kolom: Store Name, Gender, Series, Article, Tier, Article Mix, dan kolom Size</li>
+        <li>Sheet "Stock" dengan kolom: Store Name, Kode Mix, Size, Kuantitas</li>
+      </ul>
+      <h3>Output:</h3>
+      <ul>
+        <li>Format pivot dengan semua size</li>
+        <li>Count metrics untuk analisis</li>
+        <li>Hasil di sheet "Hasil Gabungan"</li>
+      </ul>
+      <h3>Debug:</h3>
+      <ul>
+        <li>Cek Execution Log: Extensions → Apps Script → View → Logs</li>
+        <li>Log menunjukkan matching details dan errors</li>
+      </ul>
+    </div>
+  `;
+  
+  const htmlOutput = HtmlService.createHtmlOutput(htmlContent)
+    .setWidth(500)
+    .setHeight(500);
+  SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Petunjuk & Status Planogram');
+}
+
+// ==================== BAGIAN 3: DAILY REPORT ====================
+
+/**
+ * Update daily report - main function
+ */
+function updateDailyReport() {
+  try {
+    SpreadsheetApp.getActiveSpreadsheet().toast('Sedang memproses data...', '⏳ Loading', -1);
+    
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const sourceSheet = spreadsheet.getSheetByName('Hasil Gabungan');
+    const stockSheet = spreadsheet.getSheetByName('Stock');
+    const reportSheet = spreadsheet.getSheetByName('Report');
+    
+    if (!sourceSheet) {
+      throw new Error('Sheet "Hasil Gabungan" tidak ditemukan!');
+    }
+    if (!stockSheet) {
+      throw new Error('Sheet "Stock" tidak ditemukan!');
+    }
+    if (!reportSheet) {
+      throw new Error('Sheet "Report" tidak ditemukan!');
+    }
+    
+    const today = new Date();
+    const dateString = Utilities.formatDate(today, Session.getScriptTimeZone(), 'd MMM');
+    
+    const calculatedMetrics = processSourceData(sourceSheet, stockSheet);
+    
+    updateMetricSection(reportSheet, 'FF', dateString, calculatedMetrics, 1);
+    updateMetricSection(reportSheet, 'FA', dateString, calculatedMetrics, 16);
+    updateMetricSection(reportSheet, 'FS', dateString, calculatedMetrics, 31);
+    updateMetricSection(reportSheet, 'ST', dateString, calculatedMetrics, 46);
+    
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      `Report berhasil diupdate untuk tanggal ${dateString}`, 
+      '✅ Sukses!', 
+      5
+    );
+    
+  } catch (error) {
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      `Error: ${error.message}`, 
+      '❌ Gagal', 
+      10
+    );
+    console.error(error);
+  }
+}
+
+/**
+ * Process source data dan hitung metrics
+ */
+function processSourceData(sourceSheet, stockSheet) {
+  const sourceData = sourceSheet.getDataRange().getValues();
+  const headerRow = sourceData[0];
+  
+  const columnIndexes = {
+    storeNameCol: headerRow.indexOf('Store Name'),
+    totalPlanCol: headerRow.indexOf('Total_Plan'),
+    totalStockCol: headerRow.indexOf('Total_Stock'),
+    countPlanCol: headerRow.indexOf('Count_Plan>0'),
+    countStockCol: headerRow.indexOf('Count_Stock>0'),
+    countArticlePlanCol: headerRow.indexOf('Count_Article_Plan'),
+    countArticleCol: headerRow.indexOf('Count_Article_Stock')
+  };
+  
+  for (const [key, value] of Object.entries(columnIndexes)) {
+    if (value === -1) {
+      throw new Error(`Kolom tidak ditemukan: ${key}`);
+    }
+  }
+  
+  // Process Stock sheet untuk Sell-Through
+  let sellThroughMetrics = {};
+  if (stockSheet) {
+    const stockData = stockSheet.getDataRange().getValues();
+    const stockHeaders = stockData[0];
+    
+    console.log('Stock Headers untuk ST:', stockHeaders);
+    
+    const stockIndexes = {
+      storeNameCol: 0,
+      keluarCol: 6,
+      saldoAwalCol: 4,
+      masukCol: 5
+    };
+    
+    console.log('Kolom Store:', stockHeaders[stockIndexes.storeNameCol]);
+    console.log('Kolom Keluar:', stockHeaders[stockIndexes.keluarCol]);
+    console.log('Kolom Saldo Awal:', stockHeaders[stockIndexes.saldoAwalCol]);
+    console.log('Kolom Masuk:', stockHeaders[stockIndexes.masukCol]);
+    
+    const storeSTData = {};
+    for (let i = 1; i < stockData.length; i++) {
+      const row = stockData[i];
+      const storeName = row[stockIndexes.storeNameCol];
+      
+      if (!storeName || storeName === '') continue;
+      
+      if (!storeSTData[storeName]) {
+        storeSTData[storeName] = {
+          totalKeluar: 0,
+          totalSaldoAwal: 0,
+          totalMasuk: 0
+        };
+      }
+      
+      const keluar = Number(row[stockIndexes.keluarCol]) || 0;
+      const saldoAwal = Number(row[stockIndexes.saldoAwalCol]) || 0;
+      const masuk = Number(row[stockIndexes.masukCol]) || 0;
+      
+      storeSTData[storeName].totalKeluar += keluar;
+      storeSTData[storeName].totalSaldoAwal += saldoAwal;
+      storeSTData[storeName].totalMasuk += masuk;
+    }
+    
+    console.log('Store ST Data:', storeSTData);
+    
+    for (const store in storeSTData) {
+      const data = storeSTData[store];
+      const denominator = data.totalSaldoAwal + data.totalMasuk;
+      
+      if (denominator > 0) {
+        const st = (data.totalKeluar / denominator * 100).toFixed(2);
+        sellThroughMetrics[store] = st + '%';
+        console.log(`${store}: Keluar=${data.totalKeluar}, SaldoAwal+Masuk=${denominator}, ST=${st}%`);
+      } else {
+        sellThroughMetrics[store] = '0.00%';
+      }
+    }
+  }
+  
+  // Calculate metrics FF, FA, FS
+  const storeMetrics = {};
+  for (let i = 1; i < sourceData.length; i++) {
+    const row = sourceData[i];
+    const storeName = row[columnIndexes.storeNameCol];
+    
+    if (!storeName || storeName === '') continue;
+    
+    if (!storeMetrics[storeName]) {
+      storeMetrics[storeName] = {
+        totalPlan: 0,
+        totalStock: 0,
+        countPlan: 0,
+        countStock: 0,
+        countArticlePlan: 0,
+        countArticle: 0
+      };
+    }
+    
+    storeMetrics[storeName].totalPlan += row[columnIndexes.totalPlanCol] || 0;
+    storeMetrics[storeName].totalStock += row[columnIndexes.totalStockCol] || 0;
+    storeMetrics[storeName].countPlan += row[columnIndexes.countPlanCol] || 0;
+    storeMetrics[storeName].countStock += row[columnIndexes.countStockCol] || 0;
+    storeMetrics[storeName].countArticlePlan += row[columnIndexes.countArticlePlanCol] || 0;
+    storeMetrics[storeName].countArticle += row[columnIndexes.countArticleCol] || 0;
+  }
+  
+  const calculatedMetrics = {};
+  for (const store in storeMetrics) {
+    const metrics = storeMetrics[store];
+    calculatedMetrics[store] = {
+      FF: metrics.countPlan > 0 ? (metrics.countStock / metrics.countPlan * 100).toFixed(2) + '%' : '0.00%',
+      FA: metrics.countArticlePlan > 0 ? (metrics.countArticle / metrics.countArticlePlan * 100).toFixed(2) + '%' : '0.00%',
+      FS: metrics.totalPlan > 0 ? (metrics.totalStock / metrics.totalPlan * 100).toFixed(2) + '%' : '0.00%',
+      ST: sellThroughMetrics[store] || '0.00%'
+    };
+  }
+  
+  console.log('Final Metrics:', calculatedMetrics);
+  return calculatedMetrics;
+}
+
+/**
+ * Update metric section di report sheet
+ */
+function updateMetricSection(sheet, metricType, dateString, calculatedMetrics, startRow) {
+  const headerRow = sheet.getRange(startRow, 1, 1, sheet.getMaxColumns()).getValues()[0];
+  let lastFilledColumn = 1;
+  
+  for (let i = 1; i < headerRow.length; i++) {
+    if (headerRow[i] !== '' && headerRow[i] !== null) {
+      lastFilledColumn = i + 1;
+    }
+  }
+  
+  const newColumn = lastFilledColumn + 1;
+  
+  sheet.getRange(startRow, newColumn).setValue(dateString);
+  sheet.getRange(startRow + 1, newColumn).setValue(metricType);
+  
+  const stores = [
+    'Zuma Matos',
+    'Zuma Galaxy Mall',
+    'Zuma Tunjungan Plaza',
+    'ZUMA PTC',
+    'Zuma Icon Gresik',
+    'Zuma Lippo Sidoarjo',
+    'Zuma Lippo Batu',
+    'Zuma Royal Plaza',
+    'Zuma City Of Tomorrow Mall',
+    'Zuma Sunrise Mall',
+    'Zuma Mall Olympic Garden'
+  ];
+  
+  for (let i = 0; i < stores.length; i++) {
+    const storeName = stores[i];
+    const rowIndex = startRow + 2 + i;
+    
+    if (sheet.getRange(rowIndex, 1).getValue() === '') {
+      sheet.getRange(rowIndex, 1).setValue(storeName);
+    }
+    
+    if (calculatedMetrics[storeName]) {
+      sheet.getRange(rowIndex, newColumn).setValue(calculatedMetrics[storeName][metricType]);
+    } else {
+      sheet.getRange(rowIndex, newColumn).setValue('0.00%');
+    }
+  }
+}
+
+/**
+ * Date picker untuk custom date
+ */
+function showDatePicker() {
+  const html = `
+    <div style="padding: 20px; font-family: Arial;">
+      <h3>Pilih Tanggal</h3>
+      <input type="date" id="dateInput" style="padding: 8px; font-size: 14px; width: 100%; margin: 10px 0;">
+      <br>
+      <button onclick="processDate()" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; cursor: pointer; border-radius: 5px; width: 100%;">
+        Update Report
+      </button>
+    </div>
+    <script>
+      function processDate() {
+        const date = document.getElementById('dateInput').value;
+        if (date) {
+          google.script.run.withSuccessHandler(closeDialog)
+            .updateWithCustomDate(date);
+        } else {
+          alert('Pilih tanggal terlebih dahulu!');
+        }
+      }
+      function closeDialog() {
+        google.script.host.close();
+      }
+    </script>
+  `;
+  
+  const htmlOutput = HtmlService.createHtmlOutput(html)
+    .setWidth(400)
+    .setHeight(200);
+  SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Pilih Tanggal untuk Update Report');
+}
+
+/**
+ * Update dengan custom date
+ */
+function updateWithCustomDate(dateString) {
+  try {
+    SpreadsheetApp.getActiveSpreadsheet().toast('Sedang memproses data...', '⏳ Loading', -1);
+    
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const sourceSheet = spreadsheet.getSheetByName('Hasil Gabungan');
+    const stockSheet = spreadsheet.getSheetByName('Stock');
+    const reportSheet = spreadsheet.getSheetByName('Report');
+    
+    if (!sourceSheet || !stockSheet || !reportSheet) {
+      throw new Error('Sheet tidak ditemukan!');
+    }
+    
+    const date = new Date(dateString);
+    const formattedDate = Utilities.formatDate(date, Session.getScriptTimeZone(), 'd MMM');
+    
+    const calculatedMetrics = processSourceData(sourceSheet, stockSheet);
+    
+    updateMetricSection(reportSheet, 'FF', formattedDate, calculatedMetrics, 1);
+    updateMetricSection(reportSheet, 'FA', formattedDate, calculatedMetrics, 16);
+    updateMetricSection(reportSheet, 'FS', formattedDate, calculatedMetrics, 31);
+    updateMetricSection(reportSheet, 'ST', formattedDate, calculatedMetrics, 46);
+    
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      `Report berhasil diupdate untuk tanggal ${formattedDate}`, 
+      '✅ Sukses!', 
+      5
+    );
+    
+    return true;
+  } catch (error) {
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      `Error: ${error.message}`, 
+      '❌ Gagal', 
+      10
+    );
+    return false;
+  }
+}
+
+/**
+ * Setup trigger harian untuk daily report jam 13:00
+ */
+function setupDailyTrigger() {
+  try {
+    removeDailyTrigger();
+    
+    ScriptApp.newTrigger('updateDailyReport')
+      .timeBased()
+      .everyDays(1)
+      .atHour(13)
+      .nearMinute(0)
+      .create();
+    
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Auto update akan berjalan setiap hari jam 13:00', 
+      '✅ Auto Update Aktif!', 
+      5
+    );
+  } catch (error) {
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      `Error: ${error.message}`, 
+      '❌ Gagal Setup Trigger', 
+      10
+    );
+  }
+}
+
+/**
+ * Remove trigger daily report
+ */
+function removeDailyTrigger() {
+  const triggers = ScriptApp.getProjectTriggers();
+  let removed = 0;
+  
+  triggers.forEach(trigger => {
+    if (trigger.getHandlerFunction() === 'updateDailyReport') {
+      ScriptApp.deleteTrigger(trigger);
+      removed++;
+    }
+  });
+  
+  if (removed > 0) {
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Auto update telah dimatikan', 
+      '🛑 Trigger Dihapus', 
+      3
+    );
+  }
+}
+
+/**
+ * Show confirmation untuk clear data
+ */
+function showClearConfirmation() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert(
+    '⚠️ Konfirmasi Clear Data',
+    'Apakah Anda yakin ingin menghapus semua data report?\n\nIni akan menghapus semua kolom tanggal kecuali Store Name.',
+    ui.ButtonSet.YES_NO
+  );
+  
+  if (response === ui.Button.YES) {
+    clearReportData();
+  }
+}
+
+/**
+ * Clear report data
+ */
+function clearReportData() {
+  try {
+    const reportSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Report');
+    
+    if (!reportSheet) {
+      throw new Error('Sheet "Report" tidak ditemukan!');
+    }
+    
+    clearSection(reportSheet, 1, 12);
+    clearSection(reportSheet, 16, 27);
+    clearSection(reportSheet, 31, 42);
+    clearSection(reportSheet, 46, 57);
+    
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Data report berhasil dihapus', 
+      '✅ Clear Data Berhasil', 
+      5
+    );
+  } catch (error) {
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      `Error: ${error.message}`, 
+      '❌ Gagal Clear Data', 
+      10
+    );
+  }
+}
+
+/**
+ * Clear section helper
+ */
+function clearSection(sheet, startRow, endRow) {
+  const lastColumn = sheet.getLastColumn();
+  if (lastColumn > 1) {
+    sheet.getRange(startRow, 2, 2, lastColumn - 1).clear();
+    if (endRow > startRow + 1) {
+      sheet.getRange(startRow + 2, 2, endRow - startRow - 1, lastColumn - 1).clear();
+    }
+  }
+}
+
+// ==================== BAGIAN 4: SETUP SEMUA AUTOMASI ====================
+
+/**
+ * Setup semua automasi sekaligus
+ */
+function setupAllAutomation() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert(
+    '⚡ Setup Semua Automasi',
+    'Ini akan mengaktifkan semua automasi:\n\n' +
+    '1. Supabase Sync - 11:30\n' +
+    '2. Gabung Planogram & Stock - 12:00\n' +
+    '3. Daily Report Update - 13:00\n\n' +
+    'Lanjutkan?',
+    ui.ButtonSet.YES_NO
+  );
+  
+  if (response === ui.Button.YES) {
+    try {
+      SpreadsheetApp.getActiveSpreadsheet().toast('Mengatur semua automasi...', '⏳ Loading', -1);
+      
+      createSupabaseTrigger();
+      createPlanogramTrigger();
+      setupDailyTrigger();
+      
+      SpreadsheetApp.getActiveSpreadsheet().toast(
+        'Semua automasi berhasil diaktifkan!', 
+        '✅ Setup Berhasil', 
+        5
+      );
+    } catch (error) {
+      SpreadsheetApp.getActiveSpreadsheet().toast(
+        `Error: ${error.message}`, 
+        '❌ Setup Gagal', 
+        10
+      );
+    }
+  }
+}
+
+/**
+ * Hapus semua automasi sekaligus
+ */
+function removeAllAutomation() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert(
+    '🛑 Hapus Semua Automasi',
+    'Ini akan menonaktifkan semua automasi yang sedang berjalan.\n\nLanjutkan?',
+    ui.ButtonSet.YES_NO
+  );
+  
+  if (response === ui.Button.YES) {
+    try {
+      SpreadsheetApp.getActiveSpreadsheet().toast('Menghapus semua automasi...', '⏳ Loading', -1);
+      
+      deleteSupabaseTrigger();
+      deletePlanogramTrigger();
+      removeDailyTrigger();
+      
+      SpreadsheetApp.getActiveSpreadsheet().toast(
+        'Semua automasi berhasil dinonaktifkan', 
+        '✅ Hapus Berhasil', 
+        5
+      );
+    } catch (error) {
+      SpreadsheetApp.getActiveSpreadsheet().toast(
+        `Error: ${error.message}`, 
+        '❌ Hapus Gagal', 
+        10
+      );
+    }
+  }
+}
+
+/**
+ * Cek status semua automasi
+ */
+function checkAllAutomationStatus() {
+  const triggers = ScriptApp.getProjectTriggers();
+  
+  let supabaseStatus = '⚠️ TIDAK AKTIF';
+  let planogramStatus = '⚠️ TIDAK AKTIF';
+  let reportStatus = '⚠️ TIDAK AKTIF';
+  
+  triggers.forEach(function(tr) {
+    const funcName = tr.getHandlerFunction();
+    
+    if (funcName === 'runDumpSupabaseRaw') {
+      supabaseStatus = '✅ AKTIF - Jam 11:30';
+    } else if (funcName === 'gabungkanPlanogramStock') {
+      planogramStatus = '✅ AKTIF - Jam 12:00';
+    } else if (funcName === 'updateDailyReport') {
+      reportStatus = '✅ AKTIF - Jam 13:00';
+    }
+  });
+  
+  const statusInfo = 
+    '📊 STATUS SEMUA AUTOMASI\n\n' +
+    '1️⃣ Supabase Sync:\n' + supabaseStatus + '\n\n' +
+    '2️⃣ Gabung Planogram & Stock:\n' + planogramStatus + '\n\n' +
+    '3️⃣ Daily Report Update:\n' + reportStatus + '\n\n' +
+    '────────────────────────\n' +
+    'Gunakan menu untuk mengatur automasi';
+  
+  SpreadsheetApp.getUi().alert(
+    'Status Automasi', 
+    statusInfo, 
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+}
+
+// ==================== END OF SCRIPT ====================
