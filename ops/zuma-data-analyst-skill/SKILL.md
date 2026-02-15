@@ -73,6 +73,28 @@ conn.close()
 
 ---
 
+## 1.5. Product Analysis — NEW Unified Approach (2026-02-15)
+
+**⭐ PRIMARY REFERENCE:** `templates/product-analysis-unified.md`
+
+For ALL product/SKU performance queries, use the unified template which covers:
+- **Decision tree:** When to use `mart.sku_portfolio` vs `core.sales_with_product`
+- **Query framework:** WHAT/WHERE/WHEN pattern for structured queries
+- **Column mapping:** New (mart) vs old (core) column equivalents
+- **WhatsApp formatting:** Compact list vs detailed blocks
+- **Auto-flags:** 🔥 stockout, 🐌 overstock, ⚠️ negative WH, 📉 YoY drop
+
+**Default data source:** `mart.sku_portfolio` (use for 90% of product queries)
+
+**Key Rule:**
+- **NATIONAL aggregate?** → Use `mart.sku_portfolio` (101 columns, pre-computed monthly, YoY)
+- **Store-level breakdown?** → Use `core.sales_with_product` (has matched_store_name)
+- **Custom date range?** → Use `core.sales_with_product` (flexible WHERE clause)
+
+See section on `mart.*` schema below for full `sku_portfolio` column reference.
+
+---
+
 ## 2. Schema Architecture
 
 ```
@@ -293,23 +315,85 @@ All objects in `core` are **views** (not tables). They auto-recompute when queri
 
 ---
 
-## 6. Schema: `mart` (Ad-hoc Analysis)
+## 6. Schema: `mart` (Ad-hoc Analysis & Daily Automation)
 
-**Tables in this schema always change based on user requests.** The mart schema is a workspace for creating summary tables, aggregations, and analysis-specific materializations.
+**New as of 2026-02-15:** This schema now contains **permanent daily automation tables** alongside ad-hoc analysis tables.
 
-**Current state:** Schema exists but tables are created and dropped as needed. Do not assume any specific table exists — always check first:
+### 6.1. Permanent Daily Tables (Automated via Cron)
 
+#### `mart.sku_portfolio` ⭐ PRIMARY for Product Analysis
+
+**Purpose:** All-in-one comprehensive SKU analysis table (national aggregate only)
+**Updated:** Daily (post Stock Pull + Sales Pull)
+**Rows:** ~598 (all articles from kodemix)
+**Columns:** 101 active + 2 future (PO columns)
+
+**Use this table for 90% of product queries!**
+
+**Column Groups:**
+1. **ID/Base (7 cols):** id, kodemix, gender, series, color, tipe, tier
+2. **Sales (83 cols):** Monthly YoY (72 cols: 6×12 months), year totals (6), labels (2), mix/avg (3)
+3. **Stock (13 cols):** wh_pusat, wh_bali, wh_jkt, wh_total, stok_toko, stok_online, stok_unlabel, stok_global, to_wh, to_total
+
+**Key Features:**
+- Auto-detect year (current_year_label, last_year_label) — no hardcoded years
+- YoY comparison (var_year_qty, var_year_rp in %)
+- Monthly trends (now_jan vs last_jan, now_feb vs last_feb, etc.)
+- Turnover metrics (to_total = months of coverage, critical for PO decisions)
+- Sales mix % (current_sales_mix, last_sales_mix)
+
+**Example Query:**
 ```sql
-SELECT table_name FROM information_schema.tables WHERE table_schema = 'mart';
+SELECT kodemix, gender, series, color, tier,
+       current_year_qty, last_year_qty, var_year_qty,
+       current_sales_mix, to_total, stok_global
+FROM mart.sku_portfolio
+WHERE tier = '1'
+ORDER BY current_year_qty DESC
+LIMIT 10;
 ```
 
-**Common mart table patterns:**
-- `mart.monthly_sales_summary` — aggregated monthly sales by article/store
-- `mart.article_performance` — article-level KPIs
-- `mart.store_performance` — store-level KPIs
-- `mart.tier_analysis` — sales/stock by tier breakdown
+**Limitations:**
+- **NATIONAL only** — no store/area/branch breakdown
+- **Article level only** — no size breakdown
+- **Fixed time periods** — current year vs last year (for custom dates, use core views)
 
-**Creating mart tables:** Always use `CREATE TABLE mart.{name} AS SELECT ...` from core views.
+#### `mart.ff_fa_fs_daily`
+
+**Purpose:** Daily Fill Factor/Article/Stock metrics per store
+**Updated:** Daily 03:00 WIB (post Stock Pull)
+**Coverage:** Currently Jatim stores (11 stores), expanding to all branches
+
+**Columns:** report_date, branch, store_label, ff, fa, fs
+
+**Targets:** FF ≥70%, FA ≥90%, FS ≥80%
+
+#### `mart.stock_opname_l2_daily`
+
+**Purpose:** Daily stock vs sales reconciliation (detect shrinkage/theft)
+**Updated:** Daily 05:00 WIB (post Sales Pull)
+**Coverage:** 56 retail stores × 3 gender groups = 168 rows/day
+
+**Key Columns:** snapshot_date, store_name, gender_group, stock_qty, sales_qty, prev_stock_qty, expected_stock_qty, selisih (discrepancy), selisih_pct
+
+**Alert:** selisih < 0 = potential shrinkage/theft ⚠️
+
+### 6.2. Ad-hoc Analysis Tables
+
+**Tables in this section change based on user requests.** Do not assume any specific ad-hoc table exists — always check first:
+
+```sql
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'mart' 
+  AND table_name NOT IN ('sku_portfolio', 'ff_fa_fs_daily', 'stock_opname_l2_daily');
+```
+
+**Common ad-hoc patterns:**
+- `mart.monthly_sales_summary` — custom monthly aggregations
+- `mart.store_performance` — store-level KPIs
+- `mart.tier_analysis` — tier breakdown analysis
+
+**Creating ad-hoc tables:** Always use `CREATE TABLE mart.{name} AS SELECT ...` from core views.
 
 ---
 
