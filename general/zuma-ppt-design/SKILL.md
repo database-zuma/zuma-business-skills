@@ -403,16 +403,44 @@ Use when task requires exploration or complex logic:
 
 ## Usage
 
-When generating PPT for Zuma Indonesia:
+🚨 **CRITICAL: DEFAULT WORKFLOW FOR ALL PPT REQUESTS** 🚨
+
+**When ANY user requests PPT/presentation:**
+1. **Generate HTML deck** (single file with Tailwind CSS)
+2. **Deploy to Vercel** (web-based, permanent URL)
+3. **Share link** — NOT static file download
+
+**Why HTML + Vercel is mandatory:**
+- ✅ Web-shareable (permanent URL, accessible anywhere)
+- ✅ Better print quality (user can print to PDF themselves)
+- ✅ Fast iteration (re-deploy in 10 seconds)
+- ✅ No python-pptx layout struggles
+- ✅ Scrollable, responsive, modern UX
+
+**ONLY use python-pptx if:**
+- User explicitly requests .pptx file format
+- Or: HTML approach fails multiple times
+
+---
+
+**Standard workflow:**
+
 1. Read this SKILL.md for design guidelines
-2. Use Zuma colors (Teal + Green, NOT other palettes)
-3. Follow KBI-inspired layout principles (grid, white space, data focus)
-4. Adapt chart types to fit data (don't force exact KBI charts)
-5. Maintain brand consistency across all slides
-6. Output: 16:9 ratio, professional quality, A4-printable
+2. Use Zuma colors (Teal #002A3A + Green #00E273, NOT other palettes)
+3. Follow KBI-inspired or Swiss Style layout principles
+4. Generate HTML with Tailwind CSS (scrollable vertical slides)
+5. Deploy to Vercel (`vercel --prod --yes`)
+6. Share permanent URL
+
+**Output specifications:**
+- Format: Scrollable HTML (vertical 1-column layout)
+- Responsive: Works on desktop/mobile/tablet
+- Printable: User can Cmd+P → Save as PDF (with background graphics ON)
+- Shareable: Permanent Vercel URL
+- Professional quality: CEO-level audience ready
 
 **Tools:**
-- **Primary:** python-pptx for generation, gog CLI for Google Drive upload
-- **Alternative:** HTML deck + Vercel deployment (when python-pptx fails or web output preferred)
+- **Primary (MANDATORY):** HTML + Tailwind CSS → Vercel deployment
+- **Fallback:** python-pptx → gog CLI for Google Drive upload (only when explicitly requested)
 
-**Quality Bar:** Corporate presentation-ready, CEO-level audience
+**Quality Bar:** Corporate presentation-ready, web-first, shareable
