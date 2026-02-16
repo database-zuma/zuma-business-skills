@@ -165,7 +165,8 @@ Tanggal: {TANGGAL}
 - **No Pelanggan (Invoice) & No Pemasok (PO):** Dikosongkan (manual fill in Accurate)
 - **DN number:** Recorded in Keterangan field as reference
 - **Entity detection:** Auto-detected from customer name in DN
-- **Warehouse:** All warehouses supported (Pluit/WHJ, Bali/WHB, etc.) via Master Harga
+- **Warehouse:** All warehouses supported (exact names from Accurate: "Warehouse Pluit", "Warehouse Bali Gatsu - Box", etc.)
+- **Warehouse name:** Exact match dari DN — tidak dimodifikasi (critical for Accurate import)
 - **Output folder:** Auto-created if not exists
 - **1 DN = 2 files:** Invoice (DDD) + PO (MBB/UBB) — MANDATORY
 
