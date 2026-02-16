@@ -54,10 +54,24 @@ Attach Excel file + message together.
 
 `~/.openclaw/workspace/dn-to-po/convert-dn-to-po.js`
 
-**Output:** `PO-{ENTITY}-dari-{DN_NUMBER}.xlsx`
+## Output Location ⚠️ MANDATORY
+
+**Folder:** `~/Desktop/DN PO ENTITAS/`
+**Format:** `PO-[ENTITY]-[YYMMDD]-[NNN].xlsx`
+**Example:** `PO-MBB-260216-001.xlsx`
+
+**RULE:** ALL PO outputs MUST save to this folder (not directly to Desktop)
+
+**Implementation:**
+```javascript
+const outputDir = path.join(os.homedir(), 'Desktop', 'DN PO ENTITAS');
+if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+const outputPath = path.join(outputDir, outputFileName);
+```
 
 ## Notes
 
 - No Pemasok & Harga Satuan dikosongkan (manual fill)
 - DN number di pojok kanan atas DN file
 - Support MBB & UBB entities
+- Output folder auto-created if not exists
