@@ -1,9 +1,13 @@
 ---
 name: dn-to-po
-description: Auto-detect Delivery Note (DN) Excel files and convert to PO format. When user sends Excel file with DN indicators (DELIVERY NOTE, DN/DDD/ pattern, or Pengiriman Pesanan sheet), immediately ask "Untuk MBB atau UBB?" then convert and deliver (Excel + Google Sheets).
+description: Auto-detect Delivery Note (DN) Excel files and convert to Invoice + PO format. When user sends Excel file with DN indicators (DELIVERY NOTE, DN/DDD/ pattern, or Pengiriman Pesanan sheet), immediately ask "Untuk MBB atau UBB?" then convert and deliver 2 files (Invoice for DDD + PO for MBB/UBB).
 ---
 
-# DN to PO - Auto Workflow
+# DN to Invoice + PO - Auto Workflow
+
+**⚠️ CRITICAL:** Every DN must generate **2 outputs**:
+1. **Invoice (Faktur Penjualan)** → for DDD (seller)
+2. **PO (Pesanan Pembelian)** → for MBB/UBB (buyer)
 
 ## Trigger
 
@@ -18,15 +22,19 @@ User sends Excel file (.xlsx) → Check for DN indicators:
 
 ### 🔴 MANDATORY — NO EXCEPTIONS
 
-1. **ALWAYS USE `convert-dn-to-po.js` SCRIPT**
+1. **ALWAYS USE STANDARD SCRIPTS (2 files required)**
    - ❌ NEVER write ad-hoc Python/manual scripts
    - ❌ NEVER create custom Excel formatting
-   - ✅ ONLY use: `node convert-dn-to-po.js <file> <entity>`
+   - ✅ MUST generate Invoice: `node convert-dn-to-invoice.js <file>`
+   - ✅ MUST generate PO: `node convert-dn-to-po.js <file> <entity>`
+   - ⚠️ Every DN = 2 outputs (Invoice + PO)
    
-2. **ALWAYS DELIVER: Excel File + Google Sheets Link TOGETHER**
+2. **ALWAYS DELIVER: Both Files (Invoice + PO) with Links TOGETHER**
    - ❌ NEVER send Google Sheets link first, then file later
    - ❌ NEVER send file only or link only
-   - ✅ MUST: Attach Excel file + caption with link in ONE message
+   - ❌ NEVER send only PO (missing Invoice)
+   - ✅ MUST: Send Invoice file + link, then PO file + link
+   - ✅ Each file attached + caption with Google Sheets link in ONE message
 
 3. **IRIS EXECUTION ONLY** — Do NOT delegate to VPS
    - Task requires Mac mini tools (Node.js, gog CLI)
@@ -45,67 +53,113 @@ User sends Excel file (.xlsx) → Check for DN indicators:
 Untuk MBB atau UBB?
 ```
 
-### 2. Convert (User jawab) — USE STANDARD SCRIPT
+### 2. Convert (User jawab) — USE STANDARD SCRIPTS
+
+**Generate 2 files (MANDATORY):**
+
 ```bash
 cd ~/.openclaw/workspace/dn-to-po
-PATH="$HOME/homebrew/bin:$PATH" node convert-dn-to-po.js <file_path> <MBB|UBB>
+PATH="$HOME/homebrew/bin:$PATH"
+
+# Step 1: Generate Invoice for DDD
+node convert-dn-to-invoice.js <file_path>
+
+# Step 2: Generate PO for MBB/UBB
+node convert-dn-to-po.js <file_path> <MBB|UBB>
 ```
 
-**⚠️ Script output:** `~/Desktop/DN PO ENTITAS/PO-{ENTITY}-{YYMMDD}-{NNN}.xlsx`
+**⚠️ Script outputs:**
+- Invoice: `/Users/database-zuma/.openclaw/media/inbound/INV-DDD-dari-{NO_DN}-{TANGGAL}-{JAM}.xlsx`
+- PO: `/Users/database-zuma/.openclaw/media/inbound/PO-{ENTITY}-dari-{NO_DN}.xlsx`
 
-### 3. Upload to Google Drive
+**Note:** Both files generated in same directory as input DN file
+
+### 3. Move Files to Output Folder
 ```bash
-# Use output filename from script (not custom naming)
-OUTPUT_FILE=$(ls -t ~/Desktop/DN\ PO\ ENTITAS/PO-*.xlsx | head -1)
-gog drive upload "$OUTPUT_FILE" --name "$(basename "$OUTPUT_FILE")" --json
-# Extract file_id from JSON output
-gog drive share <file_id> --email wayan@zuma.id --role writer
-gog drive share <file_id> --email database@zuma.id --role writer
-gog drive share <file_id> --anyone --role reader
+# Move both files to DN PO ENTITAS folder
+mkdir -p ~/Desktop/DN\ PO\ ENTITAS
+mv /Users/database-zuma/.openclaw/media/inbound/INV-DDD-dari-*.xlsx ~/Desktop/DN\ PO\ ENTITAS/
+mv /Users/database-zuma/.openclaw/media/inbound/PO-*-dari-*.xlsx ~/Desktop/DN\ PO\ ENTITAS/
+
+# Get latest files
+INVOICE_FILE=$(ls -t ~/Desktop/DN\ PO\ ENTITAS/INV-DDD-*.xlsx | head -1)
+PO_FILE=$(ls -t ~/Desktop/DN\ PO\ ENTITAS/PO-*.xlsx | head -1)
 ```
 
-### 4. Send to User — FILE + LINK TOGETHER
+### 4. Upload Both Files to Google Drive
 ```bash
-# Use message tool with BOTH filePath AND caption
+# Upload Invoice
+gog drive upload "$INVOICE_FILE" --name "$(basename "$INVOICE_FILE")" --json
+INVOICE_ID=<extracted_from_json>
+gog drive share $INVOICE_ID --email wayan@zuma.id --role writer
+gog drive share $INVOICE_ID --email database@zuma.id --role writer
+gog drive share $INVOICE_ID --anyone --role reader
+
+# Upload PO
+gog drive upload "$PO_FILE" --name "$(basename "$PO_FILE")" --json
+PO_ID=<extracted_from_json>
+gog drive share $PO_ID --email wayan@zuma.id --role writer
+gog drive share $PO_ID --email database@zuma.id --role writer
+gog drive share $PO_ID --anyone --role reader
+```
+
+### 5. Send to User — BOTH FILES + LINKS TOGETHER
+```bash
+# Send Invoice first
 message action=send channel=whatsapp target=<user> \
-  filePath="$OUTPUT_FILE" \
-  message="📄 **PO-{ENTITY}-dari-{DN_NUMBER}**
+  filePath="$INVOICE_FILE" \
+  message="📄 **INVOICE (untuk DDD)**
+INV-DDD-dari-{DN_NUMBER}
 
-{DN_NUMBER}
 {X} SKU, {Y} pairs
 Tanggal: {TANGGAL}
 
 🔗 **Google Sheets:**
-{LINK}"
+{INVOICE_LINK}"
+
+# Then send PO
+message action=send channel=whatsapp target=<user> \
+  filePath="$PO_FILE" \
+  message="📄 **PO (untuk {ENTITY})**
+PO-{ENTITY}-dari-{DN_NUMBER}
+
+{X} SKU, {Y} pairs
+Tanggal: {TANGGAL}
+
+🔗 **Google Sheets:**
+{PO_LINK}"
 ```
 
-**⚠️ CRITICAL:** Excel file attached + caption with Google Sheets link = ONE message delivery
+**⚠️ CRITICAL:** Send BOTH files (Invoice + PO) with their respective Google Sheets links
 
-## Script Location
+## Script Locations
 
-`~/.openclaw/workspace/dn-to-po/convert-dn-to-po.js`
+- `~/.openclaw/workspace/dn-to-po/convert-dn-to-invoice.js` — Generate Invoice (DDD)
+- `~/.openclaw/workspace/dn-to-po/convert-dn-to-po.js` — Generate PO (MBB/UBB)
+- `~/.openclaw/workspace/dn-to-po/load-harga.js` — Price loader helper
+- `~/.openclaw/workspace/dn-to-po/template/Master Harga.xlsx` — Master price list
 
 ## Output Location ⚠️ MANDATORY
 
 **Folder:** `~/Desktop/DN PO ENTITAS/`
-**Format:** `PO-[ENTITY]-[YYMMDD]-[NNN].xlsx`
-**Example:** `PO-MBB-260216-001.xlsx`
 
-**RULE:** ALL PO outputs MUST save to this folder (not directly to Desktop)
+**Invoice Format:** `INV-DDD-dari-{NO_DN}-{TANGGAL}-{JAM}.xlsx`
+**Example:** `INV-DDD-dari-DN-DDD-WHB-2026-II-021-20260216-120345.xlsx`
 
-**Implementation:**
-```javascript
-const outputDir = path.join(os.homedir(), 'Desktop', 'DN PO ENTITAS');
-if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
-const outputPath = path.join(outputDir, outputFileName);
-```
+**PO Format:** `PO-{ENTITY}-dari-{NO_DN}.xlsx`
+**Example:** `PO-MBB-dari-DN-DDD-WHB-2026-II-021.xlsx`
+
+**RULE:** ALL outputs MUST be moved to `~/Desktop/DN PO ENTITAS/` after generation
 
 ## Notes
 
-- No Pemasok & Harga Satuan dikosongkan (manual fill)
-- DN number di pojok kanan atas DN file
-- Support MBB & UBB entities
-- Output folder auto-created if not exists
+- **Pricing:** Harga satuan auto-loaded from `Master Harga.xlsx` (sheet MBB/UBB)
+- **Column:** Harga After Diskon (price after discount)
+- **No Pelanggan (Invoice) & No Pemasok (PO):** Dikosongkan (manual fill in Accurate)
+- **DN number:** Recorded in Keterangan field as reference
+- **Entity detection:** Auto-detected from customer name in DN
+- **Output folder:** Auto-created if not exists
+- **1 DN = 2 files:** Invoice (DDD) + PO (MBB/UBB) — MANDATORY
 
 ## ❌ Common Mistakes (DO NOT REPEAT)
 
@@ -116,15 +170,21 @@ const outputPath = path.join(outputDir, outputFileName);
    → Output format didn't match Accurate template
 2. ❌ Sent Google Sheets link only, file delivered later when requested
    → User had to ask "Sya minta excel" (inconsistent with standard)
+3. ❌ Only generated PO (missing Invoice for DDD)
 
 **Result:** User reported "tidak sesuai" (output mismatch + delivery inconsistency)
 
 **Prevention:**
-- ✅ ALWAYS use `convert-dn-to-po.js` (no custom scripts)
-- ✅ ALWAYS deliver Excel file + Google Sheets link TOGETHER (one message)
+- ✅ ALWAYS use standard scripts: `convert-dn-to-invoice.js` + `convert-dn-to-po.js`
+- ✅ ALWAYS generate BOTH files (Invoice + PO) — never just PO alone
+- ✅ ALWAYS deliver Excel file + Google Sheets link TOGETHER (one message per file)
 - ✅ Follow workflow exactly as documented (no ad-hoc variations)
 
 **If skill not active (gateway restart pending):**
 - Still execute workflow manually
-- But MUST use standard script + standard delivery format
+- But MUST use standard scripts + standard delivery format
+- MUST generate both Invoice and PO
 - Consistency > convenience
+
+### New Rule (2026-02-16 onwards):
+**Every DN = 2 outputs (Invoice + PO).** Missing either file = incomplete workflow.
