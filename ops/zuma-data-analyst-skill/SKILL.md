@@ -1572,3 +1572,91 @@ Stock data can show negative quantities in one entity when stock has been physic
 **Status:** Complete
 **Last Updated:** 13 Feb 2026
 **Covers:** Database connection, schema architecture, all tables/views, ETL schedule, query rules, data processing patterns, SQL cookbook, analysis methodology, common pitfalls, admin reference, **standardized SQL templates** (sales, stock, TO/coverage, column conventions, entity warnings), **setup guide for non-technical users** (Python, libraries, DB access, script execution, troubleshooting)
+
+---
+
+## 🚨 CRITICAL: Branch/Store Mapping (Added 2026-02-16)
+
+**NEVER map branch/area using store name patterns!**
+
+### ❌ WRONG Approach
+```sql
+-- DON'T DO THIS - assumptions based on store names fail!
+CASE 
+  WHEN store_name ILIKE '%epicentrum%' THEN 'Jakarta'  -- WRONG! Epicentrum is in Lombok
+  WHEN store_name ILIKE '%level 21%' THEN 'Jakarta'     -- WRONG! Level 21 is in Bali
+  WHEN store_name ILIKE '%city of tomorrow%' THEN 'Jakarta'  -- WRONG! City of Tomorrow is in Surabaya
+END AS branch
+```
+
+**Why it fails:** Store names don't reliably indicate location. Many stores have deceptive names.
+
+### ✅ CORRECT Approach
+
+**ALWAYS JOIN with `portal.store` table** (source of truth):
+
+```sql
+SELECT 
+  s.store_name_raw,
+  ps.branch,           -- ← Definitive branch from master data
+  ps.area,             -- ← Specific area/city
+  ps.category,         -- ← RETAIL/NON-RETAIL/EVENT
+  SUM(s.quantity) AS total_qty,
+  SUM(s.total_amount) AS total_revenue
+FROM core.sales_with_product s
+LEFT JOIN portal.store ps 
+  ON s.store_name_raw = ps.nama_accurate 
+  OR s.store_name_raw = ps.nama_iseller
+WHERE ps.category = 'RETAIL'  -- Exclude NON-RETAIL/EVENT if needed
+  AND ps.branch IS NOT NULL
+GROUP BY ps.branch, ps.area, ps.category, s.store_name_raw
+ORDER BY total_revenue DESC;
+```
+
+### Portal Store Table Reference
+
+**Columns:**
+- `nama_accurate` — Store name in Accurate (ERP)
+- `nama_iseller` — Store name in iSeller (POS)
+- `branch` — Branch classification (Jakarta, Jatim, Bali, Lombok, etc.)
+- `area` — Specific area/city
+- `category` — RETAIL / NON-RETAIL / EVENT
+- `max_display` — Display capacity
+- `storage` — Storage capacity
+- `monthly_target` — Revenue target
+
+**Categories to filter:**
+- `RETAIL` — Permanent retail stores (include in analysis)
+- `NON-RETAIL` — Wholesale, konsinyasi, hublife (usually exclude)
+- `EVENT` — Temporary pameran/bazar (exclude for permanent store analysis)
+
+### Validation Workflow
+
+**Before any branch/area analysis:**
+1. Query `portal.store` to see which stores belong to which branch
+2. JOIN sales data with portal.store
+3. Filter by category if needed
+4. Present results
+
+**Example: Jakarta stores only**
+```sql
+SELECT 
+  nama_accurate,
+  nama_iseller,
+  category,
+  storage
+FROM portal.store
+WHERE branch = 'Jakarta'
+  AND category = 'RETAIL'
+ORDER BY nama_accurate;
+```
+
+### Lesson Learned (2026-02-16)
+
+**Incident:** Performance analysis with 3 wrong revisions due to assumed mappings.
+
+**Root cause:** Used `ILIKE` patterns based on gut feeling instead of master data.
+
+**Solution:** ALWAYS use `portal.store` as source of truth for branch/area mapping.
+
+**Rule:** Master data > assumptions. Don't guess locations, JOIN with portal.store.
