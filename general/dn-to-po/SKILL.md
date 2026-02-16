@@ -155,11 +155,57 @@ Tanggal: {TANGGAL}
 
 **RULE:** ALL outputs MUST be moved to `~/Desktop/DN PO ENTITAS/` after generation
 
+## PDF Support (Added 2026-02-16)
+
+### Implementation
+- **Library:** pdf-parse v1.1.1 (installed via npm)
+- **Parser:** `~/.openclaw/workspace/dn-to-po/parse-dn-pdf.js`
+- **Auto-detection:** Scripts check file extension (`.pdf` vs `.xlsx`) and route to correct parser
+
+### Parsing Logic
+**PDF text extraction:**
+- DN metadata: Number, Date, Warehouse, Customer
+- Item table: SKU, Description, Quantity
+- Regex patterns for structured data extraction
+
+**Field normalization (PDF → matches Excel output):**
+```javascript
+{
+  dnNumber: "DN/DDD/WHJ/2026/II/007",  // from DN header
+  dnDate: "17 Feb 2026",                // from "Tanggal:" field
+  customerName: "MBB - PT MATARAM...",  // from "Pelanggan:" field
+  items: [
+    { sku: "MEN STRIPE...", desc: "...", qty: 2 },
+    ...
+  ]
+}
+```
+
+### Testing
+✅ **Verified with:** DN/DDD/WHJ/2026/II/007 (PDF format)
+- 33 SKU, 68 pairs
+- Both Invoice and PO generated successfully
+- Pricing auto-loaded from Master Harga
+- Upload to Google Drive successful
+
+### Script Updates
+Both converters now async/await:
+```javascript
+const fileExt = path.extname(inputFile).toLowerCase();
+let dnData;
+
+if (fileExt === '.pdf') {
+  dnData = await parseDnPdf(inputFile);
+} else {
+  dnData = parseDn(inputFile);  // Excel
+}
+```
+
 ## Notes
 
-- **File Format:** Supports both PDF and Excel (.xlsx)
-- **PDF Parser:** `parse-dn-pdf.js` using pdf-parse library (installed)
-- **Field Normalization:** PDF parser output normalized to match Excel parser
+- **File Format:** Supports both PDF and Excel (.xlsx) — auto-detected by extension
+- **PDF Parser:** Text extraction with pdf-parse, field normalization to match Excel output
+- **Excel Parser:** XLSX library (existing, unchanged)
 - **Pricing:** Harga satuan auto-loaded from `Master Harga.xlsx` (sheet MBB/UBB)
 - **Column:** Harga After Diskon (price after discount)
 - **No Pelanggan (Invoice) & No Pemasok (PO):** Dikosongkan (manual fill in Accurate)
@@ -169,6 +215,7 @@ Tanggal: {TANGGAL}
 - **Warehouse name:** Exact match dari DN — tidak dimodifikasi (critical for Accurate import)
 - **Output folder:** Auto-created if not exists
 - **1 DN = 2 files:** Invoice (DDD) + PO (MBB/UBB) — MANDATORY
+- **PDF edge cases:** Monitor for different DN formats, regex patterns may need adjustment
 
 ## ❌ Common Mistakes (DO NOT REPEAT)
 
