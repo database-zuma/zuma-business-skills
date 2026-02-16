@@ -1,6 +1,6 @@
 ---
 name: dn-to-po
-description: Auto-detect Delivery Note (DN) Excel files and convert to Invoice + PO format. When user sends Excel file with DN indicators (DELIVERY NOTE, DN/DDD/ pattern, or Pengiriman Pesanan sheet), immediately ask "Untuk MBB atau UBB?" then convert and deliver 2 files (Invoice for DDD + PO for MBB/UBB).
+description: Auto-detect Delivery Note (DN) files (PDF or Excel) and convert to Invoice + PO format. When user sends DN file with indicators (DELIVERY NOTE, DN/DDD/ pattern, or Pengiriman Pesanan sheet), immediately ask "Untuk MBB atau UBB?" then convert and deliver 2 files (Invoice for DDD + PO for MBB/UBB). Supports both PDF and Excel formats.
 ---
 
 # DN to Invoice + PO - Auto Workflow
@@ -11,12 +11,16 @@ description: Auto-detect Delivery Note (DN) Excel files and convert to Invoice +
 
 ## Trigger
 
-User sends Excel file (.xlsx) → Check for DN indicators:
-- Sheet name: "Pengiriman Pesanan"
-- Cell content: "DELIVERY NOTE"
-- Cell content: Pattern `DN/DDD/`
+User sends DN file (PDF or Excel) → Check for DN indicators:
+- **PDF:** Text contains "DELIVERY NOTE" and "DN/DDD/" pattern
+- **Excel (.xlsx):** Sheet name "Pengiriman Pesanan" or cell contains "DELIVERY NOTE"
 
 **If detected → LANGSUNG TANYA:** "Untuk MBB atau UBB?"
+
+**File Format Support:**
+- ✅ PDF (text extraction via pdf-parse)
+- ✅ Excel (.xlsx) (XLSX library)
+- Script auto-detects file extension
 
 ## ⚠️ CRITICAL EXECUTION RULES
 
@@ -153,11 +157,15 @@ Tanggal: {TANGGAL}
 
 ## Notes
 
+- **File Format:** Supports both PDF and Excel (.xlsx)
+- **PDF Parser:** `parse-dn-pdf.js` using pdf-parse library (installed)
+- **Field Normalization:** PDF parser output normalized to match Excel parser
 - **Pricing:** Harga satuan auto-loaded from `Master Harga.xlsx` (sheet MBB/UBB)
 - **Column:** Harga After Diskon (price after discount)
 - **No Pelanggan (Invoice) & No Pemasok (PO):** Dikosongkan (manual fill in Accurate)
 - **DN number:** Recorded in Keterangan field as reference
 - **Entity detection:** Auto-detected from customer name in DN
+- **Warehouse:** All warehouses supported (Pluit/WHJ, Bali/WHB, etc.) via Master Harga
 - **Output folder:** Auto-created if not exists
 - **1 DN = 2 files:** Invoice (DDD) + PO (MBB/UBB) — MANDATORY
 
