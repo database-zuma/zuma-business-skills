@@ -164,14 +164,32 @@ TABLE TITLE
 
 ---
 
-## Chart & Visual Guidelines
+## Visual Guidelines
 
-### Chart Types (Use as Needed)
+### ⚠️ IMPORTANT: Match Visuals to Content
+
+**Use charts ONLY when presenting data/metrics.**
+**Use flowcharts/diagrams for processes/workflows/concepts.**
+
+Don't force charts where they don't belong!
+
+### Data Visualization (Charts)
+Use when presenting: sales numbers, performance metrics, comparisons, trends
+
 - **Bar Charts:** Solid Teal bars, Green for highlights/comparison
 - **Line Charts:** Teal primary line, Green secondary/target line
 - **Area Charts:** Teal fill with gradient (semi-transparent)
 - **Pie/Donut:** Teal shades (light to dark), Green for key segment
 - **Tables:** Teal header row, alternating white/light gray rows
+
+### Process Visualization (Flowcharts/Diagrams)
+Use when presenting: workflows, decision trees, system architecture, timelines
+
+- **Flowcharts:** Teal boxes/shapes, Green arrows for flow, white text
+- **Timelines:** Horizontal with Teal milestones, Green current phase
+- **Org Charts:** Teal header boxes, white/light gray sub-boxes
+- **Decision Trees:** Teal decision nodes, Green paths
+- **Process Flows:** Simple boxes + arrows (Teal/Green palette)
 
 ### Chart Styling
 - **Clean axes** (no heavy borders)
@@ -185,6 +203,7 @@ TABLE TITLE
 - Drop shadows (unless very subtle)
 - Overly decorative elements
 - Chart junk (excessive borders, backgrounds)
+- **Forcing charts when content is conceptual** (use flowcharts instead)
 
 ---
 
@@ -195,7 +214,8 @@ TABLE TITLE
 - Keep white space generous
 - Align everything to grid
 - Use big numbers for impact
-- Mix chart types for variety
+- **Match visuals to content** (charts for data, flowcharts for processes)
+- Mix visual types for variety (when appropriate)
 - Stay consistent with typography
 - Use gradients sparingly (Teal only)
 
