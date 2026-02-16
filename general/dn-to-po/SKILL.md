@@ -14,6 +14,13 @@ User sends Excel file (.xlsx) → Check for DN indicators:
 
 **If detected → LANGSUNG TANYA:** "Untuk MBB atau UBB?"
 
+## ⚠️ EXECUTION RULE
+
+**IRIS EXECUTION ONLY** — Do NOT delegate to VPS agents (Atlas/Apollo/Iris Junior)
+- Task requires Mac mini tools (Node.js script, gog CLI)
+- Ad-hoc user request (not cron job)
+- Execute locally, deliver immediately
+
 ## Workflow
 
 ### 1. Ask Entity
