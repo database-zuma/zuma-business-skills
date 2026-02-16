@@ -1,72 +1,42 @@
 ---
 name: dn-to-po
-description: Auto-detect Delivery Note (DN) Excel files from DDD and convert to Purchase Order (PO) import format for Accurate Online. Handles DN file detection, entity extraction (MBB/UBB), conversion, Google Drive upload, and standardized delivery (Excel + Google Sheets link). Use when user sends Excel file containing DN data.
+description: Auto-detect Delivery Note (DN) Excel files and convert to PO format. When user sends Excel file with DN indicators (DELIVERY NOTE, DN/DDD/ pattern, or Pengiriman Pesanan sheet), immediately ask "Untuk MBB atau UBB?" then convert and deliver (Excel + Google Sheets).
 ---
 
-# DN to PO Converter
+# DN to PO - Auto Workflow
 
-Auto-convert Delivery Note (DN) files from DDD to Purchase Order (PO) import format for MBB/UBB entities.
+## Trigger
 
-## When to Use
+User sends Excel file (.xlsx) → Check for DN indicators:
+- Sheet name: "Pengiriman Pesanan"
+- Cell content: "DELIVERY NOTE"
+- Cell content: Pattern `DN/DDD/`
 
-**Trigger:** User sends Excel file (.xlsx)
+**If detected → LANGSUNG TANYA:** "Untuk MBB atau UBB?"
 
-**Auto-detect DN if:**
-- Sheet name contains "Pengiriman Pesanan" OR
-- Cell content contains "DELIVERY NOTE" OR
-- Cell content contains "DN/DDD/" pattern (DN number)
+## Workflow
 
-**If detected:** Proceed with conversion workflow automatically (don't ask user)
-
-## Detection & Extraction
-
-Use Node.js quick check:
-```javascript
-const XLSX = require('xlsx');
-const wb = XLSX.readFile(filePath);
-const sheet = wb.Sheets[wb.SheetNames[0]];
-const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-
-// Check for DN indicators
-const isDN = wb.SheetNames.some(s => s.includes('Pengiriman Pesanan')) ||
-  rows.some(row => row.some(cell => 
-    String(cell).includes('DELIVERY NOTE') || 
-    String(cell).match(/DN\/DDD\//)
-  ));
+### 1. Ask Entity
+```
+Untuk MBB atau UBB?
 ```
 
-**Extract from DN:**
-- DN Number: Cell pattern `DN/DDD/*/YYYY/*/###` (e.g., DN/DDD/WHB/2026/II/021)
-- Entity: Customer name → "CV MAKMUR BESAR BERSAMA" = MBB, "CV UNTUNG BESAR BERSAMA" = UBB
-- Date: Date cell near DN number
-- Items: Item Kode + Name Article + Qty + Unit (row 22+, columns 1, 7, 22, 31)
-
-## Conversion Workflow
-
-### 1. Run Converter
+### 2. Convert (User jawab)
 ```bash
 cd ~/.openclaw/workspace/dn-to-po
-PATH="$HOME/homebrew/bin:$PATH" node convert-dn-to-po.js <file_path> <entity>
+PATH="$HOME/homebrew/bin:$PATH" node convert-dn-to-po.js <file_path> <MBB|UBB>
 ```
 
-**Output:** `PO-{ENTITY}-dari-{DN_NUMBER}.xlsx`
-- Example: `PO-MBB-dari-DN-DDD-WHB-2026-II-021.xlsx`
-- Location: Same folder as input file
-
-### 2. Upload to Google Drive
+### 3. Upload Google Drive
 ```bash
-~/homebrew/Cellar/gogcli/0.9.0/bin/gog drive upload <output_file> \
-  --name "PO-{ENTITY}-dari-{DN_NUMBER}.xlsx" --json
-
-# Extract file_id from JSON output, then share:
+gog drive upload <output_file> --name "PO-{ENTITY}-dari-{DN_NUMBER}.xlsx" --json
+# Get file_id from output
 gog drive share <file_id> --email wayan@zuma.id --role writer
 gog drive share <file_id> --email database@zuma.id --role writer
 gog drive share <file_id> --anyone --role reader
 ```
 
-### 3. Deliver to User
-
-**Format standar (WhatsApp):**
+### 4. Send to User
 ```
 📄 **PO-{ENTITY}-dari-{DN_NUMBER}**
 
@@ -75,47 +45,19 @@ gog drive share <file_id> --anyone --role reader
 Tanggal: {TANGGAL}
 
 🔗 **Google Sheets:**
-{GSHEET_LINK}
+{LINK}
 ```
 
-**Send together:**
-- File Excel (media attachment)
-- Google Sheets link (in message)
-
-**Tools:**
-```javascript
-message({
-  action: 'send',
-  channel: 'whatsapp',
-  target: '<user_phone>',
-  message: `📄 **PO-MBB-dari-DN-DDD-WHB-2026-II-021**\n\nDN/DDD/WHB/2026/II/021\n53 SKU, 168 pairs\nTanggal: 13 Feb 2026\n\n🔗 **Google Sheets:**\nhttps://docs.google.com/spreadsheets/d/...`,
-  media: '/path/to/PO-MBB-dari-DN-DDD-WHB-2026-II-021.xlsx'
-});
-```
-
-## Error Handling
-
-**If entity unclear:**
-- Check customer name in DN file first
-- If still unclear → Ask user: "Ini untuk MBB atau UBB?"
-
-**If conversion fails:**
-- Check DN file format (must be Accurate export "Pengiriman Pesanan")
-- Verify Node.js installed: `~/homebrew/bin/node --version`
-- Check npm deps: `cd ~/.openclaw/workspace/dn-to-po && npm install`
+Attach Excel file + message together.
 
 ## Script Location
 
-**Converter repo:** `~/.openclaw/workspace/dn-to-po/`
-**GitHub:** https://github.com/database-zuma/dn-to-po
+`~/.openclaw/workspace/dn-to-po/convert-dn-to-po.js`
 
-**Dependencies:**
-- Node.js (v25.6.0+) at `~/homebrew/bin/node`
-- npm packages: `xlsx`, `exceljs` (auto-installed via `npm install`)
+**Output:** `PO-{ENTITY}-dari-{DN_NUMBER}.xlsx`
 
 ## Notes
 
-- **No Pemasok & Harga Satuan** dikosongkan (user isi manual di Accurate)
-- **Keterangan PO:** Auto-filled with `PO dari {DN_NUMBER}`
-- **Filename:** Clean format without timestamp (e.g., `PO-MBB-dari-DN-DDD-WHB-2026-II-021.xlsx`)
-- **Multi-entity support:** MBB (CV Makmur Besar Bersama), UBB (CV Untung Besar Bersama)
+- No Pemasok & Harga Satuan dikosongkan (manual fill)
+- DN number di pojok kanan atas DN file
+- Support MBB & UBB entities
