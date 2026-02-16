@@ -75,6 +75,208 @@ description: Professional presentation design guidelines for Zuma Indonesia. KBI
 
 ---
 
+## Narrative Structure & Data Storytelling
+
+**Goal:** Transform descriptive data → compelling narrative with actionable insights
+
+**Critical:** Design beautiful slides ≠ effective presentation. Story first, visuals second.
+
+---
+
+### Framework 1: SCQA (Situation-Complication-Question-Answer)
+
+**McKinsey/consulting standard structure:**
+
+1. **Situation:** Where we are today (context, facts)
+2. **Complication:** Problem/opportunity/tension (what's wrong?)
+3. **Question:** What should we do about it?
+4. **Answer:** Recommendation with rationale + data
+
+**Application:**
+- **Open with complication** (not situation) — grab attention
+- **Every slide answers one question** in the Q→A flow
+- **Tension is key** — no conflict = boring presentation
+
+**Example:**
+- ❌ "Zuma has 598 SKU across 6 branches" (situation, boring)
+- ✅ "19 of top 20 SKU declining -70% YoY — revenue at risk" (complication, urgent)
+
+---
+
+### Framework 2: Pyramid Principle (Barbara Minto)
+
+**Structure:**
+- **Top:** Main conclusion/recommendation (answer first!)
+- **Layer 1:** 3-4 key supporting arguments
+- **Layer 2:** Data/evidence for each argument
+- **Layer 3:** Detailed analysis (appendix)
+
+**Golden rule:** Start with the answer, not the data.
+
+**Slide application:**
+- Headline = conclusion (not topic)
+- Body = supporting evidence
+- Footer = "So what?" implication
+
+**Example headlines:**
+- ❌ "Top 20 SKU Performance" (topic)
+- ✅ "Top 20 SKU face 80% decline — urgent product refresh needed" (conclusion)
+
+---
+
+### Framework 3: Insight Hierarchy (Gartner Model)
+
+**4 levels of analysis:**
+
+1. **Descriptive:** What happened? (data reporting)
+   - "Revenue is Rp 27.6B"
+   - Charts, tables, metrics
+   
+2. **Diagnostic:** Why did it happen? (root cause)
+   - "Revenue declining because of product lifecycle maturity + competition"
+   - Analysis, comparisons, breakdowns
+   
+3. **Predictive:** What will happen? (forecast)
+   - "If trend continues, we lose Rp 2.3B by Q4"
+   - Scenarios, projections, trend lines
+   
+4. **Prescriptive:** What should we do? (action)
+   - "Launch 10-15 new SKU per quarter to recover Rp 500M by Q3"
+   - Recommendations, roadmap, metrics
+
+**Most presentations fail at Diagnostic/Predictive/Prescriptive — they just report data (Descriptive).**
+
+**Quality bar:** Every insight must answer "So what?" and progress through hierarchy.
+
+---
+
+### Framework 4: Narrative Arc for Business
+
+**Classic story structure:**
+
+1. **Setup:** Where we are (brief, establishes context)
+2. **Conflict/Challenge:** What's wrong or at stake (tension!)
+3. **Journey:** What we discovered in the data (insights)
+4. **Resolution:** What we should do (recommendations)
+5. **Call to action:** Next steps with urgency
+
+**Critical:** Without conflict, presentation is flat. Find the "villain":
+- Market threat
+- Declining performance
+- Missed opportunity
+- Resource constraint
+
+**Example narrative:**
+- Setup: "Zuma operates 6 branches across Indonesia"
+- Conflict: "But 19 of top 20 SKU declining -80% YoY — revenue collapsing"
+- Journey: "We analyzed the data and found 3 patterns..."
+- Resolution: "We can reverse decline with 3-play strategy"
+- CTA: "Approve product pipeline by end of Q2"
+
+---
+
+### Best Practices: McKinsey Slide Structure
+
+**Every slide must have:**
+
+1. **Insight headline** (not topic title)
+   - Answer "So what?" in the headline itself
+   - Make it actionable/decision-oriented
+   
+2. **Supporting visual** (chart/table/diagram)
+   - Data that proves the headline
+   - Annotate key points
+   
+3. **Bottom-line implication** (1-2 sentences)
+   - What this means for the business
+   - Call to action or next question
+
+**Example slide:**
+```
+[Headline] Top 20 SKU face 80% YoY decline — urgent product refresh needed
+
+[Visual] Bar chart showing YoY decline by SKU
+         - 19/20 declining
+         - Avg decline -83%
+         - Only 1 SKU growing (Merci +31%)
+
+[Implication] Without new product pipeline, we risk Rp 2.3B revenue loss by Q4.
+              Recommend launching 10-15 new SKU per quarter starting Q2.
+```
+
+---
+
+### Actionable Recommendations: SMART Format
+
+**Every recommendation must be:**
+
+- **Specific:** Not "improve products" but "launch 10-15 new SKU in Men's & Baby"
+- **Measurable:** "Recover Rp 500M revenue by Q3"
+- **Achievable:** Within resource/time constraints
+- **Relevant:** Addresses root cause identified
+- **Time-bound:** "By end of Q2 2025"
+
+**Template:**
+1. **What:** The action (clear, specific)
+2. **Why:** Rationale tied to insight (diagnostic)
+3. **How:** Implementation approach (high-level)
+4. **When:** Timeline with milestones
+5. **Impact:** Expected outcome (quantified)
+6. **Investment:** Resources needed (budget, headcount)
+7. **Owner:** Who's accountable
+
+---
+
+### Common Pitfalls
+
+**❌ Descriptive-only presentation:**
+- Just shows data without interpretation
+- "Revenue is X, Cost is Y, Profit is Z"
+- Audience reaction: "So what?"
+
+**❌ Missing "why" analysis:**
+- Shows WHAT happened but not WHY
+- "Sales declined 80%" → But why? Competition? Product? Market?
+
+**❌ No forecast/projection:**
+- Doesn't answer "What if we don't act?"
+- No sense of urgency
+
+**❌ Generic recommendations:**
+- "Improve products", "Expand market", "Increase sales"
+- Not specific, measurable, or time-bound
+
+**❌ No prioritization:**
+- Lists 10 recommendations without ranking
+- Everything seems equally important = nothing is
+
+**✅ Good presentation:**
+- Answers WHY (diagnostic)
+- Shows WHAT IF (predictive)
+- Recommends WHAT TO DO (prescriptive)
+- Quantifies everything (metrics, timelines, investment, ROI)
+- Prioritizes actions (urgent vs important)
+- Creates urgency (deadline, risk, opportunity cost)
+
+---
+
+### Quality Checklist
+
+Before finalizing deck, verify:
+
+- [ ] **Headline = insight** (not topic) on every slide
+- [ ] **Story arc clear:** Setup → Conflict → Journey → Resolution → CTA
+- [ ] **Diagnostic level:** WHY analysis included (not just WHAT)
+- [ ] **Predictive level:** Forecast/scenario analysis (what if we don't act?)
+- [ ] **Prescriptive level:** SMART recommendations with metrics
+- [ ] **Quantified impact:** Investment, ROI, timeline for each recommendation
+- [ ] **Prioritization:** Urgent vs important, sequenced roadmap
+- [ ] **Risk mitigation:** What could go wrong? How do we address it?
+- [ ] **Success criteria:** How do we measure progress?
+- [ ] **Call to action:** Clear next steps with ownership + deadline
+
+---
+
 ## Slide Templates
 
 ### Template 1: Title Slide
