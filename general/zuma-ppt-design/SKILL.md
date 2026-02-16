@@ -362,6 +362,43 @@ vercel --prod --yes
 **Deployment date:** 2026-02-16
 **Deployment time:** ~10 seconds (Vercel)
 
+### ⚙️ Implementation Decision: Direct Coding vs Delegation
+
+**✅ DIRECT CODING (Iris writes code herself):**
+Use when task is simple and straightforward:
+- Single file HTML updates (content, layout, styling)
+- Clear requirements (add screenshot, change text to Bahasa, fix grid)
+- Pure HTML + Tailwind CSS (no complex logic)
+- Quick iterations (user feedback loop)
+- **Speed advantage:** Write → deploy → done (no AI interpretation layer)
+
+**Example tasks:**
+- Update deck content (slide text, add images)
+- Fix layout (grid → scrollable, responsive tweaks)
+- Add Bahasa Indonesia translation
+- Insert screenshots into existing slides
+
+**⚠️ DELEGATE TO OPENCODE/CLAUDE CODE:**
+Use when task requires exploration or complex logic:
+- Multi-file projects (backend + frontend)
+- Large codebases (need to explore structure)
+- Complex algorithms or calculations
+- Python scripts with dependencies/imports
+- Database operations (multi-step queries, schema changes)
+- **When python-pptx fails repeatedly:** Switch to direct HTML scripting
+
+**Example tasks:**
+- Full app development
+- Data pipelines with error handling
+- Interactive charts with libraries
+- Backend API integration
+
+**Rule of thumb:** Simple HTML/CSS = Direct (faster). Everything else = Delegate (leverage AI reasoning).
+
+**Proven workflow (2026-02-16):**
+- RO Benchmark deck updates: Direct coding → 3 iterations → 10 sec deploys ✓
+- Complex PPT generation: OpenCode → multiple failures → switched to direct scripting ✓
+
 ---
 
 ## Usage
