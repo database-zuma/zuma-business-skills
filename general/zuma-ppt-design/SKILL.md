@@ -290,6 +290,80 @@ def set_text_format(text_frame, font_size, bold=False, color=DARK_GRAY, align=PP
 
 ---
 
+## Alternative Approach: HTML Deck (Vercel)
+
+**When to use:** When python-pptx struggles with complex layouts or user wants web-based deck
+
+### Workflow
+
+**1. Generate HTML Deck**
+- Single HTML file with Tailwind CSS
+- Swiss Style / Bold typography (Inter font)
+- Grid-based card layouts (3-column for overview)
+- Absolute positioning for precise element placement
+- Zuma colors: Green #00E273 accent, Teal #002A3A text, off-white #F5F5F0 backgrounds
+
+**2. Deploy to Vercel**
+```bash
+# Setup
+mkdir ~/Desktop/project-name-vercel
+cp ~/Desktop/deck.html ~/Desktop/project-name-vercel/index.html
+
+# Deploy
+cd ~/Desktop/project-name-vercel
+export PATH=~/homebrew/bin:$PATH
+export VERCEL_TOKEN=<from .env>
+vercel --prod --yes
+```
+
+**3. Print to PDF (from web)**
+- Open Vercel URL in browser
+- Cmd+P (Print)
+- Settings:
+  - **Background graphics:** ON (CRITICAL!)
+  - **Layout:** Landscape
+  - **Margins:** None
+  - **Scale:** 100%
+  - **Paper size:** A4 or Letter
+- Save as PDF
+
+### Benefits
+- ✅ Web-shareable link (permanent URL)
+- ✅ Better print fidelity (browser render > headless Chrome)
+- ✅ Interactive (scrollable, responsive)
+- ✅ Easy iteration (re-deploy in seconds)
+- ✅ No python-pptx layout struggles
+
+### HTML Template Structure
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        /* Custom styles with Zuma colors */
+    </style>
+</head>
+<body class="bg-[#1a1a1a] p-10">
+    <div class="max-w-7xl mx-auto grid grid-cols-3 gap-5">
+        <!-- Slide cards -->
+        <div class="bg-[#f5f5f0] rounded-2xl p-12 aspect-[16/10] relative">
+            <!-- Content -->
+        </div>
+    </div>
+</body>
+</html>
+```
+
+### Reference
+**Example:** RO Benchmark deck → https://ro-benchmark-vercel.vercel.app
+**Style:** Swiss Design (bold Grotesk, high contrast, generous whitespace, grid system)
+**Deployment date:** 2026-02-16
+**Deployment time:** ~10 seconds (Vercel)
+
+---
+
 ## Usage
 
 When generating PPT for Zuma Indonesia:
@@ -300,5 +374,8 @@ When generating PPT for Zuma Indonesia:
 5. Maintain brand consistency across all slides
 6. Output: 16:9 ratio, professional quality, A4-printable
 
-**Tools:** python-pptx for generation, gog CLI for Google Drive upload
+**Tools:**
+- **Primary:** python-pptx for generation, gog CLI for Google Drive upload
+- **Alternative:** HTML deck + Vercel deployment (when python-pptx fails or web output preferred)
+
 **Quality Bar:** Corporate presentation-ready, CEO-level audience
