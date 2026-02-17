@@ -46,7 +46,17 @@ Katalog deck yang sudah dibuat & teruji. Gunakan sebagai **starting point & benc
 ## Branch Manager
 **Context:** Per-cabang store performance, local ABC analysis
 
-> Belum ada. Needs: portal.store JOIN fix dulu (timeout issue). Template: sama dengan Performance Analysis tapi filtered `WHERE branch = 'Bali'` etc.
+> ⚠️ **PERMANENT URL RULE:** Setiap branch punya 1 link permanen. Update data = deploy ulang ke folder yang sama. JANGAN buat Vercel project baru untuk update.
+> ⚠️ **PDF REMINDER:** Setiap kali kirim BM link ke user, SELALU tambahkan: *"Jangan lupa save ke PDF ya, karena data di link ini akan di-update terus"*
+
+| Branch | URL Permanen | Status |
+|--------|-------------|--------|
+| Jawa Timur | https://zuma-bm-jatim.vercel.app | ✅ Live |
+| Bali | https://zuma-bm-bali.vercel.app | 🔜 Belum dibuat |
+| Jakarta | https://zuma-bm-jakarta.vercel.app | 🔜 Belum dibuat |
+| Sumatra | https://zuma-bm-sumatra.vercel.app | 🔜 Belum dibuat |
+| Sulawesi | https://zuma-bm-sulawesi.vercel.app | 🔜 Belum dibuat |
+| Batam | https://zuma-bm-batam.vercel.app | 🔜 Belum dibuat |
 
 ---
 
@@ -87,7 +97,7 @@ Katalog deck yang sudah dibuat & teruji. Gunakan sebagai **starting point & benc
 
 ### Zuma BM Jatim Review (Jan–Feb 2026)
 - **URL:** https://zuma-bm-jatim.vercel.app
-- **File:** `~/Desktop/zuma-bm-jatim/index.html`
+- **File:** `zuma-business-skills/references/decks/bm-jatim/index.html`
 - **Data:** Jan–Feb 2026 (Feb YTD s/d 17 Feb)
 - **Frameworks:** Branch Scorecard · Achievement vs Target · ABC Store · Growth×Revenue Matrix · FF/FA/FS Planogram Health · Product Mix BCG overlay · MoM Trend · Benchmark Nasional · 3 Action Items
 - **Slides:** Cover · Scorecard · Actual vs Target (per store) · ABC+Matrix · Planogram Health · Product Mix · Trend+Benchmark · Action Items
