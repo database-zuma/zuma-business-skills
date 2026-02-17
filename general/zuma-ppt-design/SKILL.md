@@ -11,6 +11,32 @@ description: Professional presentation design guidelines for Zuma Indonesia. KBI
 
 ---
 
+## ⚠️ MANDATORY: Use Canonical Template (2026-02-17)
+
+**CRITICAL RULE:** ALL presentations MUST start from `TEMPLATE.html` in this folder.
+
+**Why:** Ensures visual consistency across all decks. Proven layout from "Zuma Performance Analysis" deck.
+
+**Workflow:**
+1. Copy `TEMPLATE.html` to new project folder
+2. Replace content (titles, data, stats) — KEEP structure
+3. Add/remove slides as needed — COPY slide patterns from template
+4. Deploy to Vercel
+
+**DO NOT create HTML from scratch.** Always start from template.
+
+**Template Features:**
+- Dark background (#1a1a1a) + white cards (.slide)
+- Gradient blob accents
+- Slide variants: `.slide`, `.slide-teal`, `.slide-red`, `.slide-green`
+- Grid layouts for stats
+- Proper spacing & typography
+- Print-friendly CSS
+
+**Location:** `/Users/database-zuma/.openclaw/workspace/zuma-business-skills/general/zuma-ppt-design/TEMPLATE.html`
+
+---
+
 ## Color Palette
 
 ### Primary Colors

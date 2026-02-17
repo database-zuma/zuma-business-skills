@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZUMA PRESENTATION TITLE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        body {
+            background: #1a1a1a;
+            padding: 2rem;
+        }
+        
+        .slide {
+            background: #f9f9f9;
+            border-radius: 12px;
+            padding: 3rem;
+            margin-bottom: 1.5rem;
+            min-height: 600px;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        .slide-teal {
+            background: #002A3A;
+            color: white;
+        }
+        
+        .slide-red {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+        }
+        
+        .slide-green {
+            background: linear-gradient(135deg, #00E273 0%, #00b359 100%);
+            color: #002A3A;
+        }
+        
+        .gradient-blob {
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #00E273 0%, rgba(0,226,115,0.1) 100%);
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 0;
+        }
+        
+        .content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .slide-label {
+            position: absolute;
+            top: 1.5rem;
+            right: 2rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .slide-teal .slide-label,
+        .slide-red .slide-label,
+        .slide-green .slide-label {
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .big-number {
+            font-size: 4rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+        
+        .metric-label {
+            font-size: 0.875rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+        
+        .stat-box {
+            background: #002A3A;
+            color: white;
+            padding: 2rem;
+            border-radius: 8px;
+        }
+        
+        .stat-box-green {
+            background: #00E273;
+            color: #002A3A;
+        }
+        
+        .stat-box-red {
+            background: #dc2626;
+            color: white;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .slide {
+                page-break-after: always;
+                box-shadow: none;
+                margin-bottom: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="max-w-7xl mx-auto">
+        
+        <!-- SLIDE 1: TITLE -->
+        <div class="slide">
+            <div class="gradient-blob"></div>
+            <div class="content flex flex-col justify-end h-full">
+                <div class="slide-label">Slide Type / Category</div>
+                <p class="text-lg text-gray-600 mb-3">Period / Context</p>
+                <h1 class="text-6xl font-black leading-tight mb-8" style="color: #111;">
+                    Main Title:<br>
+                    <span style="color: #00E273;">Highlighted Phrase</span>
+                </h1>
+                <p class="text-gray-600">Subtitle • Date</p>
+            </div>
+        </div>
+        
+        <!-- SLIDE 2: CONTENT SLIDE (White background) -->
+        <div class="slide">
+            <div class="slide-label">Section Name</div>
+            <div class="content">
+                <h2 class="text-4xl font-black mb-6" style="color: #111;">Slide Heading</h2>
+                
+                <!-- Grid layout for stats -->
+                <div class="grid grid-cols-2 gap-8 mb-8">
+                    <div class="bg-red-50 border-l-4 border-red-600 p-6 rounded-lg">
+                        <div class="text-sm font-bold text-red-900 mb-2">🚨 LABEL</div>
+                        <div class="text-2xl font-black text-red-600 mb-3">Big Stat</div>
+                        <div class="text-sm text-red-800">
+                            Description text goes here.
+                        </div>
+                    </div>
+                    
+                    <div class="bg-green-50 border-l-4 border-green-600 p-6 rounded-lg">
+                        <div class="text-sm font-bold text-green-900 mb-2">✅ LABEL</div>
+                        <div class="text-2xl font-black text-green-600 mb-3">Big Stat</div>
+                        <div class="text-sm text-green-800">
+                            Description text goes here.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bullets -->
+                <div class="space-y-4">
+                    <div class="flex items-start gap-3">
+                        <div class="text-2xl">→</div>
+                        <div>
+                            <div class="font-bold text-lg">Point Title</div>
+                            <div class="text-gray-600">Description</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SLIDE 3: TEAL VARIANT -->
+        <div class="slide slide-teal">
+            <div class="slide-label">Section Name</div>
+            <div class="content">
+                <h2 class="text-4xl font-black mb-6">Heading on Teal</h2>
+                
+                <!-- Stats grid -->
+                <div class="grid grid-cols-3 gap-6">
+                    <div class="stat-box">
+                        <div class="big-number" style="color: #00E273;">123</div>
+                        <div class="metric-label" style="color: rgba(255,255,255,0.7);">Metric Name</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="big-number" style="color: #00E273;">456</div>
+                        <div class="metric-label" style="color: rgba(255,255,255,0.7);">Metric Name</div>
+                    </div>
+                    <div class="stat-box-red">
+                        <div class="big-number" style="color: white;">-78%</div>
+                        <div class="metric-label" style="color: rgba(255,255,255,0.8);">Metric Name</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SLIDE 4: TABLE SLIDE -->
+        <div class="slide">
+            <div class="slide-label">Section Name</div>
+            <div class="content">
+                <h2 class="text-4xl font-black mb-6" style="color: #111;">Data Breakdown</h2>
+                
+                <table class="w-full">
+                    <thead>
+                        <tr class="bg-gray-800 text-white">
+                            <th class="p-3 text-left">Column 1</th>
+                            <th class="p-3 text-right">Column 2</th>
+                            <th class="p-3 text-right">Column 3</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-gray-200">
+                            <td class="p-3">Data</td>
+                            <td class="p-3 text-right">Data</td>
+                            <td class="p-3 text-right font-bold text-red-600">-XX%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- FINAL SLIDE: CALL TO ACTION -->
+        <div class="slide slide-green">
+            <div class="slide-label">Call to Action</div>
+            <div class="content flex flex-col justify-center h-full text-center">
+                <h2 class="text-5xl font-black mb-6">Final Message</h2>
+                <p class="text-xl mb-8">Supporting statement that drives action</p>
+                
+                <div class="bg-white/20 backdrop-blur-sm rounded-xl p-8 mb-8">
+                    <div class="big-number mb-4">Key Metric</div>
+                    <p class="text-lg">Context for the metric</p>
+                </div>
+                
+                <p class="text-sm opacity-70">Generated by Iris AI • Data Source • Date</p>
+            </div>
+        </div>
+        
+    </div>
+</body>
+</html>
