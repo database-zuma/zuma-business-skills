@@ -3,20 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZUMA PRESENTATION TITLE</title>
+    <title>ZUMA — PRESENTATION TITLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+        /* ============================================
+           ZUMA PRESENTATION TEMPLATE
+           Version: 2.0 (2026-02-17)
+           Style: KBI Finance Report + Zuma Brand
+           
+           PRIMARY COLORS:
+           - Teal:  #002A3A (backgrounds, authority)
+           - Green: #00E273 (accents, highlights, success)
+           - Dark:  #111827 (dramatic dark slides)
+           
+           USAGE:
+           1. Copy this file to new project folder
+           2. Replace content only — KEEP CSS structure
+           3. Add slides by copy-pasting slide patterns
+           4. Deploy: node ~/homebrew/Cellar/node/25.6.0/bin/node ~/homebrew/lib/node_modules/vercel/dist/index.js --prod --yes --token $VERCEL_TOKEN
+        ============================================ */
+
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
         
-        * {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
-        
-        body {
-            background: #1a1a1a;
-            padding: 2rem;
-        }
-        
+        body { background: #1a1a1a; padding: 2rem; }
+
+        /* ── SLIDE BASE ── */
         .slide {
             background: #f9f9f9;
             border-radius: 12px;
@@ -26,216 +39,496 @@
             position: relative;
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
-        
-        .slide-teal {
-            background: #002A3A;
-            color: white;
-        }
-        
-        .slide-red {
-            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-            color: white;
-        }
-        
-        .slide-green {
-            background: linear-gradient(135deg, #00E273 0%, #00b359 100%);
-            color: #002A3A;
-        }
-        
+
+        /* ── SLIDE VARIANTS ── */
+        .slide-teal  { background: #002A3A; color: white; }
+        .slide-dark  { background: #111827; color: white; }
+        .slide-green { background: linear-gradient(135deg, #00E273 0%, #00b359 100%); color: #002A3A; }
+        .slide-red   { background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; }
+        .slide-amber { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #1c1917; }
+
+        /* ── DECORATIVE BLOB ── */
         .gradient-blob {
-            position: absolute;
-            top: -100px;
-            right: -100px;
-            width: 400px;
-            height: 400px;
+            position: absolute; top: -100px; right: -100px;
+            width: 400px; height: 400px;
             background: linear-gradient(135deg, #00E273 0%, rgba(0,226,115,0.1) 100%);
-            border-radius: 50%;
-            filter: blur(80px);
-            z-index: 0;
+            border-radius: 50%; filter: blur(80px); z-index: 0;
         }
-        
-        .content {
-            position: relative;
-            z-index: 1;
-        }
-        
+        .content { position: relative; z-index: 1; }
+
+        /* ── SLIDE NUMBER ── */
         .slide-label {
-            position: absolute;
-            top: 1.5rem;
-            right: 2rem;
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: #666;
+            position: absolute; top: 1.5rem; right: 2rem;
+            font-size: 0.875rem; font-weight: 600; color: #999;
         }
-        
         .slide-teal .slide-label,
+        .slide-dark .slide-label,
         .slide-red .slide-label,
-        .slide-green .slide-label {
-            color: rgba(255,255,255,0.7);
-        }
-        
-        .big-number {
-            font-size: 4rem;
-            font-weight: 900;
-            line-height: 1;
-        }
-        
-        .metric-label {
-            font-size: 0.875rem;
-            color: #666;
-            margin-top: 0.5rem;
-        }
-        
-        .stat-box {
-            background: #002A3A;
-            color: white;
-            padding: 2rem;
-            border-radius: 8px;
-        }
-        
-        .stat-box-green {
-            background: #00E273;
-            color: #002A3A;
-        }
-        
-        .stat-box-red {
-            background: #dc2626;
-            color: white;
-        }
-        
+        .slide-green .slide-label,
+        .slide-amber .slide-label { color: rgba(255,255,255,0.5); }
+
+        /* ── TYPOGRAPHY ── */
+        .big-number { font-size: 4rem; font-weight: 900; line-height: 1; }
+        .metric-label { font-size: 0.875rem; color: #666; margin-top: 0.5rem; }
+
+        /* ── STAT BOXES ── */
+        .stat-box       { background: #002A3A; color: white; padding: 2rem; border-radius: 8px; }
+        .stat-box-green { background: #00E273; color: #002A3A; padding: 2rem; border-radius: 8px; }
+        .stat-box-red   { background: #dc2626; color: white; padding: 2rem; border-radius: 8px; }
+        .stat-box-light { background: white; border: 2px solid #e5e7eb; padding: 1.5rem; border-radius: 8px; }
+
+        /* ── BADGES (inline status pills) ── */
+        .badge-green  { background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+        .badge-red    { background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+        .badge-amber  { background: #fef3c7; color: #d97706; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+        .badge-blue   { background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+        .badge-teal   { background: #002A3A; color: #00E273; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+
+        /* ── TEXT COLORS ── */
+        .grow    { color: #16a34a; font-weight: 700; }
+        .decline { color: #dc2626; font-weight: 700; }
+        .neutral { color: #6b7280; }
+
+        /* ── PROGRESS / TIER BARS ── */
+        .tier-bar  { height: 8px; border-radius: 4px; background: #e5e7eb; overflow: hidden; margin-top: 4px; }
+        .tier-fill { height: 100%; border-radius: 4px; }
+
+        /* ── TABLE (data slides) ── */
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #002A3A; color: white; padding: 0.75rem 1rem; text-align: left; font-size: 0.875rem; }
+        td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; font-size: 0.875rem; }
+        tr:hover td { background: #f0fdf4; }
+
+        /* ── CALLOUT / HIGHLIGHT BOX ── */
+        .callout-green  { background: #f0fdf4; border-left: 4px solid #00E273; padding: 1rem 1.5rem; border-radius: 0 8px 8px 0; }
+        .callout-amber  { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 1rem 1.5rem; border-radius: 0 8px 8px 0; }
+        .callout-red    { background: #fff5f5; border-left: 4px solid #dc2626; padding: 1rem 1.5rem; border-radius: 0 8px 8px 0; }
+
+        /* ── FOOTNOTE ── */
+        .footnote { font-size: 0.75rem; color: #9ca3af; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; }
+
+        /* ── PRINT ── */
         @media print {
-            body {
-                background: white;
-                padding: 0;
-            }
-            .slide {
-                page-break-after: always;
-                box-shadow: none;
-                margin-bottom: 0;
-            }
+            body { background: white; padding: 0; }
+            .slide { page-break-after: always; box-shadow: none; margin-bottom: 0; }
         }
     </style>
 </head>
 <body>
-    <div class="max-w-7xl mx-auto">
-        
-        <!-- SLIDE 1: TITLE -->
-        <div class="slide">
-            <div class="gradient-blob"></div>
-            <div class="content flex flex-col justify-end h-full">
-                <div class="slide-label">Slide Type / Category</div>
-                <p class="text-lg text-gray-600 mb-3">Period / Context</p>
-                <h1 class="text-6xl font-black leading-tight mb-8" style="color: #111;">
-                    Main Title:<br>
-                    <span style="color: #00E273;">Highlighted Phrase</span>
-                </h1>
-                <p class="text-gray-600">Subtitle • Date</p>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 1: COVER (Teal — always use for cover)
+     Pattern: Logo + Title + 3 hero metrics + subtitle
+══════════════════════════════════════════ -->
+<div class="slide slide-teal" style="min-height: 500px;">
+    <div class="gradient-blob"></div>
+    <div class="content">
+        <!-- Logo + context label -->
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 4rem;">
+            <div style="background: #00E273; color: #002A3A; font-weight: 900; font-size: 1.25rem; padding: 0.5rem 1.25rem; border-radius: 6px;">ZUMA</div>
+            <div style="color: rgba(255,255,255,0.5); font-size: 0.875rem;">Internal Review · [Department]</div>
+        </div>
+
+        <!-- Main title -->
+        <h1 style="font-size: 3.5rem; font-weight: 900; line-height: 1.1; margin-bottom: 1.5rem;">
+            Presentation Title<br>
+            <span style="color: #00E273;">Subtitle / Period</span>
+        </h1>
+        <p style="color: rgba(255,255,255,0.6); font-size: 1rem; max-width: 500px; line-height: 1.7;">
+            One-line description of what this deck covers and why it matters.
+        </p>
+
+        <!-- 3 hero numbers -->
+        <div style="margin-top: 3rem; display: flex; gap: 3rem;">
+            <div>
+                <div style="font-size: 2.5rem; font-weight: 900; color: #00E273;">XX%</div>
+                <div style="color: rgba(255,255,255,0.6); font-size: 0.875rem;">Key metric 1</div>
+            </div>
+            <div>
+                <div style="font-size: 2.5rem; font-weight: 900; color: #00E273;">XXX</div>
+                <div style="color: rgba(255,255,255,0.6); font-size: 0.875rem;">Key metric 2</div>
+            </div>
+            <div>
+                <div style="font-size: 2.5rem; font-weight: 900; color: #00E273;">XXK</div>
+                <div style="color: rgba(255,255,255,0.6); font-size: 0.875rem;">Key metric 3</div>
             </div>
         </div>
-        
-        <!-- SLIDE 2: CONTENT SLIDE (White background) -->
-        <div class="slide">
-            <div class="slide-label">Section Name</div>
-            <div class="content">
-                <h2 class="text-4xl font-black mb-6" style="color: #111;">Slide Heading</h2>
-                
-                <!-- Grid layout for stats -->
-                <div class="grid grid-cols-2 gap-8 mb-8">
-                    <div class="bg-red-50 border-l-4 border-red-600 p-6 rounded-lg">
-                        <div class="text-sm font-bold text-red-900 mb-2">🚨 LABEL</div>
-                        <div class="text-2xl font-black text-red-600 mb-3">Big Stat</div>
-                        <div class="text-sm text-red-800">
-                            Description text goes here.
-                        </div>
-                    </div>
-                    
-                    <div class="bg-green-50 border-l-4 border-green-600 p-6 rounded-lg">
-                        <div class="text-sm font-bold text-green-900 mb-2">✅ LABEL</div>
-                        <div class="text-2xl font-black text-green-600 mb-3">Big Stat</div>
-                        <div class="text-sm text-green-800">
-                            Description text goes here.
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Bullets -->
-                <div class="space-y-4">
-                    <div class="flex items-start gap-3">
-                        <div class="text-2xl">→</div>
-                        <div>
-                            <div class="font-bold text-lg">Point Title</div>
-                            <div class="text-gray-600">Description</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+
+        <!-- Footer -->
+        <div style="margin-top: 4rem; color: rgba(255,255,255,0.3); font-size: 0.8rem;">
+            Prepared by Iris · [Date] · Source: [data source]
         </div>
-        
-        <!-- SLIDE 3: TEAL VARIANT -->
-        <div class="slide slide-teal">
-            <div class="slide-label">Section Name</div>
-            <div class="content">
-                <h2 class="text-4xl font-black mb-6">Heading on Teal</h2>
-                
-                <!-- Stats grid -->
-                <div class="grid grid-cols-3 gap-6">
-                    <div class="stat-box">
-                        <div class="big-number" style="color: #00E273;">123</div>
-                        <div class="metric-label" style="color: rgba(255,255,255,0.7);">Metric Name</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="big-number" style="color: #00E273;">456</div>
-                        <div class="metric-label" style="color: rgba(255,255,255,0.7);">Metric Name</div>
-                    </div>
-                    <div class="stat-box-red">
-                        <div class="big-number" style="color: white;">-78%</div>
-                        <div class="metric-label" style="color: rgba(255,255,255,0.8);">Metric Name</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- SLIDE 4: TABLE SLIDE -->
-        <div class="slide">
-            <div class="slide-label">Section Name</div>
-            <div class="content">
-                <h2 class="text-4xl font-black mb-6" style="color: #111;">Data Breakdown</h2>
-                
-                <table class="w-full">
-                    <thead>
-                        <tr class="bg-gray-800 text-white">
-                            <th class="p-3 text-left">Column 1</th>
-                            <th class="p-3 text-right">Column 2</th>
-                            <th class="p-3 text-right">Column 3</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr class="border-b border-gray-200">
-                            <td class="p-3">Data</td>
-                            <td class="p-3 text-right">Data</td>
-                            <td class="p-3 text-right font-bold text-red-600">-XX%</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <!-- FINAL SLIDE: CALL TO ACTION -->
-        <div class="slide slide-green">
-            <div class="slide-label">Call to Action</div>
-            <div class="content flex flex-col justify-center h-full text-center">
-                <h2 class="text-5xl font-black mb-6">Final Message</h2>
-                <p class="text-xl mb-8">Supporting statement that drives action</p>
-                
-                <div class="bg-white/20 backdrop-blur-sm rounded-xl p-8 mb-8">
-                    <div class="big-number mb-4">Key Metric</div>
-                    <p class="text-lg">Context for the metric</p>
-                </div>
-                
-                <p class="text-sm opacity-70">Generated by Iris AI • Data Source • Date</p>
-            </div>
-        </div>
-        
     </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 2: OVERVIEW / SNAPSHOT (White — KPI grid)
+     Pattern: 3 big stats + 3 supporting stats + callout
+══════════════════════════════════════════ -->
+<div class="slide">
+    <div class="slide-label">02 / XX</div>
+    <h2 style="font-size: 1.75rem; font-weight: 900; color: #002A3A; margin-bottom: 2rem;">Headline / Snapshot Title</h2>
+    
+    <!-- Row 1: 3 big stat boxes -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem;">
+        <div class="stat-box">
+            <div class="big-number" style="color: #00E273;">76K</div>
+            <div style="color: rgba(255,255,255,0.8); font-size: 0.875rem; margin-top: 0.5rem;">Primary metric label</div>
+        </div>
+        <div class="stat-box">
+            <div class="big-number" style="color: rgba(255,255,255,0.4);">91K</div>
+            <div style="color: rgba(255,255,255,0.7); font-size: 0.875rem; margin-top: 0.5rem;">Comparison metric label</div>
+        </div>
+        <div style="background: #fef2f2; border: 2px solid #fecaca; padding: 2rem; border-radius: 8px;">
+            <div class="big-number" style="color: #dc2626;">-16.7%</div>
+            <div style="color: #991b1b; font-size: 0.875rem; margin-top: 0.5rem;">YoY / delta label</div>
+        </div>
+    </div>
+
+    <!-- Row 2: 3 lighter supporting stats -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
+        <div class="stat-box-light">
+            <div style="font-size: 2rem; font-weight: 900; color: #002A3A;">569K</div>
+            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Supporting metric 1</div>
+            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">context / note</div>
+        </div>
+        <div class="stat-box-light">
+            <div style="font-size: 2rem; font-weight: 900; color: #002A3A;">303</div>
+            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Supporting metric 2</div>
+            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">context / note</div>
+        </div>
+        <div class="stat-box-light">
+            <div style="font-size: 2rem; font-weight: 900; color: #d97706;">30</div>
+            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Supporting metric 3</div>
+            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">context / note</div>
+        </div>
+    </div>
+
+    <!-- Callout / key takeaway -->
+    <div class="callout-green" style="margin-top: 1.5rem;">
+        <strong style="color: #002A3A;">Key insight:</strong>
+        <span style="color: #374151; font-size: 0.95rem;"> One sentence summary that frames the story of this slide.</span>
+    </div>
+    
+    <div class="footnote">⚠️ Methodology note / data source caveat if needed.</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 3: DARK — GROWTH/CONTRAST STORY
+     Pattern: Badge + title + 2-col (left: winners, right: losers + insight)
+══════════════════════════════════════════ -->
+<div class="slide slide-dark">
+    <div class="slide-label">03 / XX</div>
+    <div class="content">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+            <span class="badge-green" style="font-size: 0.875rem; padding: 4px 12px;">GROWTH STORY</span>
+            <span style="color: rgba(255,255,255,0.5); font-size: 0.875rem;">Context label</span>
+        </div>
+        <h2 style="font-size: 2rem; font-weight: 900; color: white; margin-bottom: 0.5rem;">Slide Title — The Story</h2>
+        <p style="color: rgba(255,255,255,0.6); margin-bottom: 2rem;">Supporting subtitle with key insight framing.</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <!-- Left: winners -->
+            <div>
+                <div style="font-size: 0.75rem; font-weight: 700; color: #00E273; letter-spacing: 0.1em; margin-bottom: 1rem;">🚀 GROWING</div>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <!-- Row pattern: copy/paste as needed -->
+                    <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; border-left: 3px solid #00E273;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: white; font-size: 0.875rem; font-weight: 600;">Article / Item Name</span>
+                            <span style="color: #00E273; font-weight: 900; font-size: 1.1rem;">+XX%</span>
+                        </div>
+                        <div style="color: rgba(255,255,255,0.4); font-size: 0.75rem; margin-top: 0.25rem;">X,XXX pairs — additional context</div>
+                    </div>
+                </div>
+            </div>
+            <!-- Right: losers + insight box -->
+            <div>
+                <div style="font-size: 0.75rem; font-weight: 700; color: #f87171; letter-spacing: 0.1em; margin-bottom: 1rem;">📉 DECLINING</div>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+                    <div style="background: rgba(255,255,255,0.04); padding: 1rem; border-radius: 8px; border-left: 3px solid #f87171;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: rgba(255,255,255,0.8); font-size: 0.875rem;">Article / Item Name</span>
+                            <span style="color: #f87171; font-weight: 700;">-XX%</span>
+                        </div>
+                        <div style="color: rgba(255,255,255,0.4); font-size: 0.75rem; margin-top: 0.25rem;">X,XXX pairs — context</div>
+                    </div>
+                </div>
+                <!-- Insight box -->
+                <div style="background: rgba(0,226,115,0.1); border: 1px solid rgba(0,226,115,0.3); padding: 1.25rem; border-radius: 8px;">
+                    <div style="color: #00E273; font-weight: 700; margin-bottom: 0.5rem;">💡 Insight</div>
+                    <div style="color: rgba(255,255,255,0.7); font-size: 0.875rem; line-height: 1.6;">
+                        One actionable insight derived from the data comparison above.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 4: TIER / CATEGORY BREAKDOWN (White)
+     Pattern: Horizontal bars with label + badge + description
+══════════════════════════════════════════ -->
+<div class="slide">
+    <div class="slide-label">04 / XX</div>
+    <h2 style="font-size: 1.75rem; font-weight: 900; color: #002A3A; margin-bottom: 0.5rem;">Breakdown Title</h2>
+    <p style="color: #6b7280; margin-bottom: 2rem; font-size: 0.9rem;">Subtitle — context and methodology note.</p>
+
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <!-- Bar row pattern: copy/paste as needed -->
+        <div style="background: #f9fafb; border-radius: 8px; padding: 1.25rem; border-left: 4px solid #002A3A;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <div>
+                    <span style="font-weight: 700; color: #002A3A;">Tier / Category Name</span>
+                    <span style="color: #6b7280; font-size: 0.875rem; margin-left: 0.5rem;">XX,XXX units · Forecast ~XXXK</span>
+                </div>
+                <span class="badge-amber">-XX%</span>
+            </div>
+            <div class="tier-bar"><div class="tier-fill" style="width: 78%; background: #002A3A;"></div></div>
+            <div style="color: #6b7280; font-size: 0.75rem; margin-top: 0.35rem;">Context: from → to · interpretation</div>
+        </div>
+
+        <!-- Concern row (red border) -->
+        <div style="background: #fff5f5; border-radius: 8px; padding: 1.25rem; border-left: 4px solid #dc2626; border: 1px solid #fecaca;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <div>
+                    <span style="font-weight: 700; color: #dc2626;">⚠️ Concern Category</span>
+                    <span style="color: #6b7280; font-size: 0.875rem; margin-left: 0.5rem;">X,XXX units · Forecast ~XK</span>
+                </div>
+                <span class="badge-red">-XX%</span>
+            </div>
+            <div class="tier-bar"><div class="tier-fill" style="width: 27%; background: #dc2626;"></div></div>
+            <div style="color: #991b1b; font-size: 0.75rem; margin-top: 0.35rem; font-weight: 600;">SHARP DROP — action required: describe what to investigate</div>
+        </div>
+
+        <!-- New/positive row (green border) -->
+        <div style="background: #f0fdf4; border-radius: 8px; padding: 1.25rem; border-left: 4px solid #00E273; border: 1px solid #bbf7d0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <div>
+                    <span style="font-weight: 700; color: #16a34a;">✨ New / Growing</span>
+                    <span style="color: #6b7280; font-size: 0.875rem; margin-left: 0.5rem;">XX,XXX units · New tier/category</span>
+                </div>
+                <span class="badge-blue">NEW</span>
+            </div>
+            <div style="color: #166534; font-size: 0.75rem; margin-top: 0.35rem;">Description of what this category contains and why it's positive.</div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 5: TABLE (White — ranked data)
+     Pattern: Ranked table with badge status column
+══════════════════════════════════════════ -->
+<div class="slide">
+    <div class="slide-label">05 / XX</div>
+    <h2 style="font-size: 1.75rem; font-weight: 900; color: #002A3A; margin-bottom: 0.5rem;">Top N — Table Title</h2>
+    <p style="color: #6b7280; margin-bottom: 1.5rem; font-size: 0.9rem;">Ranked by [metric]. YoY = same-period comparison.</p>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 30px;">#</th>
+                <th>Item Name</th>
+                <th style="text-align: right;">Current</th>
+                <th style="text-align: right;">Prior</th>
+                <th style="text-align: right;">YoY</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="color: #002A3A; font-weight: 700;">1</td>
+                <td><span style="font-weight: 600;">Item Name</span></td>
+                <td style="text-align: right; font-weight: 700;">X,XXX</td>
+                <td style="text-align: right; color: #6b7280;">X,XXX</td>
+                <td style="text-align: right;" class="grow">+XX%</td>
+                <td><span class="badge-green">▲ Growing</span></td>
+            </tr>
+            <tr>
+                <td style="color: #002A3A; font-weight: 700;">2</td>
+                <td><span style="font-weight: 600;">Item Name</span></td>
+                <td style="text-align: right; font-weight: 700;">X,XXX</td>
+                <td style="text-align: right; color: #6b7280;">X,XXX</td>
+                <td style="text-align: right;" class="decline">-XX%</td>
+                <td><span class="badge-amber">▼ Moderate</span></td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="callout-green" style="margin-top: 1.5rem;">
+        <strong style="color: #002A3A;">Summary insight</strong>
+        <span style="color: #374151; font-size: 0.9rem;"> — one sentence takeaway from the table data.</span>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 6: CONCERN / DEEP DIVE (White — 2-col)
+     Pattern: Left: stat + description | Right: cause analysis + action
+══════════════════════════════════════════ -->
+<div class="slide">
+    <div class="slide-label">06 / XX</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start;">
+        <div>
+            <div style="display: inline-block; background: #fee2e2; color: #dc2626; font-weight: 700; font-size: 0.75rem; padding: 4px 12px; border-radius: 999px; margin-bottom: 1rem;">⚠️ AREA OF CONCERN</div>
+            <h2 style="font-size: 2rem; font-weight: 900; color: #002A3A; margin-bottom: 1rem; line-height: 1.2;">Concern Title<br>Drop / Issue</h2>
+            <p style="color: #374151; font-size: 0.95rem; line-height: 1.7; margin-bottom: 1.5rem;">Describe the concern clearly. Include magnitude and comparison context.</p>
+            <div style="background: #fff5f5; border: 1px solid #fecaca; padding: 1.25rem; border-radius: 8px;">
+                <div style="font-weight: 700; color: #dc2626; margin-bottom: 0.5rem;">Forecast Impact:</div>
+                <div style="font-size: 2rem; font-weight: 900; color: #dc2626;">~XX,XXX units</div>
+                <div style="color: #6b7280; font-size: 0.875rem; margin-top: 0.25rem;">vs XX,XXX in prior year</div>
+            </div>
+        </div>
+        <div>
+            <div style="font-size: 0.75rem; font-weight: 700; color: #6b7280; letter-spacing: 0.1em; margin-bottom: 1rem;">POSSIBLE CAUSES</div>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div class="callout-amber" style="border-radius: 0 8px 8px 0;">
+                    <strong style="color: #92400e;">Hypothesis 1</strong>
+                    <p style="color: #374151; font-size: 0.875rem; margin-top: 0.25rem;">Explanation of possible cause.</p>
+                </div>
+                <div class="callout-amber" style="border-radius: 0 8px 8px 0;">
+                    <strong style="color: #92400e;">Hypothesis 2</strong>
+                    <p style="color: #374151; font-size: 0.875rem; margin-top: 0.25rem;">Explanation of possible cause.</p>
+                </div>
+                <div class="callout-green" style="margin-top: 0.5rem; border-radius: 0 8px 8px 0;">
+                    <strong style="color: #166534;">Action:</strong>
+                    <p style="color: #374151; font-size: 0.875rem; margin-top: 0.25rem;">Specific next step to investigate or resolve.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 7: FORECAST (Teal — scenarios)
+     Pattern: Left: headline forecast + formula | Right: scenario table
+══════════════════════════════════════════ -->
+<div class="slide slide-teal">
+    <div class="gradient-blob"></div>
+    <div class="content">
+        <div class="slide-label">07 / XX</div>
+        <h2 style="font-size: 1.75rem; font-weight: 900; color: white; margin-bottom: 0.5rem;">Annual Forecast / Projection</h2>
+        <p style="color: rgba(255,255,255,0.6); margin-bottom: 2rem; font-size: 0.9rem;">Methodology: same-period growth rate × full prior year.</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <div>
+                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-bottom: 0.75rem;">BASE SCENARIO</div>
+                <div class="big-number" style="color: #00E273;">XXXK</div>
+                <div style="color: rgba(255,255,255,0.7); margin-top: 0.5rem;">units forecast full year</div>
+                <div style="color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-top: 0.25rem;">vs XXXK prior year (±XX%)</div>
+                <div style="margin-top: 1.5rem; font-size: 0.875rem; color: rgba(255,255,255,0.7);">
+                    <strong style="color: white;">Formula:</strong><br>
+                    <code style="background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">
+                        prior_year × (ytd_now / ytd_last)
+                    </code>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-bottom: 0.25rem;">SCENARIOS</div>
+                <div style="background: rgba(255,255,255,0.07); padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between;">
+                    <span style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Optimistic</span>
+                    <span style="color: #00E273; font-weight: 700;">~XXXK</span>
+                </div>
+                <div style="background: rgba(0,226,115,0.15); border: 1px solid rgba(0,226,115,0.3); padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between;">
+                    <span style="color: white; font-size: 0.875rem; font-weight: 600;">Base (current trend)</span>
+                    <span style="color: #00E273; font-weight: 900;">~XXXK</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.04); padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between;">
+                    <span style="color: rgba(255,255,255,0.5); font-size: 0.875rem;">Pessimistic</span>
+                    <span style="color: #f87171; font-weight: 700;">~XXXK</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 8: RECOMMENDATIONS (White — 2x2 grid)
+     Pattern: 4 numbered action items with priority borders
+══════════════════════════════════════════ -->
+<div class="slide">
+    <div class="slide-label">08 / XX</div>
+    <h2 style="font-size: 1.75rem; font-weight: 900; color: #002A3A; margin-bottom: 2rem;">Rekomendasi Tindakan</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+
+        <!-- Priority 1 (Teal border — main action) -->
+        <div style="border: 2px solid #002A3A; border-radius: 8px; padding: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                <div style="background: #002A3A; color: #00E273; font-weight: 900; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">1</div>
+                <span style="font-weight: 700; color: #002A3A;">Action Title</span>
+            </div>
+            <p style="color: #374151; font-size: 0.875rem; line-height: 1.6;">Action description — what to do, why, expected outcome.</p>
+            <div style="margin-top: 0.75rem; font-size: 0.75rem; color: #6b7280;"><strong>Target:</strong> Measurable success metric</div>
+        </div>
+
+        <!-- Priority 2 (Red border — urgent concern) -->
+        <div style="border: 2px solid #dc2626; border-radius: 8px; padding: 1.5rem; background: #fff5f5;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                <div style="background: #dc2626; color: white; font-weight: 900; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">2</div>
+                <span style="font-weight: 700; color: #dc2626;">Urgent Action</span>
+            </div>
+            <p style="color: #374151; font-size: 0.875rem; line-height: 1.6;">Urgent action description — time-sensitive, high impact.</p>
+            <div style="margin-top: 0.75rem; font-size: 0.75rem; color: #6b7280;"><strong>Target:</strong> Measurable success metric</div>
+        </div>
+
+        <!-- Priority 3 (Amber border — monitoring) -->
+        <div style="border: 2px solid #d97706; border-radius: 8px; padding: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                <div style="background: #d97706; color: white; font-weight: 900; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">3</div>
+                <span style="font-weight: 700; color: #92400e;">Monitor / Review</span>
+            </div>
+            <p style="color: #374151; font-size: 0.875rem; line-height: 1.6;">Monitoring action — track and respond if threshold crossed.</p>
+            <div style="margin-top: 0.75rem; font-size: 0.75rem; color: #6b7280;"><strong>Target:</strong> Measurable success metric</div>
+        </div>
+
+        <!-- Priority 4 (Green border — opportunity) -->
+        <div style="border: 2px solid #00E273; border-radius: 8px; padding: 1.5rem; background: #f0fdf4;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                <div style="background: #00E273; color: #002A3A; font-weight: 900; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">4</div>
+                <span style="font-weight: 700; color: #166534;">Opportunity</span>
+            </div>
+            <p style="color: #374151; font-size: 0.875rem; line-height: 1.6;">Growth opportunity — invest/expand/accelerate.</p>
+            <div style="margin-top: 0.75rem; font-size: 0.75rem; color: #6b7280;"><strong>Target:</strong> Measurable success metric</div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     LAST SLIDE: SUMMARY / CLOSING (Teal)
+     Pattern: Left: summary bullets | Right: methodology note
+══════════════════════════════════════════ -->
+<div class="slide slide-teal" style="min-height: 400px;">
+    <div class="gradient-blob"></div>
+    <div class="content">
+        <div class="slide-label">XX / XX</div>
+        <h2 style="font-size: 2rem; font-weight: 900; color: white; margin-bottom: 1.5rem;">Summary</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+            <div>
+                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-bottom: 1rem;">KEY FINDINGS</div>
+                <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.75rem;">
+                    <li style="color: white; font-size: 0.9rem;">📊 Finding 1 — key number and context</li>
+                    <li style="color: white; font-size: 0.9rem;">📈 Finding 2 — growth/opportunity</li>
+                    <li style="color: white; font-size: 0.9rem;">⚠️ Finding 3 — concern / action needed</li>
+                    <li style="color: white; font-size: 0.9rem;">✅ Finding 4 — positive signal</li>
+                </ul>
+            </div>
+            <div>
+                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-bottom: 1rem;">METHODOLOGY</div>
+                <div style="background: rgba(255,255,255,0.07); padding: 1.25rem; border-radius: 8px; font-size: 0.8rem; color: rgba(255,255,255,0.7); line-height: 1.7;">
+                    Data source, calculation method, important caveats, and links to full data if needed.
+                </div>
+            </div>
+        </div>
+        <div style="color: rgba(255,255,255,0.3); font-size: 0.8rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+            Prepared by Iris · [Date] · Source: [table/view name] · [URL if deployed]
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

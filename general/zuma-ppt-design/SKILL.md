@@ -537,12 +537,15 @@ def set_text_format(text_frame, font_size, bold=False, color=DARK_GRAY, align=PP
 mkdir ~/Desktop/project-name-vercel
 cp ~/Desktop/deck.html ~/Desktop/project-name-vercel/index.html
 
-# Deploy
+# Deploy (use full node + vercel path — 'vercel' not in PATH)
+source ~/.openclaw/workspace/.env
 cd ~/Desktop/project-name-vercel
-export PATH=~/homebrew/bin:$PATH
-export VERCEL_TOKEN=<from .env>
-vercel --prod --yes
+~/homebrew/Cellar/node/25.6.0/bin/node \
+  ~/homebrew/lib/node_modules/vercel/dist/index.js \
+  --prod --yes --token "$VERCEL_TOKEN"
 ```
+
+⚠️ **Note:** `vercel` command not in $PATH on this machine. Always use full node + vercel paths above.
 
 **3. Print to PDF (from web)**
 - Open Vercel URL in browser
@@ -657,7 +660,7 @@ Use when task requires exploration or complex logic:
 2. Use Zuma colors (Teal #002A3A + Green #00E273, NOT other palettes)
 3. Follow KBI-inspired or Swiss Style layout principles
 4. Generate HTML with Tailwind CSS (scrollable vertical slides)
-5. Deploy to Vercel (`vercel --prod --yes`)
+5. Deploy to Vercel (full path — see Section above for correct command)
 6. Share permanent URL
 
 **Output specifications:**
