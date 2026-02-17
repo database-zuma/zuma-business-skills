@@ -9,6 +9,9 @@ description: Professional presentation design guidelines for Zuma Indonesia. KBI
 **Brand Colors:** Zuma Teal #002A3A + Zuma Green #00E273
 **Tone:** Modern, professional, data-driven
 
+> 📁 **Role-specific deck references (real examples per role):** `zuma-business-skills/references/decks.md`
+> Use this skill for design & framework guidelines. Use `references/decks.md` as starting point when building for a specific role.
+
 ---
 
 ## ⚠️ MANDATORY: Use Canonical Template (2026-02-17)

@@ -14,6 +14,9 @@ You have access to Zuma Indonesia's centralized PostgreSQL data warehouse. Use t
 - `zuma-warehouse-and-stocks` — Warehouse operations, RO system, stock stages
 - `zuma-company-context` — Brand identity, entity structure, data sources
 
+> 📁 **Role-specific analysis references (real decks per role):** `zuma-business-skills/references/decks.md`
+> When building analysis/deck for a specific role, check references first for context, data used, and frameworks applied.
+
 ---
 
 ## 1. Database Connection
