@@ -1740,3 +1740,49 @@ ORDER BY nama_accurate;
 **Solution:** ALWAYS use `portal.store` as source of truth for branch/area mapping.
 
 **Rule:** Master data > assumptions. Don't guess locations, JOIN with portal.store.
+
+---
+
+## Store Target Data — portal.store_monthly_target (2026-02-17)
+
+**Table:** `portal.store_monthly_target`
+**Data:** 2025 (121 rows) + 2026 (97 rows) = 218 rows total
+**Source:** Google Sheets (Finance) — uploaded via gog CLI + Python
+
+**Columns:**
+- `store_name` TEXT — original name from Finance sheet (mixed case)
+- `store_name_norm` TEXT GENERATED — `LOWER(TRIM(store_name))`, indexed
+- `branch` TEXT — branch name (Bali, Jawa Timur, Lombok, Jakarta, Sumatera, Sulawesi, Online, WHOLESALE)
+- `year` INT — 2025 or 2026
+- `jan`...`dec` BIGINT — monthly revenue target in IDR (NULL if not set)
+
+**JOIN pattern (actual vs target):**
+```sql
+LEFT JOIN portal.store_monthly_target t
+    ON t.store_name_norm = LOWER(TRIM(s.matched_store_name))
+    AND t.year = EXTRACT(YEAR FROM CURRENT_DATE)
+```
+
+**Achievement % template:**
+```sql
+SELECT
+    s.matched_store_name,
+    SUM(s.total_amount) AS actual_rev,
+    t.feb AS target_rev,
+    ROUND(SUM(s.total_amount) / NULLIF(t.feb, 0) * 100, 1) AS achievement_pct
+FROM core.sales_with_product s
+LEFT JOIN portal.store_monthly_target t
+    ON t.store_name_norm = LOWER(TRIM(s.matched_store_name))
+    AND t.year = 2026
+WHERE s.transaction_date BETWEEN '2026-02-01' AND '2026-02-28'
+  AND s.is_intercompany = FALSE
+GROUP BY s.matched_store_name, t.feb
+ORDER BY achievement_pct DESC NULLS LAST;
+```
+
+**Mapping status:**
+- ✅ All Zuma retail stores match (JOIN works out of the box)
+- ❌ 48 non-matched = Konsinyasi partners (Pepito, Bintang, AEON, etc.) + Wholesale regional + Online — expected, not Zuma retail stores
+
+**Refresh:** Manual (re-run upload script when Finance updates targets)
+**Upload scripts:** `/tmp/upload_target.py` (2026) + `/tmp/process_target_2025.py` (2025)
