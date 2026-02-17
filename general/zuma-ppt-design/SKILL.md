@@ -101,6 +101,108 @@ description: Professional presentation design guidelines for Zuma Indonesia. KBI
 
 ---
 
+## Analytical Frameworks by Context (2026-02-17)
+
+**Rule:** Pick framework based on the *type of question* being asked. Don't force one framework for all contexts.
+
+---
+
+### 🛍️ Product Context → BCG Matrix + Product Life Cycle
+
+**Use when:** Analyzing SKU performance, portfolio health, investment decisions per article.
+
+**BCG Matrix** — classify articles by growth rate × sales volume:
+| Quadrant | Criteria | Action |
+|----------|----------|--------|
+| ⭐ Stars | High YoY growth + high volume | Invest, expand, ensure stock |
+| 🐄 Cash Cows | Low/flat growth + high volume | Maintain, milk margin, don't over-invest |
+| ❓ Question Marks | High growth + low volume | Evaluate: scale up or cut? |
+| 🐕 Dogs | Declining + low volume | Phase out or fix urgently |
+
+*Zuma examples (Jan-Feb 2026):*
+- Stars → BLACKSERIES STONE BLUE +37.5%, PEANUT +36.2%, BROWN STONE +979%
+- Cash Cows → STRIPE BLACK BLUE RED (terlaris, +4.2% flat)
+- Question Marks → Tier 8 articles (new, growing but small volume)
+- Dogs → Tier 4 articles (-72.6%)
+
+**Product Life Cycle (PLC)** — explains *why* growth/decline is happening:
+- Introduction → Tier 8 new articles
+- Growth → BLACKSERIES series
+- Maturity → Classic Jet Black (stable, mild decline)
+- Decline → Tier 4, old Classic variants
+
+**Axes for BCG visualization:**
+- X-axis: YTD volume (or revenue) = `SUM(now_jan_qty + now_feb_qty)`
+- Y-axis: YoY same-period growth = `(ytd_now / ytd_last - 1) × 100`
+- Bubble size: optional (stock, turnover)
+
+---
+
+### 🏪 Store Context → ABC Pareto + Growth × Revenue Matrix
+
+**Use when:** Comparing store performance, prioritizing resources, store health review.
+
+**ABC Pareto** — tier stores by revenue contribution:
+- **A stores** (top 20% stores → ~80% revenue) → Full attention, premium assortment, planogram priority
+- **B stores** (middle 50% → ~15% revenue) → Maintain, standard assortment
+- **C stores** (bottom 30% → ~5% revenue) → Minimal investment, review viability
+
+**Growth × Revenue Matrix** (BCG equivalent for stores):
+| Quadrant | Criteria | Action |
+|----------|----------|--------|
+| ⭐ Star Stores | High YoY growth + high revenue | Invest, expand format |
+| 🐄 Anchor Stores | Flat growth + high revenue | Protect, don't disrupt |
+| 🌱 Rising Stores | High growth + low revenue | Nurture, increase assortment |
+| ⚠️ At-Risk Stores | Declining + low revenue | Audit, restructure, or close |
+
+**Data sources:** `core.sales_with_product` + `portal.store` JOIN for branch/area
+
+---
+
+### 💰 Finance Context → Revenue Bridge + Contribution Margin
+
+**Use when:** Explaining why revenue changed, profitability analysis, budget variance.
+
+**Revenue Bridge (Waterfall Analysis)** — decompose revenue change into drivers:
+```
+Revenue Change = Volume Effect + Price Effect + Mix Effect + New/Lost articles
+```
+Example: "Revenue -16.7% karena: volume -22% tapi mix shift ke higher-tier (+5%) dan price increase (+0.3%)"
+
+**Components:**
+- **Volume effect:** more/fewer units sold
+- **Price effect:** avg selling price change
+- **Mix effect:** shift toward higher/lower-tier products
+- **Portfolio effect:** new articles added vs discontinued
+
+**Contribution Margin per tier/store:**
+```
+Contribution Margin = Revenue - COGS - Direct selling costs
+```
+Shows *where* Zuma actually makes money — top-line revenue ≠ profitability.
+
+---
+
+### 📐 Framework Selection Guide
+
+| User's Question | Framework to Use |
+|-----------------|-----------------|
+| "Artikel mana yang harus di-invest?" | BCG Matrix |
+| "Kenapa artikel X declining?" | Product Life Cycle |
+| "Toko mana yang performa paling bagus?" | ABC Pareto + Growth×Revenue Matrix |
+| "Kenapa revenue bulan ini turun?" | Revenue Bridge (Waterfall) |
+| "Toko mana yang actually profitable?" | Contribution Margin |
+| "Strategi pertumbuhan Zuma harus ke mana?" | Ansoff Matrix (market × product expansion) |
+| "Kompetitor environment kita kayak apa?" | Porter's Five Forces |
+
+**Default flow for any analysis:**
+1. Identify question type (product / store / finance)
+2. Pick framework above
+3. Map Zuma data to framework axes/quadrants
+4. Build narrative: SCQA → findings → recommendation (SMART)
+
+---
+
 ## Narrative Structure & Data Storytelling
 
 **Goal:** Transform descriptive data → compelling narrative with actionable insights
