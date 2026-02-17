@@ -47,6 +47,34 @@
         .slide-red   { background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; }
         .slide-amber { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #1c1917; }
 
+        /* ── PRINT / PDF (A4 Landscape) ──
+           Ensures each slide = 1 page when Cmd+P → Save as PDF.
+           MANDATORY in every deck. Added 2026-02-17.
+           User must: Margins=None, Layout=Landscape, ✅Background graphics
+        ── */
+        @media print {
+            @page { size: A4 landscape; margin: 0; }
+            html, body { background: white !important; padding: 0 !important; margin: 0 !important; }
+            .slide {
+                page-break-after: always;
+                break-after: page;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 2.25rem 2.5rem !important;
+                min-height: 0 !important;
+                height: 190mm !important;
+                overflow: hidden !important;
+                box-sizing: border-box;
+            }
+            .slide:last-child { page-break-after: avoid; break-after: avoid; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .slide-teal { background: #002A3A !important; }
+            .slide-dark { background: #111827 !important; }
+            .gradient-blob { display: none !important; }
+            #print-btn { display: none !important; }
+        }
+
         /* ── DECORATIVE BLOB ── */
         .gradient-blob {
             position: absolute; top: -100px; right: -100px;
@@ -115,6 +143,11 @@
     </style>
 </head>
 <body>
+
+<!-- PRINT BUTTON — shown in browser, hidden when printing -->
+<div id="print-btn" style="text-align:right; margin-bottom:1rem;">
+    <button onclick="window.print()" style="background:#00E273; color:#002A3A; border:none; padding:0.6rem 1.5rem; border-radius:6px; font-weight:700; font-size:0.875rem; cursor:pointer;">🖨️ Print / Save PDF (Landscape A4)</button>
+</div>
 
 <!-- ══════════════════════════════════════════
      SLIDE 1: COVER (Teal — always use for cover)

@@ -650,15 +650,25 @@ cd ~/Desktop/project-name-vercel
 ⚠️ **Note:** `vercel` command not in $PATH on this machine. Always use full node + vercel paths above.
 
 **3. Print to PDF (from web)**
-- Open Vercel URL in browser
-- Cmd+P (Print)
+
+⚠️ **MANDATORY: Include `@media print` CSS in every deck** (added to TEMPLATE.html v2.0 — always use template so this is automatic). Without it, slides kepotong-potong ketika di-PDF.
+
+The `@media print` block in TEMPLATE.html handles:
+- `@page { size: A4 landscape; margin: 0; }` — auto landscape
+- `page-break-after: always` per slide — 1 slide = 1 page
+- `height: 190mm; overflow: hidden` — clip to page, no cutoff
+- `print-color-adjust: exact` — background colors print correctly
+- `.gradient-blob { display: none }` — hide heavy decorative elements
+- `#print-btn { display: none }` — hide UI button in PDF output
+
+User instructions:
+- Open Vercel URL in browser (Chrome recommended)
+- Click 🖨️ button (or Cmd+P)
 - Settings:
-  - **Background graphics:** ON (CRITICAL!)
-  - **Layout:** Landscape
+  - **Background graphics:** ✅ ON (CRITICAL!)
+  - **Layout:** Landscape (auto from CSS)
   - **Margins:** None
-  - **Scale:** 100%
-  - **Paper size:** A4 or Letter
-- Save as PDF
+  - **Save as PDF**
 
 ### Benefits
 - ✅ Web-shareable link (permanent URL)
