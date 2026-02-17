@@ -358,6 +358,65 @@ LIMIT 10;
 - **Article level only** — no size breakdown
 - **Fixed time periods** — current year vs last year (for custom dates, use core views)
 
+#### `mart.sku_portfolio_size` ⚠️ SIZE-LEVEL ANALYSIS (Critical Query Rule!)
+
+**Purpose:** Same as `mart.sku_portfolio` but at **SIZE level** (kode_besar grain)
+**Updated:** Snapshot table — rebuild daily/periodically
+**Rows:** 5,220 (all SKU versions × sizes)
+**Columns:** 107 (11 ID/Base + 83 Sales + 13 Stock)
+
+**Column Groups:**
+1. **ID/Base (11 cols):** id, kode_besar (PK UNIQUE), kode_kecil, kode_mix_size, kodemix, gender, series, color, tipe, tier, size
+2. **Sales (83 cols):** Same as sku_portfolio (monthly YoY + totals + mix)
+3. **Stock (13 cols):** Same as sku_portfolio (warehouse + channel breakdown)
+
+**⚠️ CRITICAL ANALYSIS RULE (2026-02-17):**
+
+**ALWAYS aggregate by `kodemix` (or `kode_mix_size`) — NEVER filter by single `kode_besar`!**
+
+**Why:**
+- One article has **multiple kode_besar versions** over time (M1SPV201, M1SP01, M1SPV101, SJ1A)
+- Kode lama → kode baru evolution (same product, different codes)
+- `kode_besar` = PRIMARY KEY for data integrity (prevent duplicates)
+- **Business analysis** = SUM across ALL versions (ignore kode version differences)
+
+**Wrong vs Right Query:**
+```sql
+-- ❌ WRONG (only 1 version, incomplete data):
+SELECT current_year_qty, current_year_rp
+FROM mart.sku_portfolio_size
+WHERE kode_besar = 'M1SPV201Z42';  -- Only gets M1SPV201 version!
+
+-- ✅ CORRECT (all versions combined):
+SELECT 
+    kodemix, size,
+    SUM(current_year_qty) AS total_qty,
+    SUM(current_year_rp) AS total_rp,
+    SUM(stok_global) AS total_stock
+FROM mart.sku_portfolio_size
+WHERE kodemix = 'M1SP0PV201'  -- Gets ALL versions: M1SPV201, M1SP01, M1SPV101, SJ1A
+GROUP BY kodemix, size
+ORDER BY size;
+```
+
+**Example Use Case:**
+- User asks: "Penjualan MEN STRIPE BLACK BLUE RED per size"
+- Steps:
+  1. Identify kodemix: `M1SP0PV201` (from portal.kodemix or previous queries)
+  2. Query: `WHERE kodemix = 'M1SP0PV201' GROUP BY size`
+  3. Result: Size 42 = SUM(M1SPV201Z42 + M1SP01Z42 + M1SPV101Z42) = true article performance
+
+**Key Difference from sku_portfolio:**
+- **Grain:** kode_besar (with size) vs kodemix (article, no size)
+- **Analysis pattern:** Both use `kodemix` for business queries (ignore versions)
+- **When to use:** Need size breakdown → sku_portfolio_size | Article-level only → sku_portfolio
+
+**Technical Notes:**
+- Case-sensitivity fix: All CTEs use `UPPER(kode_besar)` to ensure JOIN success
+- Sales source: `core.sales_with_product` (lowercase kode_besar)
+- Stock source: `core.stock_with_product` (lowercase kode_besar)
+- Portal.kodemix: UPPERCASE kode_besar
+
 #### `mart.ff_fa_fs_daily`
 
 **Purpose:** Daily Fill Factor/Article/Stock metrics per store
