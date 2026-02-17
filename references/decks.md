@@ -79,3 +79,19 @@ Katalog deck yang sudah dibuat & teruji. Gunakan sebagai **starting point & benc
 - Semua deck: print-ready (`@media print` A4 landscape) — Cmd+P → Background graphics ✅
 - Update file ini setiap ada deck baru yang dibuat & approved
 - Deck lama yang di-replace → archive URL di sini (jangan delete, buat reference)
+
+---
+
+## Branch Manager — Jawa Timur
+**Context:** Monthly branch review, store performance monitoring, planogram audit
+
+### Zuma BM Jatim Review (Jan–Feb 2026)
+- **URL:** https://zuma-bm-jatim.vercel.app
+- **File:** `~/Desktop/zuma-bm-jatim/index.html`
+- **Data:** Jan–Feb 2026 (Feb YTD s/d 17 Feb)
+- **Frameworks:** Branch Scorecard · Achievement vs Target · ABC Store · Growth×Revenue Matrix · FF/FA/FS Planogram Health · Product Mix BCG overlay · MoM Trend · Benchmark Nasional · 3 Action Items
+- **Slides:** Cover · Scorecard · Actual vs Target (per store) · ABC+Matrix · Planogram Health · Product Mix · Trend+Benchmark · Action Items
+- **Key data:** 11 stores · Jan achievement 87% · Avg FF 66% · PTC FF kritis 52.9% · Galaxy Mall concern 64% · BLACKSERIES under-penetrated
+- **Data sources:** core.sales_with_product + portal.store_monthly_target (JOIN via store_name_norm) + mart.ff_fa_fs_daily
+- **Template for other branches:** Copy this deck → filter branch name → update data → redeploy
+- **When to use:** Monthly BM review, ops meeting, performance escalation
