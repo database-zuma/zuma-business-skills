@@ -338,15 +338,30 @@ All objects in `core` are **views** (not tables). They auto-recompute when queri
 
 **Key Features:**
 - Auto-detect year (current_year_label, last_year_label) — no hardcoded years
-- YoY comparison (var_year_qty, var_year_rp in %)
+- ⚠️ **YoY comparison (var_year_qty):** DO NOT USE mid-year! (compares YTD vs full prior year = misleading) → Use same-period formula below
 - Monthly trends (now_jan vs last_jan, now_feb vs last_feb, etc.)
 - Turnover metrics (to_total = months of coverage, critical for PO decisions)
 - Sales mix % (current_sales_mix, last_sales_mix)
 
-**Example Query:**
+**⚠️ YoY MANDATORY RULE (2026-02-17):**
+```sql
+-- ❌ WRONG mid-year: current_year_qty vs last_year_qty (2mo vs 12mo = misleading)
+-- ✅ CORRECT: same-period comparison
+-- For Feb 2026 (Jan+Feb elapsed):
+SELECT kodemix,
+    SUM(now_jan_qty + now_feb_qty)  AS ytd_now,
+    SUM(last_jan_qty + last_feb_qty) AS ytd_last,
+    ROUND((SUM(now_jan_qty + now_feb_qty)::numeric / NULLIF(SUM(last_jan_qty + last_feb_qty), 0) - 1) * 100, 1) AS yoy_same_period_pct,
+    -- Annual forecast = last_year × same-period growth rate
+    ROUND(SUM(last_year_qty)::numeric * SUM(now_jan_qty + now_feb_qty) / NULLIF(SUM(last_jan_qty + last_feb_qty), 0), 0) AS annual_forecast
+FROM mart.sku_portfolio_size WHERE kodemix IS NOT NULL GROUP BY kodemix;
+-- Always label: "Jan-Feb 2026 vs Jan-Feb 2025" (explicit period)
+```
+
+**Example Query (article-level):**
 ```sql
 SELECT kodemix, gender, series, color, tier,
-       current_year_qty, last_year_qty, var_year_qty,
+       current_year_qty, last_year_qty,  -- use for annual comparisons only (after Dec)
        current_sales_mix, to_total, stok_global
 FROM mart.sku_portfolio
 WHERE tier = '1'
