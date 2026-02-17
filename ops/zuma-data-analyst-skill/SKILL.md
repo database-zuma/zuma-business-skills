@@ -84,12 +84,13 @@ For ALL product/SKU performance queries, use the unified template which covers:
 - **WhatsApp formatting:** Compact list vs detailed blocks
 - **Auto-flags:** 🔥 stockout, 🐌 overstock, ⚠️ negative WH, 📉 YoY drop
 
-**Default data source:** `mart.sku_portfolio` (use for 90% of product queries)
+**Default data source:** `mart.sku_portfolio_size` (use for 90% of product queries — most granular, can aggregate up)
 
 **Key Rule:**
-- **NATIONAL aggregate?** → Use `mart.sku_portfolio` (101 columns, pre-computed monthly, YoY)
+- **NATIONAL aggregate?** → Use `mart.sku_portfolio_size` (107 columns, size-level, pre-computed monthly, YoY)
 - **Store-level breakdown?** → Use `core.sales_with_product` (has matched_store_name)
 - **Custom date range?** → Use `core.sales_with_product` (flexible WHERE clause)
+- **Article-level only (no size)?** → Can use `mart.sku_portfolio` (101 columns) OR aggregate `sku_portfolio_size` by kodemix
 
 See section on `mart.*` schema below for full `sku_portfolio` column reference.
 
@@ -321,14 +322,14 @@ All objects in `core` are **views** (not tables). They auto-recompute when queri
 
 ### 6.1. Permanent Daily Tables (Automated via Cron)
 
-#### `mart.sku_portfolio` ⭐ PRIMARY for Product Analysis
+#### `mart.sku_portfolio` — Article-Level Fallback
 
-**Purpose:** All-in-one comprehensive SKU analysis table (national aggregate only)
+**Purpose:** All-in-one comprehensive SKU analysis table (article-level, national aggregate only)
 **Updated:** Daily (post Stock Pull + Sales Pull)
 **Rows:** ~598 (all articles from kodemix)
 **Columns:** 101 active + 2 future (PO columns)
 
-**Use this table for 90% of product queries!**
+**Use when:** Already have article-level aggregates or prefer simpler structure (no size breakdown)
 
 **Column Groups:**
 1. **ID/Base (7 cols):** id, kodemix, gender, series, color, tipe, tier
@@ -358,12 +359,14 @@ LIMIT 10;
 - **Article level only** — no size breakdown
 - **Fixed time periods** — current year vs last year (for custom dates, use core views)
 
-#### `mart.sku_portfolio_size` ⚠️ SIZE-LEVEL ANALYSIS (Critical Query Rule!)
+#### `mart.sku_portfolio_size` ⭐ PRIMARY for Product Analysis ⚠️ CRITICAL QUERY RULE
 
-**Purpose:** Same as `mart.sku_portfolio` but at **SIZE level** (kode_besar grain)
+**Purpose:** Most granular SKU analysis table (size-level, can aggregate to article-level)
 **Updated:** Snapshot table — rebuild daily/periodically
 **Rows:** 5,220 (all SKU versions × sizes)
 **Columns:** 107 (11 ID/Base + 83 Sales + 13 Stock)
+
+**Use this table for 90% of product queries!** (Replaces `mart.sku_portfolio` as default since 2026-02-17)
 
 **Column Groups:**
 1. **ID/Base (11 cols):** id, kode_besar (PK UNIQUE), kode_kecil, kode_mix_size, kodemix, gender, series, color, tipe, tier, size
