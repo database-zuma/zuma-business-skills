@@ -499,7 +499,7 @@ Jika menggunakan VPS PostgreSQL DB (`openclaw_ops`), data sudah pre-enriched di 
 **DB Connection:**
 ```
 Host: 76.13.194.120 | Port: 5432 | DB: openclaw_ops
-User: openclaw_app | Pass: Zuma-0psCl4w-2026!
+User: openclaw_app | Pass: $PGPASSWORD
 ```
 
 **CRITICAL DB RULES (from zuma-data-ops skill):**

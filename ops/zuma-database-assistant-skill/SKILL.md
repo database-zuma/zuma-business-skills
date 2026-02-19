@@ -22,7 +22,7 @@ You are maintaining Zuma Indonesia's centralized PostgreSQL data warehouse (`ope
 | **Port** | `5432` |
 | **Database** | `openclaw_ops` |
 | **User** | `openclaw_app` |
-| **Password** | `Zuma-0psCl4w-2026!` |
+| **Password** | `$PGPASSWORD` |
 | **SSH** | `ssh root@76.13.194.120` |
 | **Python venv** | `/opt/openclaw/venv/bin/python` |
 | **Scripts dir** | `/opt/openclaw/scripts/` |
@@ -35,7 +35,7 @@ You are maintaining Zuma Indonesia's centralized PostgreSQL data warehouse (`ope
 ssh root@76.13.194.120
 
 # psql from VPS (localhost, no password prompt)
-PGPASSWORD='Zuma-0psCl4w-2026!' psql -h localhost -U openclaw_app -d openclaw_ops
+PGPASSWORD='$PGPASSWORD' psql -h localhost -U openclaw_app -d openclaw_ops
 
 # Run ETL scripts (MUST use venv Python)
 /opt/openclaw/venv/bin/python /opt/openclaw/scripts/pull_accurate_sales.py ddd

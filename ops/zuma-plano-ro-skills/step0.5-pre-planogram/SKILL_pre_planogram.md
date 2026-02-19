@@ -49,11 +49,11 @@ For a typical Jatim region planogram: ~2,500-2,900 rows across ~11 retail stores
 | Port | `5432` |
 | Database | `openclaw_ops` |
 | User | `openclaw_app` |
-| Password | `Zuma-0psCl4w-2026!` |
+| Password | `$PGPASSWORD` |
 
 **Connection string:**
 ```
-postgresql://openclaw_app:Zuma-0psCl4w-2026!@76.13.194.120:5432/openclaw_ops
+postgresql://openclaw_app:$PGPASSWORD@76.13.194.120:5432/openclaw_ops
 ```
 
 **Python connection:**
@@ -62,7 +62,7 @@ import psycopg2
 import pandas as pd
 
 DB = dict(host="76.13.194.120", port=5432, dbname="openclaw_ops",
-          user="openclaw_app", password="Zuma-0psCl4w-2026!")
+          user="openclaw_app", password="$PGPASSWORD")
 conn = psycopg2.connect(**DB)
 ```
 
@@ -590,7 +590,7 @@ DATE_END = "2026-01-31"
 DATE_3MO_START = "2025-11-01"  # 3 months before DATE_END
 
 DB = dict(host="76.13.194.120", port=5432, dbname="openclaw_ops",
-          user="openclaw_app", password="Zuma-0psCl4w-2026!")
+          user="openclaw_app", password="$PGPASSWORD")
 
 SIZE_COLUMNS = [
     '18/19', '20/21', '21/22', '22/23', '23/24', '24/25', '25/26',

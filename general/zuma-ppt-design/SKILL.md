@@ -627,6 +627,82 @@ def set_text_format(text_frame, font_size, bold=False, color=DARK_GRAY, align=PP
 
 **When to use:** When python-pptx struggles with complex layouts or user wants web-based deck
 
+---
+
+## 🎨 Two HTML Deck Formats — Choose Based on Context
+
+### Format 1: Slide-Based (Prev/Next Navigation)
+**Reference:** https://bm-jatim.vercel.app
+**Use when:** Formal presentations, BM decks, executive reviews — mimics PowerPoint behavior
+
+**Characteristics:**
+- Each slide = `height: 100vh` (full screen, no scroll)
+- Prev ← / Next → navigation buttons (bottom center)
+- Dot indicators showing current slide number
+- Keyboard arrow support (optional)
+- One slide visible at a time
+
+**CSS Pattern:**
+```css
+.slide { height: 100vh; width: 100%; display: none; }
+.slide.active { display: flex; flex-direction: column; }
+```
+
+**JS Navigation:**
+```javascript
+let current = 0;
+function goTo(n) {
+    slides[current].classList.remove('active');
+    current = (n + slides.length) % slides.length;
+    slides[current].classList.add('active');
+    updateDots();
+}
+document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') goTo(current + 1);
+    if (e.key === 'ArrowLeft') goTo(current - 1);
+});
+```
+
+**Best for:** BM Review, executive briefing, structured multi-section decks
+
+---
+
+### Format 2: Scroll-Down (Card Layout)
+**Reference:** https://ladies-wedges-deck.vercel.app
+**Use when:** Product analysis, detailed reports, content-heavy decks
+
+**Characteristics:**
+- All slides visible, scroll down to navigate
+- Each slide = a card (fixed aspect ratio, e.g. `aspect-[16/10]`)
+- 1-column or 2-column grid of cards
+- No JS required — pure HTML/CSS
+- More scannable, better for dense content
+
+**CSS Pattern:**
+```css
+.deck { display: flex; flex-direction: column; gap: 2rem; }
+.slide { aspect-ratio: 16/10; width: 100%; border-radius: 1rem; }
+/* OR grid layout: */
+.deck { display: grid; grid-template-columns: 1fr; gap: 2rem; }
+```
+
+**Best for:** Product analysis decks, detailed reports, data-heavy content, R&D reviews
+
+---
+
+### When to Use Which Format
+
+| Scenario | Format | Example |
+|----------|--------|---------|
+| BM Review presentation | Format 1 (slide nav) | bm-jatim.vercel.app |
+| Executive briefing | Format 1 (slide nav) | — |
+| Product/SKU analysis | Format 2 (scroll) | ladies-wedges-deck.vercel.app |
+| Detailed data report | Format 2 (scroll) | — |
+| Store performance deep dive | Format 2 (scroll) | — |
+| Quick pitch (3-5 slides) | Format 1 (slide nav) | — |
+
+---
+
 ### Workflow
 
 **1. Generate HTML Deck**

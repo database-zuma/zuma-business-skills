@@ -29,14 +29,14 @@ You have access to Zuma Indonesia's centralized PostgreSQL data warehouse. Use t
 | **Port** | `5432` |
 | **Database** | `openclaw_ops` |
 | **User** | `openclaw_app` |
-| **Password** | `Zuma-0psCl4w-2026!` |
+| **Password** | `$PGPASSWORD` |
 | **SSH Access** | `ssh root@76.13.194.120` |
 
 ### Connection Methods
 
 **Direct PostgreSQL (from any tool/app):**
 ```
-postgresql://openclaw_app:Zuma-0psCl4w-2026!@76.13.194.120:5432/openclaw_ops
+postgresql://openclaw_app:$PGPASSWORD@76.13.194.120:5432/openclaw_ops
 ```
 
 **psql CLI (from VPS via SSH):**
@@ -47,7 +47,7 @@ psql -U openclaw_app -d openclaw_ops
 
 **psql CLI (remote with password):**
 ```bash
-PGPASSWORD='Zuma-0psCl4w-2026!' psql -h 76.13.194.120 -U openclaw_app -d openclaw_ops
+PGPASSWORD='$PGPASSWORD' psql -h 76.13.194.120 -U openclaw_app -d openclaw_ops
 ```
 
 **Python (psycopg2 + pandas) — used by all Zuma scripts:**
@@ -56,7 +56,7 @@ import psycopg2
 import pandas as pd
 
 DB = dict(host="76.13.194.120", port=5432, dbname="openclaw_ops",
-          user="openclaw_app", password="Zuma-0psCl4w-2026!")
+          user="openclaw_app", password="$PGPASSWORD")
 
 conn = psycopg2.connect(**DB)
 df = pd.read_sql("SELECT * FROM core.sales_with_product LIMIT 10", conn)
@@ -1114,7 +1114,7 @@ Database Zuma ada di server VPS (IP: `76.13.194.120`). Komputer kamu harus bisa 
 ```bash
 python -c "
 import psycopg2
-conn = psycopg2.connect(host='76.13.194.120', port=5432, dbname='openclaw_ops', user='openclaw_app', password='Zuma-0psCl4w-2026!')
+conn = psycopg2.connect(host='76.13.194.120', port=5432, dbname='openclaw_ops', user='openclaw_app', password='$PGPASSWORD')
 cur = conn.cursor()
 cur.execute('SELECT COUNT(*) FROM core.stock_with_product')
 print(f'Koneksi berhasil! Stock rows: {cur.fetchone()[0]}')

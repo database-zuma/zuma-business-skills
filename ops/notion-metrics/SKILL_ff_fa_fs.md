@@ -71,7 +71,7 @@ Host: 76.13.194.120
 Port: 5432
 Database: openclaw_ops
 User: openclaw_app
-Password: Zuma-0psCl4w-2026!
+Password: $PGPASSWORD
 ```
 
 #### `core.stock_with_product` — The Only Stock Source

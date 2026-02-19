@@ -599,23 +599,40 @@ Section 3 — Off-Planogram Articles (if any):
 
 ### Script Reference
 
-**File**: `build_ro_royal_plaza.py` (in `step3-zuma-ro-surplus-skills/` folder)
+**File**: `build_ro_request.py` (in `step3-zuma-ro-surplus-skills/` folder)
+
+**Universal script** — one script for all stores. No per-store copies needed.
 
 **Dependencies** (must be installed):
 ```bash
 pip install psycopg2-binary openpyxl
 ```
 
-**Key Config Variables** (top of script):
-```python
-STORE_NAME = "Zuma Royal Plaza"          # Display name
-STORE_DB_PATTERN = "zuma royal plaza"     # For ILIKE match in DB
-STORAGE_CAPACITY = 0                      # Number of storage boxes (0 = no storage)
-RO_BOX_THRESHOLD = 0.50                   # >=50% sizes empty → RO Box
-SURPLUS_CHECK_TIERS = [1, 2, 3, 4, 5]     # T1—T5 checked for surplus (v3 update)
-PLANOGRAM_FILE = "../RO Input Jatim.xlsx" # Relative path to planogram
-PLANOGRAM_SHEET = "Planogram"             # Sheet name in planogram file
+**CLI Usage**:
+```bash
+# Required: --store
+python3 build_ro_request.py --store "Icon Mall Gresik" --storage 0
+python3 build_ro_request.py --store "Royal Plaza" --storage 75
+python3 build_ro_request.py --store "Galaxy Mall" --storage 0
+
+# Optional overrides
+python3 build_ro_request.py --store "Royal Plaza" --storage 75 --threshold 0.60
+python3 build_ro_request.py --store "Icon Mall Gresik" --output /tmp/my_ro.xlsx
 ```
+
+**Arguments**:
+| Arg | Required | Default | Description |
+|-----|----------|---------|-------------|
+| `--store` | Yes | — | Store display name. Used as `ILIKE '%{store}%'` on `nama_gudang` (stock) and `store_name` (planogram) |
+| `--storage` | No | `0` | Storage capacity in boxes |
+| `--output` | No | `~/Desktop/DN PO ENTITAS/RO_Request_{store}_{date}.xlsx` | Output file path |
+| `--threshold` | No | `0.50` | % size kosong threshold for RO Box (default 50%) |
+
+**Planogram source**: `portal.temp_portal_plannogram` (DB), join key `article_mix` → `kode_mix`
+
+**Store naming note**: The planogram table (`store_name`) and stock table (`nama_gudang`) may use
+slightly different names (e.g. "Zuma Icon Gresik" vs "Zuma Icon Mall Gresik"). The script handles
+this automatically by stripping "Mall" from the planogram ILIKE pattern.
 
 **DB Connection** (in script):
 ```python
@@ -623,10 +640,21 @@ DB_HOST = "76.13.194.120"
 DB_PORT = 5432
 DB_NAME = "openclaw_ops"
 DB_USER = "openclaw_app"
-DB_PASS = "Zuma-0psCl4w-2026!"
+DB_PASS = "$PGPASSWORD"
 ```
 
-**To generate for a different store**: Copy the script, change `STORE_NAME`, `STORE_DB_PATTERN`, `STORAGE_CAPACITY`, and ensure the planogram file has rows for that store.
+**Available stores** (from `portal.temp_portal_plannogram`):
+- Zuma Royal Plaza → `--store "Royal Plaza"`
+- Zuma Icon Gresik → `--store "Icon Mall Gresik"` or `--store "Icon Gresik"`
+- Zuma Galaxy Mall → `--store "Galaxy Mall"`
+- Zuma Matos → `--store "Matos"`
+- Zuma Tunjungan Plaza → `--store "Tunjungan Plaza"`
+- ZUMA PTC → `--store "PTC"`
+- Zuma City Of Tomorrow Mall → `--store "City Of Tomorrow"`
+- Zuma Mall Olympic Garden → `--store "Olympic Garden"`
+- Zuma Sunrise Mall → `--store "Sunrise Mall"`
+- Zuma Lippo Batu → `--store "Lippo Batu"`
+- Zuma Lippo Sidoarjo → `--store "Lippo Sidoarjo"`
 
 ### Known Limitations & Pending Clarifications
 

@@ -15,7 +15,7 @@ Generic workflow for shipping any project from local machine to production. Work
 ### GitHub Personal Access Token (PAT)
 
 ```
-Token: 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
+Token: $GITHUB_TOKEN
 Org: database-zuma
 Scope: repo, workflow
 ```
@@ -23,10 +23,10 @@ Scope: repo, workflow
 **Usage in git commands:**
 ```bash
 # Clone with auth
-git clone https://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@github.com/database-zuma/{repo-name}.git
+git clone https://$GITHUB_TOKEN@github.com/database-zuma/{repo-name}.git
 
 # Set remote with auth (existing repo)
-git remote set-url origin https://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@github.com/database-zuma/{repo-name}.git
+git remote set-url origin https://$GITHUB_TOKEN@github.com/database-zuma/{repo-name}.git
 
 # Push (after setting authenticated remote)
 git push -u origin main
@@ -35,23 +35,23 @@ git push -u origin main
 ### Vercel CLI Token
 
 ```
-Token: WNWvm9fjTerfhyG9zqiSEzdx
+Token: $VERCEL_TOKEN
 Team: database-zumas-projects
 ```
 
 **Usage in Vercel CLI commands:**
 ```bash
 # Deploy to production
-vercel --prod --yes --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel --prod --yes --token=$VERCEL_TOKEN
 
 # Add environment variable
-echo "value" | vercel env add VAR_NAME production --token=WNWvm9fjTerfhyG9zqiSEzdx
+echo "value" | vercel env add VAR_NAME production --token=$VERCEL_TOKEN
 
 # List projects
-vercel ls --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel ls --token=$VERCEL_TOKEN
 
 # Pull project settings
-vercel pull --yes --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel pull --yes --token=$VERCEL_TOKEN
 ```
 
 ---
@@ -115,10 +115,10 @@ git commit -m "feat: initial commit"
 
 ```bash
 # 1. Set authenticated remote (replace {repo-name} with actual name)
-git remote add origin https://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@github.com/database-zuma/{repo-name}.git
+git remote add origin https://$GITHUB_TOKEN@github.com/database-zuma/{repo-name}.git
 
 # If remote already exists:
-git remote set-url origin https://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@github.com/database-zuma/{repo-name}.git
+git remote set-url origin https://$GITHUB_TOKEN@github.com/database-zuma/{repo-name}.git
 
 # 2. Push to main
 git push -u origin main
@@ -132,13 +132,13 @@ git push -u origin main
 
 ```bash
 # 1. Deploy to production (auto-detect framework)
-vercel --prod --yes --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel --prod --yes --token=$VERCEL_TOKEN
 
 # 2. Add environment variables (if the project needs them)
-echo "your-value" | vercel env add VAR_NAME production --token=WNWvm9fjTerfhyG9zqiSEzdx
+echo "your-value" | vercel env add VAR_NAME production --token=$VERCEL_TOKEN
 
 # 3. MUST redeploy after adding env vars (they only take effect on new deployments)
-vercel --prod --yes --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel --prod --yes --token=$VERCEL_TOKEN
 ```
 
 ### Phase 5: Post-Deploy Verification
@@ -148,7 +148,7 @@ vercel --prod --yes --token=WNWvm9fjTerfhyG9zqiSEzdx
 curl -s -o /dev/null -w "%{http_code}" https://{project-name}.vercel.app
 
 # 2. Check Vercel function logs for runtime errors
-vercel logs https://{project-name}.vercel.app --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel logs https://{project-name}.vercel.app --token=$VERCEL_TOKEN
 
 # 3. Open in browser and check browser console for client-side errors
 # Common: TypeError from data type mismatches (see Troubleshooting section)
@@ -162,26 +162,26 @@ vercel logs https://{project-name}.vercel.app --token=WNWvm9fjTerfhyG9zqiSEzdx
 
 ```bash
 # Single variable
-echo "value" | vercel env add VAR_NAME production --token=WNWvm9fjTerfhyG9zqiSEzdx
+echo "value" | vercel env add VAR_NAME production --token=$VERCEL_TOKEN
 
 # Multiple variables — add each one
-echo "val1" | vercel env add VAR_1 production --token=WNWvm9fjTerfhyG9zqiSEzdx
-echo "val2" | vercel env add VAR_2 production --token=WNWvm9fjTerfhyG9zqiSEzdx
+echo "val1" | vercel env add VAR_1 production --token=$VERCEL_TOKEN
+echo "val2" | vercel env add VAR_2 production --token=$VERCEL_TOKEN
 
 # IMPORTANT: Redeploy after adding env vars
-vercel --prod --yes --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel --prod --yes --token=$VERCEL_TOKEN
 ```
 
 ### Listing Environment Variables
 
 ```bash
-vercel env ls --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel env ls --token=$VERCEL_TOKEN
 ```
 
 ### Removing Environment Variables
 
 ```bash
-vercel env rm VAR_NAME production --yes --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel env rm VAR_NAME production --yes --token=$VERCEL_TOKEN
 ```
 
 ---
@@ -195,7 +195,7 @@ vercel env rm VAR_NAME production --yes --token=WNWvm9fjTerfhyG9zqiSEzdx
 gh repo create database-zuma/{repo-name} --public --source=. --remote=origin --push
 
 # Or using GitHub API with token
-curl -H "Authorization: token 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" \
+curl -H "Authorization: token $GITHUB_TOKEN" \
   https://api.github.com/orgs/database-zuma/repos \
   -d '{"name": "{repo-name}", "private": false}'
 ```
@@ -213,26 +213,26 @@ git commit -m "fix: description of change"
 git push origin main
 
 # 3. Redeploy on Vercel
-vercel --prod --yes --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel --prod --yes --token=$VERCEL_TOKEN
 ```
 
 ### View Deployment Logs
 
 ```bash
 # List recent deployments
-vercel ls --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel ls --token=$VERCEL_TOKEN
 
 # Inspect specific deployment
-vercel inspect {deployment-url} --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel inspect {deployment-url} --token=$VERCEL_TOKEN
 
 # View build logs
-vercel logs {deployment-url} --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel logs {deployment-url} --token=$VERCEL_TOKEN
 ```
 
 ### Rollback Deployment
 
 ```bash
-vercel promote {deployment-url} --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel promote {deployment-url} --token=$VERCEL_TOKEN
 ```
 
 ---
@@ -276,7 +276,7 @@ git push origin main
 
 ```bash
 # Check logs
-vercel logs {deployment-url} --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel logs {deployment-url} --token=$VERCEL_TOKEN
 ```
 
 **Common causes:**
@@ -393,8 +393,8 @@ export default function Page() {
 ### 5.8 Authentication Expired
 
 If tokens are expired or revoked, ask the user for new tokens. Current tokens:
-- **GitHub PAT**: `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` (org: database-zuma)
-- **Vercel Token**: `WNWvm9fjTerfhyG9zqiSEzdx` (team: database-zumas-projects)
+- **GitHub PAT**: `$GITHUB_TOKEN` (org: database-zuma)
+- **Vercel Token**: `$VERCEL_TOKEN` (team: database-zumas-projects)
 
 ---
 
@@ -413,17 +413,17 @@ git init
 git add -A
 git status   # ← VERIFY: all source files listed, no secrets
 git commit -m "feat: initial commit"
-git remote add origin https://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@github.com/database-zuma/{REPO_NAME}.git
+git remote add origin https://$GITHUB_TOKEN@github.com/database-zuma/{REPO_NAME}.git
 git push -u origin main
 
 # 3. Vercel deploy
-vercel --prod --yes --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel --prod --yes --token=$VERCEL_TOKEN
 
 # 4. Add env vars (if needed — replace with actual values)
-echo "{VALUE}" | vercel env add {VAR_NAME} production --token=WNWvm9fjTerfhyG9zqiSEzdx
+echo "{VALUE}" | vercel env add {VAR_NAME} production --token=$VERCEL_TOKEN
 
 # 5. Redeploy with env vars
-vercel --prod --yes --token=WNWvm9fjTerfhyG9zqiSEzdx
+vercel --prod --yes --token=$VERCEL_TOKEN
 
 # 6. Verify
 curl -s -o /dev/null -w "%{http_code}" https://{REPO_NAME}.vercel.app
@@ -467,12 +467,12 @@ No manual framework configuration needed.
 | Build locally | `npm run build` |
 | Check tracked files | `git ls-files` |
 | Push to GitHub | `git push -u origin main` (with authenticated remote) |
-| Deploy to Vercel | `vercel --prod --yes --token=WNWvm9fjTerfhyG9zqiSEzdx` |
-| Add env var | `echo "val" \| vercel env add NAME production --token=WNWvm9fjTerfhyG9zqiSEzdx` |
-| View deployments | `vercel ls --token=WNWvm9fjTerfhyG9zqiSEzdx` |
-| View logs | `vercel logs {url} --token=WNWvm9fjTerfhyG9zqiSEzdx` |
-| Rollback | `vercel promote {url} --token=WNWvm9fjTerfhyG9zqiSEzdx` |
-| Remove env var | `vercel env rm NAME production --yes --token=WNWvm9fjTerfhyG9zqiSEzdx` |
+| Deploy to Vercel | `vercel --prod --yes --token=$VERCEL_TOKEN` |
+| Add env var | `echo "val" \| vercel env add NAME production --token=$VERCEL_TOKEN` |
+| View deployments | `vercel ls --token=$VERCEL_TOKEN` |
+| View logs | `vercel logs {url} --token=$VERCEL_TOKEN` |
+| Rollback | `vercel promote {url} --token=$VERCEL_TOKEN` |
+| Remove env var | `vercel env rm NAME production --yes --token=$VERCEL_TOKEN` |
 
 ---
 
