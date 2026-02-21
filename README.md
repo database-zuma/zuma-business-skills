@@ -3,7 +3,7 @@
   <br/>
   <img src="https://img.shields.io/badge/Claude_Code-Skills_Library-7C3AED?style=flat-square" alt="Claude Code"/>
   <img src="https://img.shields.io/badge/Status-Active-00E273?style=flat-square" alt="Active"/>
-  <img src="https://img.shields.io/badge/Skills-10_Installed-FF6B35?style=flat-square" alt="8 Skills"/>
+  <img src="https://img.shields.io/badge/Skills-21_Installed-FF6B35?style=flat-square" alt="21 Skills"/>
   <img src="https://img.shields.io/badge/Updated-Feb_2026-blue?style=flat-square" alt="Updated"/>
 </p>
 
@@ -98,9 +98,20 @@ Skill `zuma-data-ops` sudah mendokumentasikan daftar lengkap nama pelanggan inte
 zuma-business-skills/
 |
 |-- general/                              LINTAS DEPARTEMEN (brand, identitas)
-|   +-- zuma-company-context/
-|       |-- SKILL.md                        Brand identity, 4 entitas, data sources
-|       +-- brand-guidelines.md             Warna, tipografi, estetika Japandi
+|   |-- zuma-company-context/
+|   |   |-- SKILL.md                        Brand identity, 4 entitas, data sources
+|   |   +-- brand-guidelines.md             Warna, tipografi, estetika Japandi
+|   |-- zuma-business-metrics/
+|   |   +-- SKILL.md                        Business metrics framework
+|   |-- data-storytelling-skill/
+|   |   +-- SKILL.md                        Data storytelling & narrative
+|   |-- deploy-to-live/
+|   |   +-- SKILL.md                        Deployment & live infrastructure
+|   |-- zuma-image-gen-skill/
+|   |   +-- SKILL.md                        AI image generation workflow
+|   +-- zuma-ppt-design/
+|       |-- SKILL.md                        PowerPoint design templates
+|       +-- TEMPLATE.html                   Design template file
 |
 |-- ops/                                  DEPARTEMEN OPERASIONAL
 |   |-- zuma-sku-context/
@@ -109,35 +120,69 @@ zuma-business-skills/
 |   |   +-- SKILL.md                        6 cabang, jaringan toko, operasional retail
 |   |-- zuma-warehouse-and-stocks/
 |   |   +-- SKILL.md                        3 gudang, tahapan stok, sistem RO
-|   |-- zuma-data-ops/
-|   |   +-- SKILL.md                        PostgreSQL VPS, schema, SQL cookbook, analisis
-|   |-- notion-metrics/                   STORE PERFORMANCE METRICS
-|   |   +-- SKILL_ff_fa_fs.md               FF/FA/FS fill rate calculation (1300+ baris)
-|   +-- zuma-plano-and-ro/                PLANOGRAM & RO REQUEST PIPELINE
-|       |-- PROMPT_new_planogram.md         Prompt template: generate planogram baru
-|       |-- PROMPT_ro_request.md            Prompt template: generate RO Request (single/multi store)
-|       |-- step0.5-pre-planogram/          Step 0.5: Pre-planogram data generation
-|       |   +-- SKILL_pre_planogram.md        Pre-planogram skill (1050+ baris)
-|       |-- step1-planogram/                Step 1: Planogram generation
-|       |   |-- SKILL_planogram_zuma_v3.md    Skill planogram v3.2 (1400+ baris)
-|       |   |-- SKILL_planogram_zuma_v2.md    Skill planogram v2 (legacy)
-|       |   |-- build_royal_planogram.py      Script: Royal Plaza planogram
-|       |   +-- build_tunjungan_planogram.py  Script: Tunjungan Plaza planogram
-|       |-- step2-visualizations/           Step 2: Visual planogram
-|       |   |-- SKILL_visualized-plano_zuma_v1.md  Skill visualisasi v1.2
-|       |   |-- visualize_planogram.py        Script: Royal Plaza visual
-|       |   +-- visualize_tunjungan_planogram.py  Script: Tunjungan visual
-|       +-- step3-ro-request/               Step 3: RO Request & Surplus
-|           |-- SKILL.md                      Distribution flow skill (surplus/restock rules)
-|           |-- section-for-planogram.md      Planogram reference section
-|           +-- build_ro_royal_plaza.py       Script: Royal Plaza RO Request
+|   |-- zuma-data-analyst-skill/
+|   |   |-- SKILL.md                        Data analyst workflow & SQL patterns
+|   |   |-- data-analyst-etl-cron.md        ETL cron schedule & process
+|   |   |-- data-analyst-schema-reference.md  Database schema reference
+|   |   +-- data-analyst-sql-templates.md   SQL templates & queries
+|   |-- zuma-database-assistant-skill/
+|   |   |-- SKILL.md                        Database assistant & queries
+|   |   |-- database-column-reference.md    Column mappings & reference
+|   |   +-- database-troubleshooting.md     Troubleshooting guide
+|   |-- notion-metrics/
+|   |   |-- SKILL.md                        FF/FA/FS fill rate metrics
+|   |   |-- ff-fa-fs-calculation-logic.md   Calculation methodology
+|   |   |-- ff-fa-fs-history.md             Historical tracking
+|   |   |-- ff-fa-fs-pipeline-details.md    Pipeline details
+|   |   +-- ff-fa-fs-sql-templates.md       SQL calculation templates
+|   |-- zuma-inventory-control/
+|   |   +-- zuma-ff-skills/
+|   |       |-- SKILL.md                    FF skill (inventory fill factor)
+|   |       |-- ff-fa-fs-calculation-logic.md  Calculation logic
+|   |       |-- ff-fa-fs-history.md         Historical data
+|   |       |-- ff-fa-fs-pipeline-details.md  Pipeline & processing
+|   |       +-- ff-fa-fs-sql-templates.md   SQL templates
+|   |   +-- stock-opname-level-2/
+|   |       +-- SKILL.md                    Stock opname level 2 skill
+|   |-- zuma-plano-ro-skills/
+|   |   |-- PLANOGRAM_Royal_Plaza.xlsx      Royal Plaza planogram data
+|   |   |-- PROMPT_new_planogram.md         Prompt: generate new planogram
+|   |   |-- PROMPT_ro_request.md            Prompt: generate RO Request
+|   |   |-- step0.5-pre-planogram/
+|   |   |   |-- SKILL.md                    Pre-planogram data generation
+|   |   |   |-- pre-planogram-algorithm.md  Algorithm & logic
+|   |   |   +-- pre-planogram-output-spec.md  Output specification
+|   |   |-- step1-planogram/
+|   |   |   |-- SKILL.md                    Planogram generation (v3.2)
+|   |   |   |-- planogram-algorithm.md      Algorithm & layout rules
+|   |   |   |-- planogram-display-rules.md  Display & rendering rules
+|   |   |   |-- planogram-examples.md       Example planograms
+|   |   |   |-- planogram-output-spec.md    Output format specification
+|   |   |   +-- _archive/                   Legacy planogram versions
+|   |-- step2-visualizations/
+|   |   |   |-- SKILL.md                    Planogram visualization
+|   |   |   |-- visualization-examples.md   Visual examples
+|   |   |   |-- visualization-rendering-details.md  Rendering details
+|   |   |   |-- VISUAL_PLANOGRAM_Royal_Plaza.txt  Visual output
+|   |   |   +-- VISUAL_PLANOGRAM_Royal_Plaza.xlsx  Visual spreadsheet
+|   |-- step3-zuma-ro-surplus-skills/
+|   |       |-- SKILL.md                    RO request & surplus distribution
+|   |       +-- ro-surplus-output-format.md  Output format specification
+|   |-- dn-to-po/
+|   |   +-- SKILL.md                        DN to PO conversion workflow
+|   |-- zuma-token-usage-report/
+|   |   +-- SKILL.md                        Token usage & API metrics reporting
 |
-|-- finance/                              DEPARTEMEN FINANCE (segera hadir)
-|   +-- README.md
+|-- skills/                               SKILL BARU COLLECTION
+|   +-- finance/
+|       +-- fp-rekon-stock/
+|           |-- SKILL.md                    Financial reconciliation & stock
+|           +-- fp_rekon.py                 Python script for reconciliation
 |
-|-- hrga/                                 DEPARTEMEN HR & GA (segera hadir)
-|   +-- README.md
+|-- _archive/                             DEPRECATED SKILLS (archived)
+|   +-- (legacy skill versions)
 |
+|-- BRAND.md                              Brand guidelines & standards
 |-- README.md                             File ini
 +-- CHANGELOG.md                          Riwayat perubahan
 ```
@@ -163,39 +208,74 @@ Folder departemen baru akan ditambahkan seiring ekspansi automasi AI Zuma.
 
 ---
 
-## Daftar Skill
+## Daftar Skill (21 Skills)
 
-### General (Lintas Departemen)
+### General (Lintas Departemen) — 6 Skills
 
-| Skill | Baris | Apa yang Diketahui |
-|-------|-------|--------------------|
-| **zuma-company-context** | 137 | Brand tone (witty/casual/confident), visual identity (Japandi, Zuma Teal `#002A3A`, Zuma Green `#00E273`), 4 entitas bisnis (DDD, MBB, UBB, LJBB), sumber data (Accurate, iSeller, Ginee) |
+| # | Skill | File | Apa yang Diketahui |
+|---|-------|------|-------------------|
+| 1 | **zuma-company-context** | SKILL.md + brand-guidelines.md | Brand tone (witty/casual/confident), visual identity (Japandi, Zuma Teal `#002A3A`, Zuma Green `#00E273`), 4 entitas bisnis (DDD, MBB, UBB, LJBB), sumber data |
+| 2 | **zuma-business-metrics** | SKILL.md | Business metrics framework & KPI definition |
+| 3 | **data-storytelling-skill** | SKILL.md | Data storytelling & narrative synthesis techniques |
+| 4 | **deploy-to-live** | SKILL.md | Production deployment & live infrastructure workflows |
+| 5 | **zuma-image-gen-skill** | SKILL.md | AI image generation & visual asset creation |
+| 6 | **zuma-ppt-design** | SKILL.md + TEMPLATE.html | PowerPoint design templates & styling guidelines |
 
-### Operations
+### Operations — 15 Skills
 
-| Skill | Baris | Apa yang Diketahui |
-|-------|-------|--------------------|
-| **zuma-sku-context** | 376 | Hierarki produk (Type > Gender > Series > Article > Size), sistem versioning Kode Mix, pola assortment (12 pasang/box), klasifikasi 6 tier (T1-T5 + T8) |
-| **zuma-branch** | 575 | 6 cabang (Jatim, Jakarta, Sumatra, Sulawesi, Batam, Bali), kategori toko (RETAIL/NON-RETAIL/EVENT), format mall vs Ruko, Area Supervisor, kapasitas stok |
-| **zuma-warehouse-and-stocks** | 385 | 3 gudang fisik (WHS/WHJ/WHB), formula stok (ready = whs - queue - picked - ...), alur status RO lengkap, variance tracking |
-| **zuma-data-ops** | 760+ | Koneksi PostgreSQL VPS, 5 schema (raw/portal/core/mart/public), definisi semua tabel/view, 7 aturan SQL kritikal (termasuk filter transaksi affiliasi), 9 template query, metodologi analisis, jadwal ETL |
+#### Core Context Skills (4)
 
-### Notion Metrics (`notion-metrics/`)
+| # | Skill | File | Apa yang Diketahui |
+|---|-------|------|-------------------|
+| 7 | **zuma-sku-context** | SKILL.md | Hierarki produk (Type > Gender > Series > Article > Size), Kode Mix versioning, assortment (12 pasang/box), 6 tier |
+| 8 | **zuma-branch** | SKILL.md | 6 cabang (Jatim, Jakarta, Sumatra, Sulawesi, Batam, Bali), kategori toko, layout, Area Supervisor |
+| 9 | **zuma-warehouse-and-stocks** | SKILL.md | 3 gudang (WHS/WHJ/WHB), formula stok, alur RO, variance tracking |
+| 10 | **zuma-token-usage-report** | SKILL.md | Token usage metrics & API consumption reporting |
 
-| Skill / File | Baris | Apa yang Diketahui |
-|--------------|-------|--------------------|
-| **SKILL_ff_fa_fs** | 1300+ | Fill Factor (size-level), Fill Article (article-level), Fill Stock (quantity depth). Kalkulasi dari VPS DB + planogram file input. Includes complete Python script, SQL templates, store name mapping (Jatim), Excel output with conditional formatting. ST (Sell-Through) documented tapi belum aktif — butuh Ringkasan Mutasi dari Accurate Online. |
+#### Data & Analytics Skills (3)
 
-### Planogram & RO Pipeline (`zuma-plano-and-ro/`)
+| # | Skill | File | Apa yang Diketahui |
+|---|-------|------|-------------------|
+| 11 | **zuma-data-analyst-skill** | SKILL.md + data-analyst-etl-cron.md + data-analyst-schema-reference.md + data-analyst-sql-templates.md | ETL pipeline, PostgreSQL schema, SQL patterns, analysis methodology |
+| 12 | **zuma-database-assistant-skill** | SKILL.md + database-column-reference.md + database-troubleshooting.md | Database queries, column mappings, troubleshooting guide |
+| 13 | **notion-metrics** | SKILL.md + ff-fa-fs-calculation-logic.md + ff-fa-fs-history.md + ff-fa-fs-pipeline-details.md + ff-fa-fs-sql-templates.md | FF/FA/FS fill rate metrics, calculation logic, SQL templates, store mapping |
 
-| Skill / File | Baris | Apa yang Diketahui |
-|--------------|-------|--------------------|
-| **SKILL_pre_planogram** | 1050+ | Pre-planogram data generation: analisis sales + stock → target quantity per size per store per article. 7-step pipeline. Output jadi input Step 1 (planogram layout) dan FF/FA/FS metrics. |
-| **SKILL_planogram_zuma_v3** | 1400+ | Full planogram generation: tier assignment, capacity allocation, size-level target, assortment rules, DB queries, Excel output format. Versi terbaru (v3.2) |
-| **SKILL_visualized-plano_zuma_v1** | 700+ | Planogram visualization: heatmap per tier, stock vs target comparison, color coding, openpyxl styling. Versi v1.2 |
-| **zuma-distribution-flow** (SKILL.md) | 283 | Surplus & restock rules: RO Protol (<50% empty), RO Box (>=50% empty), surplus sort (slowest seller first), same-day restock+pull, WH Pusat source rules (DDD+LJBB for Box, DDD only for Protol) |
-| **PROMPT_new_planogram.md** | — | Template prompt untuk generate planogram baru (single store) |
-| **PROMPT_ro_request.md** | 172 | Template prompt untuk generate RO Request mingguan: single store, multi-store (region), custom (protol-only/box-only/surplus-only). Termasuk store name reference table |
+#### Inventory Control Skills (2)
+
+| # | Skill | File | Apa yang Diketahui |
+|---|-------|------|-------------------|
+| 14 | **zuma-ff-skills** (under inventory-control/) | SKILL.md + ff-fa-fs-calculation-logic.md + ff-fa-fs-history.md + ff-fa-fs-pipeline-details.md + ff-fa-fs-sql-templates.md | Fill Factor calculation, methodology, SQL templates |
+| 15 | **stock-opname-level-2** (under inventory-control/) | SKILL.md | Stock opname procedures & level 2 reconciliation |
+
+#### Planogram & RO Pipeline Skills (4)
+
+| # | Skill | File | Apa yang Diketahui |
+|---|-------|------|-------------------|
+| 16 | **step0.5-pre-planogram** | SKILL.md + pre-planogram-algorithm.md + pre-planogram-output-spec.md | Pre-planogram data generation, sales+stock analysis, 7-step pipeline |
+| 17 | **step1-planogram** | SKILL.md + planogram-algorithm.md + planogram-display-rules.md + planogram-examples.md + planogram-output-spec.md | Planogram generation (v3.2), tier assignment, capacity allocation, assortment rules |
+| 18 | **step2-visualizations** | SKILL.md + visualization-examples.md + visualization-rendering-details.md | Planogram visualization, heatmaps, stock comparison, color coding |
+| 19 | **step3-zuma-ro-surplus-skills** | SKILL.md + ro-surplus-output-format.md | RO request & surplus distribution, restock rules, WH sourcing |
+
+#### Operational Workflow Skills (2)
+
+| # | Skill | File | Apa yang Diketahui |
+|---|-------|------|-------------------|
+| 20 | **dn-to-po** | SKILL.md | DN to PO conversion workflow & document processing |
+| 21 | **fp-rekon-stock** (under skills/finance/) | SKILL.md + fp_rekon.py | Financial reconciliation & stock matching |
+
+---
+
+### Reference & Template Files
+
+**Planogram Prompts:**
+- `PROMPT_new_planogram.md` — Template untuk generate planogram baru (single store)
+- `PROMPT_ro_request.md` — Template untuk generate RO Request mingguan (single/multi-store)
+
+**Data Files:**
+- `PLANOGRAM_Royal_Plaza.xlsx` — Sample planogram data (Royal Plaza store)
+
+**Deprecated:**
+- `_archive/` folder berisi legacy planogram versions & old formats
 
 ---
 
