@@ -43,7 +43,7 @@ Business rules:
 - Surplus sort: avg monthly sales ASC (slowest seller ditarik duluan)
 - Restock + surplus happen same day
 
-Skills yang perlu di-load: zuma-data-ops, zuma-sku-context, zuma-warehouse-and-stocks
+Skills yang perlu di-load: zuma-data-analyst-skill, zuma-sku-context, zuma-warehouse-and-stocks
 ```
 
 ### Contoh penggunaan (single store):
@@ -154,7 +154,7 @@ Generate Surplus Pull List saja untuk [NAMA TOKO].
 
 ## Catatan Penting
 
-1. **Planogram harus sudah ada** — RO Request bergantung pada target planogram per artikel per ukuran. Jika belum ada planogram, buat dulu pakai `SKILL_planogram_zuma_v3.md`.
+1. **Planogram harus sudah ada** — RO Request bergantung pada target planogram per artikel per ukuran. Jika belum ada planogram, buat dulu pakai `planogram-zuma` skill.
 
 2. **Data stock real-time** — Script query langsung ke DB `core.stock_with_product`. Pastikan data snapshot terbaru sudah ada.
 
@@ -168,4 +168,4 @@ Generate Surplus Pull List saja untuk [NAMA TOKO].
 
 *Version: 1.0*
 *Last Updated: 10 February 2026*
-*Related Skills: zuma-distribution-flow/SKILL.md, SKILL_planogram_zuma_v3.md*
+*Related Skills: zuma-ro-surplus-transisi, planogram-zuma*

@@ -206,49 +206,12 @@ WAREHOUSE → IN_DELIVERY → ARRIVED → COMPLETED
 
 ### Inventory Cycle
 
-```
-┌─────────────────────────────────────────────────┐
-│ 1. Customer Purchase                            │
-│    → on_hand_pairs decreases                    │
-│    → Display stock depletes                     │
-└─────────────────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────┐
-│ 2. Display Replenishment                        │
-│    → Move stock from storage to display         │
-│    → Maintain planogram levels                  │
-└─────────────────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────┐
-│ 3. Storage Depleted                             │
-│    → Assortment becomes BROKEN                  │
-│    → Trigger RO creation                        │
-└─────────────────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────┐
-│ 4. Area Supervisor Creates RO                   │
-│    → Order sent to warehouse                    │
-│    → Stock reserved at warehouse                │
-└─────────────────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────┐
-│ 5. Warehouse Fulfills Order                     │
-│    → Stock picked, packed, shipped              │
-│    → Delivery to store                          │
-└─────────────────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────┐
-│ 6. Store Receives Stock                         │
-│    → on_hand_pairs increases                    │
-│    → Assortment status updated to FULL          │
-│    → Cycle repeats                              │
-└─────────────────────────────────────────────────┘
-```
+1. **Customer Purchase** → on_hand_pairs decreases, display stock depletes
+2. **Display Replenishment** → Move stock from storage to display, maintain planogram levels
+3. **Storage Depleted** → Assortment becomes BROKEN, trigger RO creation
+4. **Area Supervisor Creates RO** → Order sent to warehouse, stock reserved
+5. **Warehouse Fulfills Order** → Stock picked, packed, shipped to store
+6. **Store Receives Stock** → on_hand_pairs increases, assortment updated to FULL
 
 ### Stock Count
 
@@ -293,76 +256,19 @@ WAREHOUSE → IN_DELIVERY → ARRIVED → COMPLETED
 ## Store Types in Detail
 
 ### RETAIL Stores (Permanent)
-
-**Characteristics:**
-- Permanent locations (mall or high-street)
-- Full product range
-- Consistent operating hours
-- Regular restocking schedule
-
-**Store Formats:**
-
-**Mall Units (Jatim, Jakarta, Sumatra, Sulawesi, Batam):**
-- Island units - Free-standing displays in mall corridors
-- Kiosk units - Small enclosed units in malls
-- Examples: Zuma Tunjungan Plaza, Zuma Bintaro Xchange, Zuma Nagoya Hills Batam
-
-**High-Street "Ruko" (Rumah Toko) - Primarily in Bali:**
-- Physical street-facing buildings
-- Indonesian-style shophouse format
-- Larger footprint than mall units
-- Examples: Zuma Dalung, Zuma Gianyar
-
-**Lombok (Mixed Format):**
-- 1 street store: Zuma Mataram
-- 1 mall unit: Zuma Epicentrum
-
-**Inventory Strategy:**
-- Maintain full assortments across all tiers
-- Higher planogram quantities for bestsellers
-- Seasonal product rotation
+- **Characteristics:** Permanent locations (mall/high-street), full product range, consistent hours, regular restocking
+- **Mall Units:** Island/kiosk units in malls (Jatim, Jakarta, Sumatra, Sulawesi, Batam). Examples: Zuma Tunjungan Plaza, Zuma Bintaro Xchange, Zuma Nagoya Hills Batam
+- **High-Street "Ruko":** Street-facing shophouses in Bali (Zuma Dalung, Zuma Gianyar); Lombok has 1 street store (Zuma Mataram) + 1 mall unit (Zuma Epicentrum)
+- **Inventory:** Full assortments across tiers, higher planogram for bestsellers, seasonal rotation
 
 ### NON-RETAIL Channels
-
-**Wholesale:**
-- Bulk orders to wholesale partners
-- Distributor agreements
-- Larger order quantities
-- Different pricing structure
-
-**Consignment:**
-- Stock placed at partner locations
-- Payment on sold basis
-- Partner manages display and sales
-- Inventory tracked separately from owned stores
+- **Wholesale:** Bulk orders to partners, distributor agreements, larger quantities, different pricing
+- **Consignment:** Stock at partner locations, payment on sold basis, partner manages display, tracked separately
 
 ### EVENT Stores (Temporary)
-
-**Characteristics:**
-- Limited duration (days to weeks)
-- Event-specific location
-- Focused product selection
-- Special pricing/promotions
-
-**Active Repeating Events:**
-
-**WILBEX (Willow Mom & Baby Expo):**
-- Branch: Jatim
-- Recurring event
-- Family/baby-focused audience
-- Seasonal schedule
-
-**IMBEX (International Mom & Baby Expo):**
-- Branch: Jakarta
-- Recurring event
-- Family/baby-focused audience
-- Larger scale than WILBEX
-
-**Inventory Strategy:**
-- Pre-allocated stock for event duration
-- Limited replenishment during event
-- Return unused stock to warehouse
-- Focus on family-friendly designs and sizes
+- **Characteristics:** Limited duration (days-weeks), event-specific location, focused selection, special pricing
+- **Active Events:** WILBEX (Jatim, family/baby-focused), IMBEX (Jakarta, larger scale)
+- **Inventory:** Pre-allocated stock, limited replenishment during event, return unused stock, family-friendly focus
 
 ## Store Staff Roles
 
@@ -501,53 +407,19 @@ store_stock (
 
 ## Reporting and Analytics
 
-### Store-Level Reports
-- Daily sales by article
-- Current stock levels
-- Broken assortment list
-- Pending RO status
-- Receive variance summary
+**Store-Level:** Daily sales by article, current stock levels, broken assortment list, pending RO status, receive variance summary
 
-### Area-Level Reports
-- Sales comparison across stores
-- Stock allocation by store
-- RO fulfillment performance
-- Store ranking by performance
+**Area-Level:** Sales comparison across stores, stock allocation by store, RO fulfillment performance, store ranking
 
-### Network-Level Reports
-- Total network stock
-- Out-of-stock articles across network
-- Sales trends by region
-- Inventory turn by store category
+**Network-Level:** Total network stock, out-of-stock articles, sales trends by region, inventory turn by category
 
 ## Common Operations
 
-### Create Store RO
-1. Area Supervisor selects target store
-2. Reviews store stock levels
-3. Identifies items needing replenishment
-4. Specifies quantities (in boxes)
-5. Selects source warehouse (DDD/LJBB)
-6. Submits RO
-7. Receives RO ID (e.g., RO-2512-0007)
+**Create Store RO:** AS selects store → reviews stock → identifies items → specifies quantities (boxes) → selects warehouse (DDD/LJBB) → submits → receives RO ID
 
-### Receive Store Delivery
-1. Driver arrives with shipment
-2. Store staff checks packages
-3. Counts boxes received
-4. Compares to RO quantities
-5. Notes any variance
-6. WH Supervisor confirms in system
-7. Stock added to store inventory
-8. RO marked COMPLETED
+**Receive Store Delivery:** Driver arrives → staff checks packages → counts boxes → compares to RO → notes variance → WH Supervisor confirms → stock added → RO marked COMPLETED
 
-### Handle Stock Transfer
-1. Identify receiving store (low stock)
-2. Identify sending store (excess stock)
-3. Area Supervisor approves transfer
-4. Update both store stock levels
-5. Log transfer in system
-6. Update assortment status if needed
+**Handle Stock Transfer:** Identify receiving store (low stock) → identify sending store (excess) → AS approves → update both stock levels → log transfer → update assortment status
 
 ## Key Terminology
 

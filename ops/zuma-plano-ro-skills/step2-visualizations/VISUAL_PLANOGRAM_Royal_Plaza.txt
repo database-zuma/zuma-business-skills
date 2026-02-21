@@ -1,0 +1,65 @@
+
+                                              LAYOUT ZUMA ROYAL PLAZA
+                                     ========================================
+                              Planogram Feb 2025 - Jan 2026 | Generated: 19 Feb 2026
+
+    BW-3 MEN FASHION (8X7)    BW-2 LADIES FASHION (8X7)
+    +-----+-----+-----+-----+-----+-----+-----+-----+    +-----+-----+-----+-----+-----+-----+-----+-----+
+    | DAL | ZRO | ZRO | ZRO | ZRO | SLD | DAL | SLD |    | FLO | ELS | ELS | ELS | MRC | MRC | MRC | MRC |
+    | T1  | T1  | T8  | T8  | T8  | T2  | T2  | T2  |    | T1  | T1  | T1  | T1  | T8  | T8  | T8  | T8  |
+    +-----+-----+-----+-----+-----+-----+-----+-----+    +-----+-----+-----+-----+-----+-----+-----+-----+
+    +-----+-----+-----+-----+-----+-----+-----+-----+    +-----+-----+-----+-----+-----+-----+-----+-----+
+    | DAL | ONX | ONX | ONX | SLD | ZRO | ZRO | ONX |    | PFY | MRC | STH | PFY | STH | PFY | PFY | FLO |
+    | T2  | T2  | T2  | T2  | T3  | T3  | T3  | T3  |    | T8  | T8  | T8  | T8  | T8  | T2  | T2  | T2  |
+    +-----+-----+-----+-----+-----+-----+-----+-----+    +-----+-----+-----+-----+-----+-----+-----+-----+
+    +-----+-----+    +-----+-----+
+    | SLD | SLD |    | FLO | WDG |
+    | T3  | T3  |    | T2  | T2  |
+    +-----+-----+    +-----+-----+
+
++----------------+                                                                   +----------------+
+|BW-1 MEN JEPIT (|                                                                   |BW-4 BABY & KIDS|
++----------------+                                         +--------+                +----------------+
+| CLS T1         |                                         | KASIR  |                | CLS T1         |
+| BLK T1         |                                         +--------+                | MCK T1         |
+| BLK T1         |                                                                   | POO T8         |
+| CLS T1         |                                                                   | POO T8         |
+| CLS T1         |           +---------------------------------+                     | POO T8         |
+| BLK T1         |           |            RAK BABY             |                     | WBB T2         |
+| STP T1         |           +---------------------------------+                     | M&F T2         |
+| BLK T1         |           |    Layer 1: BABY WBB 3 (WBB)    |                     | WBB T2         |
+| BLK T1         |           |Layer 2: BABY VELCRO STITCH (VLS)|                     | BAT T2         |
+| CLS T1         |           +---------------------------------+                     | VLC T2         |
+| STP T1         |                                                                   | VLC T2         |
+| STP T1         |                                                                   | CLS T2         |
+| STP T1         |                +-----------------------+                          | DSN T2         |
+| STP T1         |                |   AIRMOVE (Display)   |                          | STH T2         |
+| STP T1         |                +-----------------------+                          | VLC T2         |
+| BLK T1         |                                                                   | CLS T2         |
+| STP T1         |                                                                   | M&F T2         |
+| BLK T1         |                                                                   | LOT T2         |
+| STP T1         |                                                                   | CLS T2         |
+| CLS T2         |                                                                   | VLC T3         |
+| CLS T2         |                                                                   | DSN T3         |
+| BLK T2         |                                                                   | TOY T3         |
+| BLK T3         |                                                                   | VLC T3         |
+|  (empty)       |                                                                   | DSN T3         |
++----------------+                                                                   | TOY T3         |
+                                                                                     | DSN T3         |
+                                                                                     +----------------+
+
+                                                 === ENTRANCE ===
+
+  --------------------------------------------------------------------------------
+  LEGEND (Series Abbreviations):
+
+    BAT = BATMAN  BLK = BLACKSERIES  CLS = CLASSIC  DAL = DALLAS  DSN = DISNEY  ELS = ELSA  FLO = FLO
+    LOT = LOTSO  MRC = MERCI  MCK = MICKEY  M&F = MICKEY & FRIENDS  ONX = ONYX  POO = POOH  PFY = PUFFY
+    SLD = SLIDE  STH = STITCH  STP = STRIPE  TOY = TOY STORY  VLC = VELCRO  VLS = VELCRO STITCH  WBB = WBB
+    WDG = WEDGES  ZRO = ZORRO
+
+  --------------------------------------------------------------------------------
+  SUMMARY: 87/88 slots used (98.9% utilization)
+  BW-1 Men Jepit: 23/24 | BW-3 Men Fashion: 18/18 | BW-2 Ladies Fashion: 18/18 | BW-4 Baby & Kids: 26/26
+  Rak Baby: 2/2 layers
+  --------------------------------------------------------------------------------

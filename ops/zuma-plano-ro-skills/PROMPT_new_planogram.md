@@ -1,3 +1,9 @@
+---
+name: PROMPT_new_planogram
+description: Template prompt untuk generate planogram toko baru (Step 0 input check + Step 1 article assignment + Step 2 visual floor plan). Use when user asks to create a new planogram, generate planogram for a store, or run the full planogram workflow.
+user-invocable: true
+---
+
 # Prompt: New Store Planogram (Step 1 + Step 2)
 
 > Copy-paste prompt di bawah ini, ganti bagian `[...]` sesuai kebutuhan.
@@ -13,12 +19,12 @@ Region: [REGION — contoh: Jatim, Jakarta, Sumatra, Sulawesi, Batam, Bali]
 ## SKILLS TO LOAD
 
 Load these skills in order:
-1. `zuma-data-ops` — for DB connection & sales data query
+1. `zuma-data-analyst-skill` — for DB connection & sales data query
 2. `zuma-sku-context` — for tier system & article categorization
 3. `zuma-warehouse-and-stocks` — for storage context
 4. `zuma-branch` — for store/branch info
-5. `SKILL_planogram_zuma_v3.md` — Step 1: planogram article assignment
-6. `SKILL_visualized-plano_zuma_v1.md` — Step 2: planogram visual floor plan
+5. `planogram-zuma` — Step 1: planogram article assignment
+6. `visualized-planogram-zuma` — Step 2: planogram visual floor plan
 
 ---
 
@@ -59,9 +65,9 @@ Jika ada yang BELUM tersedia → TANYAKAN ke user untuk provide, JANGAN assume a
 
 ## STEP 1: PLANOGRAM ARTICLE ASSIGNMENT
 
-Setelah semua input data lengkap, jalankan Step 1 menggunakan `SKILL_planogram_zuma_v3.md`:
+Setelah semua input data lengkap, jalankan Step 1 menggunakan `planogram-zuma` skill:
 
-1. Query sales data 12 bulan dari DB (gunakan `zuma-data-ops` skill)
+1. Query sales data 12 bulan dari DB (gunakan `zuma-data-analyst-skill`)
 2. Hitung adjusted average per artikel per tier
 3. Tentukan mode per backwall (Full Box / Compact / Mix) berdasarkan demand vs slot
 4. Assign artikel ke setiap display component berdasarkan priority rules
@@ -83,7 +89,7 @@ Setelah semua input data lengkap, jalankan Step 1 menggunakan `SKILL_planogram_z
 
 ## STEP 2: PLANOGRAM VISUAL FLOOR PLAN
 
-Setelah user confirm Step 1 OK, jalankan Step 2 menggunakan `SKILL_visualized-plano_zuma_v1.md`:
+Setelah user confirm Step 1 OK, jalankan Step 2 menggunakan `visualized-planogram-zuma` skill:
 
 1. Parse `PLANOGRAM_[NAMA_TOKO].xlsx` dari Step 1
 2. Define store layout coordinates (posisi fisik setiap display unit)
