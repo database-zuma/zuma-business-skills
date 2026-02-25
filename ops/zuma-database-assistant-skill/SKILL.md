@@ -67,8 +67,12 @@ All raw tables live in the `raw` schema. Each entity (DDD, MBB, UBB, LJBB) has s
 | Table | Description |
 |-------|-------------|
 | `raw.iseller_sales` | POS sales from iSeller (evolving structure) |
+| `raw.iseller_2023` / `_2025` / `_2026` | Historical iSeller POS data by year |
+| `raw.accurate_item_transfer_{ddd,ljbb,mbb,ubb}` | Inter-warehouse stock transfers (4 tables, per-entity) |
+| `raw.accurate_purchase_invoice_{ddd,ljbb,mbb,ubb}` | Purchase invoices from suppliers (4 tables) |
+| `raw.accurate_purchase_order_{ddd,ljbb,mbb,ubb}` | Purchase orders to suppliers (4 tables) |
+| `raw.accurate_logistics_{ddd,ljbb,mbb,ubb}` | Logistics/shipping records (4 tables) |
 | `raw.load_history` | ETL audit trail — every data pull logged here |
-
 ---
 
 ## 3. View Architecture — How Deduplication Works
@@ -112,6 +116,8 @@ LEFT JOIN core.dim_warehouse w ON w.warehouse_code = '{ENTITY}'
 
 Stock uses a completely different strategy — **no overlap problem** because stock ETL does `TRUNCATE` + fresh insert (only 1 snapshot exists at any time).
 
+**Actual row counts (25 Feb 2026):** DDD ~1.39M | MBB ~209K | UBB ~52K | LJBB ~17K | **Total ~1.66M**
+
 ```sql
 -- Pattern repeated for DDD, LJBB, MBB, UBB (UNION ALL)
 SELECT ... FROM raw.accurate_stock_{entity} s
@@ -121,24 +127,43 @@ WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM raw.accurate_stock_{enti
 ```
 
 **Key detail:** `WHERE snapshot_date = MAX(snapshot_date)` — safety net even though TRUNCATE means only 1 snapshot.
-
 ### 3.4 Downstream Views
 
 | View | Reads From | Adds |
 |------|-----------|------|
-| `core.sales_with_product` (48 cols) | `fact_sales_unified` | Product enrichment (kodemix, hpprsp), store enrichment (portal.store), `is_intercompany` flag |
-| `core.stock_with_product` (38 cols) | `fact_stock_unified` | Product enrichment, warehouse/capacity enrichment |
+| `core.sales_with_product` (48 cols, ~1.55M rows) | `fact_sales_unified` | Product enrichment (kodemix, hpprsp), store enrichment (portal.store), `is_intercompany` flag |
+| `core.stock_with_product` (38 cols, **~1.66M rows**) | `fact_stock_unified` | Product enrichment, warehouse/capacity enrichment |
 | `core.sales_with_store` | `fact_sales_unified` | Store enrichment only (legacy, less enriched) |
 
-### 3.5 Dimension Views
+### 3.5 Additional Core Objects
 
-| View | Source | Dedup Method |
-|------|--------|-------------|
-| `core.dim_product` (16 cols) | `portal.kodemix` + `portal.hpprsp` | `DISTINCT ON (kode_besar)` ordered by `no_urut` |
-| `core.dim_store` (12 cols) | `portal.store` | `DISTINCT ON (TRIM(LOWER(nama_accurate)))` |
-| `core.dim_warehouse` (3 cols) | Hardcoded | `VALUES ('DDD','MBB','UBB','LJBB')` |
-| `core.dim_date` (11 cols) | Generated | Date dimension `generate_series()` |
+| Object | Type | Description |
+|--------|------|-------------|
+| `core.item_transfer` | view | Inter-warehouse stock transfer view |
+| `core.iseller` | view | iSeller POS data view |
+| `core.bm_metrics` | **table** | Branch Manager performance metrics |
+| `core.fact_sales_ddd` / `_mbb` / `_ubb` | views | Per-entity sales views |
+| `core.fact_stock_ddd` / `_ljbb` / `_mbb` / `_ubb` | views | Per-entity stock views |
 
+### 3.7 Portal Tables (Reference Data)
+
+| Table | Rows | Description |
+|-------|------|-------------|
+| `portal.kodemix` | ~5,481 | Product bridge table (kode_besar → kode_mix) |
+| `portal.hpprsp` | — | Pricing (HPP, price_taq, rsp) |
+| `portal.store` | — | Store master (name, branch, area, category) |
+| `portal.stock_capacity` | — | Store/warehouse capacity |
+| `portal.temp_portal_plannogram` | ~2,568 | **DEFAULT planogram source** (~11 Jatim stores) |
+| `portal.store_coordinates` | ~66 | Store GPS coordinates |
+| `portal.store_display_options` | ~509 | Store display hook/shelf options |
+| `portal.store_monthly_target` | ~218 | Monthly sales targets per store |
+| `portal.store_name_map` | ~65 | Store name aliases between systems |
+
+### 3.8 Mart Schema
+
+**UNSTABLE** — tables created/dropped per request. Current semi-permanent: `mart.purchasing_monthly`, `mart.purchasing_top10_monthly`.
+
+### 3.6 Dimension Views
 > Full output column lists for all views: see `database-column-reference.md`
 
 ---
@@ -361,5 +386,5 @@ Track significant database fixes here for future reference.
 
 **Status:** Complete
 **Created:** 13 Feb 2026
-**Updated:** 21 Feb 2026 — Split into SKILL.md + reference files
-**Covers:** Raw table schemas (columns, constraints), view architecture (dedup logic), ETL pipeline (sales/stock scripts, cron, credentials), common fix patterns (dedup, constraints, columns, views), maintenance SQL templates, troubleshooting guide, historical fixes log
+**Updated:** 25 Feb 2026 — Added missing raw tables (item_transfer, logistics, purchase_invoice, purchase_order × 4 entities + 3 iseller), portal tables (temp_portal_plannogram, store_coordinates, store_display_options, store_monthly_target, store_name_map), core views (item_transfer, iseller, bm_metrics, per-entity fact views), mart tables, and corrected stock row counts (total ~1.66M, up from ~142K documented previously)
+**Covers:** Raw table schemas (columns, constraints), view architecture (dedup logic), ETL pipeline (sales/stock scripts, cron, credentials), common fix patterns (dedup, constraints, columns, views), maintenance SQL templates, troubleshooting guide, historical fixes log, all 5 schemas (raw, portal, core, mart, public)

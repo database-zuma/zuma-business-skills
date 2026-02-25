@@ -218,7 +218,7 @@ def append_rows(sheet_id: str, tab: str, rows: list[list]) -> bool:
     return True
 
 
-def push_to_sheets(parsed: dict, sheet_id: str, tab: str, dry_run: bool = False):
+def push_to_sheets(parsed: dict, sheet_id: str, tab: str, entry_type: str = "stock", dry_run: bool = False):
     """Push parsed FP data to Google Sheets."""
     rows = []
     for item in parsed["items"]:
@@ -235,7 +235,7 @@ def push_to_sheets(parsed: dict, sheet_id: str, tab: str, dry_run: bool = False)
             str(item["dpp"]),              # DPP
             str(item["ppn"]),              # PPN-M
             str(item["jumlah"]),           # Jumlah
-            "stock",                       # stock
+            entry_type,                    # stock
             "",                            # (kosong)
         ]
         rows.append(row)
@@ -268,6 +268,7 @@ def main():
     parser.add_argument("pdf", help="Path to Faktur Pajak PDF")
     parser.add_argument("--sheet-id", default=DEFAULT_SHEET_ID, help="Google Sheets ID")
     parser.add_argument("--tab", default=None, help='Sheet tab name (default: derived from invoice date)')
+    parser.add_argument("--type", default="stock", help='Value for the "stock" column (default: stock)')
     parser.add_argument("--dry-run", action="store_true", help="Parse only, don't write to Sheets")
     args = parser.parse_args()
 
@@ -299,8 +300,9 @@ def main():
     tab = args.tab or tab_from_date(parsed["tanggal"])
     print(f"\n📊 Target sheet : {args.sheet_id}")
     print(f"   Tab          : {tab}")
+    print(f"   Type         : {args.type}")
 
-    ok = push_to_sheets(parsed, args.sheet_id, tab, dry_run=args.dry_run)
+    ok = push_to_sheets(parsed, args.sheet_id, tab, entry_type=args.type, dry_run=args.dry_run)
 
     if ok:
         print(f"\n✅ Done! Sheet: https://docs.google.com/spreadsheets/d/{args.sheet_id}")

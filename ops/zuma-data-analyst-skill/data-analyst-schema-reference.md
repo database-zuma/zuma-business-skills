@@ -39,10 +39,10 @@ Raw data pulled from Accurate Online API. Each entity (DDD, MBB, UBB, LJBB) has 
 
 | Table | Entity | Description |
 |-------|--------|-------------|
-| `raw.accurate_stock_ddd` | DDD | ~142K rows, latest snapshot only (overwrites daily) |
-| `raw.accurate_stock_ljbb` | LJBB | ~128 rows (Baby & Kids PO receiving entity) |
-| `raw.accurate_stock_mbb` | MBB | Minimal/empty (online entity, stock managed elsewhere) |
-| `raw.accurate_stock_ubb` | UBB | Minimal/empty (wholesale entity) |
+| `raw.accurate_stock_ddd` | DDD | ~1,386,204 rows, latest snapshot only (overwrites daily via TRUNCATE+INSERT) |
+| `raw.accurate_stock_ljbb` | LJBB | ~17,448 rows (Baby & Kids PO receiving entity) |
+| `raw.accurate_stock_mbb` | MBB | ~208,590 rows (online entity stock) |
+| `raw.accurate_stock_ubb` | UBB | ~51,980 rows (wholesale entity stock) |
 
 **Stock table columns:**
 
@@ -64,8 +64,12 @@ Raw data pulled from Accurate Online API. Each entity (DDD, MBB, UBB, LJBB) has 
 | Table | Description |
 |-------|-------------|
 | `raw.iseller_sales` | POS sales from iSeller (real-time retail). Structure may change as integration evolves. |
+| `raw.iseller_2023` / `_2025` / `_2026` | Historical iSeller POS data by year |
+| `raw.accurate_item_transfer_{ddd,ljbb,mbb,ubb}` | Inter-warehouse stock transfers (4 tables, per-entity) |
+| `raw.accurate_purchase_invoice_{ddd,ljbb,mbb,ubb}` | Purchase invoices from suppliers (4 tables) |
+| `raw.accurate_purchase_order_{ddd,ljbb,mbb,ubb}` | Purchase orders to suppliers (4 tables) |
+| `raw.accurate_logistics_{ddd,ljbb,mbb,ubb}` | Logistics/shipping records (4 tables) |
 | `raw.load_history` | ETL audit trail — logs every data pull with entity, table, row counts, timestamps |
-
 ---
 
 ## Schema: `portal` (Reference/Master Data)
@@ -134,6 +138,15 @@ Manually maintained reference tables synced from Google Sheets. These are the "b
 | `area` | text | Area |
 | `category` | text | Category |
 
+### Additional Portal Tables
+
+| Table | Rows | Description |
+|-------|------|-------------|
+| `portal.temp_portal_plannogram` | ~2,568 | **DEFAULT planogram source** for RO Request. Jatim region, ~11 stores. |
+| `portal.store_coordinates` | ~66 | Store GPS coordinates |
+| `portal.store_display_options` | ~509 | Store display hook/shelf options |
+| `portal.store_monthly_target` | ~218 | Monthly sales targets per store |
+| `portal.store_name_map` | ~65 | Store name aliases between systems |
 ---
 
 ## Schema: `core` (Transformed Views)
@@ -188,7 +201,7 @@ All objects in `core` are **views** (not tables). They auto-recompute when queri
 | **Warehouse** | gudang_branch, gudang_area, gudang_category |
 | **Technical** | v, count_by_assortment |
 
-**Row count:** ~142K rows (matches fact_stock_unified exactly, no duplicates)
+**Row count:** ~1,664,222 rows (all 4 entities combined: DDD ~1.39M, MBB ~209K, UBB ~52K, LJBB ~17K. Refreshes daily via TRUNCATE+INSERT)
 **Kodemix match rate:** ~99.9%
 **Capacity match rate:** ~96.4%
 
@@ -199,7 +212,9 @@ All objects in `core` are **views** (not tables). They auto-recompute when queri
 | `core.sales_with_store` | Older sales view (less enriched, kept for backward compat) |
 | `core.fact_sales_ddd` / `_mbb` / `_ubb` | Per-entity sales views |
 | `core.fact_stock_ddd` / `_ljbb` / `_mbb` / `_ubb` | Per-entity stock views |
-
+| `core.item_transfer` | Inter-warehouse stock transfer view |
+| `core.iseller` | iSeller POS data view |
+| `core.bm_metrics` | Branch Manager performance metrics (**table**, not view) |
 ---
 
 ## Schema: `mart` (Ad-hoc Analysis)
@@ -212,12 +227,9 @@ All objects in `core` are **views** (not tables). They auto-recompute when queri
 SELECT table_name FROM information_schema.tables WHERE table_schema = 'mart';
 ```
 
-**Common mart table patterns:**
-- `mart.monthly_sales_summary` — aggregated monthly sales by article/store
-- `mart.article_performance` — article-level KPIs
-- `mart.store_performance` — store-level KPIs
-- `mart.tier_analysis` — sales/stock by tier breakdown
+**Current semi-permanent tables:** `mart.purchasing_monthly`, `mart.purchasing_top10_monthly`.
 
+**Creating mart tables:** Always use `CREATE TABLE mart.{name} AS SELECT ...` from core views.
 **Creating mart tables:** Always use `CREATE TABLE mart.{name} AS SELECT ...` from core views.
 
 ---

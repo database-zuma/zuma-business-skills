@@ -107,10 +107,15 @@ openclaw_ops database
 | `raw.accurate_sales_ddd` | DDD retail+wholesale sales (~1.3M rows, 2022-01 to present). Key cols: transaction_date, kode_barang, quantity, total_amount, nama_pelanggan, warehouse_code |
 | `raw.accurate_sales_mbb` | MBB online marketplace sales (~197K rows, 2024-04 to present). Same structure |
 | `raw.accurate_sales_ubb` | UBB wholesale+consignment (~41K rows, 2023-02 to present). Same structure |
-| `raw.accurate_stock_ddd` | DDD stock snapshot (~142K rows, overwrites daily). Key cols: kode_barang, nama_gudang, quantity |
-| `raw.accurate_stock_ljbb` | LJBB Baby & Kids receiving (~128 rows) |
-| `raw.accurate_stock_mbb/ubb` | Minimal/empty |
+| `raw.accurate_stock_ddd` | DDD stock snapshot (~1.4M rows, refreshes daily via TRUNCATE+INSERT). Key cols: kode_barang, nama_gudang, quantity |
+| `raw.accurate_stock_ljbb` | LJBB Baby & Kids receiving (~17K rows) |
+| `raw.accurate_stock_mbb/ubb` | MBB ~209K rows, UBB ~52K rows |
 | `raw.load_history` | ETL audit trail: entity, table_name, row_count, loaded_at |
+| `raw.accurate_item_transfer_{ddd,ljbb,mbb,ubb}` | Inter-warehouse stock transfers (4 tables, per-entity) |
+| `raw.accurate_purchase_invoice_{ddd,ljbb,mbb,ubb}` | Purchase invoices from suppliers (4 tables) |
+| `raw.accurate_purchase_order_{ddd,ljbb,mbb,ubb}` | Purchase orders to suppliers (4 tables) |
+| `raw.accurate_logistics_{ddd,ljbb,mbb,ubb}` | Logistics/shipping records (4 tables) |
+| `raw.iseller_2023` / `_2025` / `_2026` | Historical iSeller POS data by year |
 
 ### `portal` — Reference/Master Data (from Google Sheets)
 
@@ -120,6 +125,11 @@ openclaw_ops database
 | `portal.hpprsp` | Pricing: kode, harga_beli (HPP), price_taq, rsp |
 | `portal.store` | Store master: nama_accurate (MIXED CASE), branch, area, category |
 | `portal.stock_capacity` | Store/warehouse capacity: stock_location (MIXED CASE), branch, area |
+| `portal.temp_portal_plannogram` (~2,600 rows) | **DEFAULT planogram source** for RO Request. Jatim region, ~11 stores. |
+| `portal.store_coordinates` (~66 rows) | Store GPS coordinates |
+| `portal.store_display_options` (~509 rows) | Store display hook/shelf options |
+| `portal.store_monthly_target` (~218 rows) | Monthly sales targets per store |
+| `portal.store_name_map` (~65 rows) | Store name aliases between systems |
 
 ### `core` — Transformed Views (USE THESE for analysis)
 
@@ -151,7 +161,7 @@ Joins fact_sales_unified with kodemix + hpprsp + store. **Use for ALL sales anal
 | **Warehouse** | gudang_branch, gudang_area, gudang_category |
 | **Technical** | v, count_by_assortment |
 
-~142K rows | 99.9% kodemix match | 96.4% capacity match
+~1.66M rows (all 4 entities combined, refreshes daily) | 99.9% kodemix match | 96.4% capacity match
 
 #### Other Core Views
 
@@ -160,12 +170,17 @@ Joins fact_sales_unified with kodemix + hpprsp + store. **Use for ALL sales anal
 | `core.fact_sales_unified` | UNION ALL raw sales (base for sales_with_product) |
 | `core.fact_stock_unified` | UNION ALL raw stock (base for stock_with_product) |
 | `core.dim_product` / `dim_store` / `dim_date` / `dim_warehouse` | Dimension views |
+| `core.item_transfer` | Inter-warehouse stock transfer view |
+| `core.iseller` | iSeller POS data view |
+| `core.bm_metrics` | Branch Manager performance metrics (table, not view) |
 
 ### `mart` — Ad-hoc Analysis
 
 **UNSTABLE** — tables created/dropped per request. Always check: `SELECT table_name FROM information_schema.tables WHERE table_schema = 'mart';`
 
 Create with: `CREATE TABLE mart.{name} AS SELECT ... FROM core.{view} WHERE ...`
+
+Current semi-permanent mart tables: `mart.purchasing_monthly`, `mart.purchasing_top10_monthly`.
 
 ### `public` — BI Tool Mirrors
 
@@ -446,5 +461,5 @@ For detailed definitions, query templates, and operational guides, see these fil
 ---
 
 **Status:** Complete
-**Last Updated:** 13 Feb 2026
+**Last Updated:** 25 Feb 2026
 **Covers:** Database connection, schema architecture, all tables/views, ETL schedule, query rules, data processing patterns, SQL cookbook, analysis methodology, common pitfalls, admin reference, standardized SQL templates, setup guide for non-technical users

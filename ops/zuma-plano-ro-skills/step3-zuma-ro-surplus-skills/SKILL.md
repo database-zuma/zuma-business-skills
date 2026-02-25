@@ -348,7 +348,7 @@ RO Request **membutuhkan planogram** sebagai input. Tanpa planogram, tidak ada t
 | WH Pusat Box | `core.stock_with_product` | `WHERE LOWER(nama_gudang) = 'warehouse pusat'` (DDD + LJBB) |
 | WH Pusat Protol | `core.stock_with_product` | `WHERE LOWER(nama_gudang) = 'warehouse pusat protol'` (DDD only) |
 | Sales (3 month) | `core.sales_with_product` | `WHERE tanggal >= NOW() - INTERVAL '3 months'` + exclude intercompany |
-| Planogram targets | Excel file | `RO Input {Region}.xlsx` -> sheet "Planogram" |
+| Planogram targets | DB table `portal.temp_portal_plannogram` | `WHERE store_name ILIKE '%{store_pattern}%'` |
 
 ### RO Type Decision Logic — TRANSISI (Count-Based, Box Default)
 
@@ -448,8 +448,8 @@ STORE_DB_PATTERN = "zuma royal plaza"     # For ILIKE match in DB
 STORAGE_CAPACITY = 0                      # Number of storage boxes (0 = no storage)
 RO_PROTOL_MAX_EMPTY = 2                   # <=2 sizes empty -> Protol (minor gap); 3+ -> Box (DEFAULT)
 SURPLUS_CHECK_TIERS = [1, 2, 3]           # Only T1/T2/T3 checked for surplus
-PLANOGRAM_FILE = "../RO Input Jatim.xlsx" # Relative path to planogram
-PLANOGRAM_SHEET = "Planogram"             # Sheet name in planogram file
+# Script reads planogram from DB: portal.temp_portal_plannogram
+# XLSX no longer used — semua data planogram di-query dari DB
 ```
 
 **Key Functions** (TRANSISI additions):

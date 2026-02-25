@@ -2,6 +2,8 @@
 
 Parse **Faktur Pajak PDF** (e-FP DJP) dan append data ke **Google Sheets Register Pembelian**.
 
+> **⚠️ IRIS:** Jangan jalankan script ini sendiri. Delegate ke **Daedalus** via `sessions_spawn agentId: "daedalus"`. Kasih path PDF + tab tujuan, biarkan Daedalus yang exec `fp_rekon.py`.
+
 ## Lokasi
 `~/.openclaw/workspace/zuma-business-skills/skills/finance/fp-rekon-stock/`
 
@@ -42,5 +44,7 @@ Columns:
 10. **DPP** (Unit Price * Qty)
 11. **PPN-M** (11% of DPP)
 12. **Jumlah** (DPP + PPN)
-13. **stock** (literal text)
+13. **Kolom M (Tagging):**
+    - `'stock'`: Untuk semua pembelian inventory (sepatu, outsole, bahan baku/raw material).
+    - `'non-stock'`: Untuk non-inventory (interior, jasa, capex).
 14. (Empty column for Kode Ref)
