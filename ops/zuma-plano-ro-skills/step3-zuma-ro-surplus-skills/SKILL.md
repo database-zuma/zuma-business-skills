@@ -348,7 +348,7 @@ RO Request **membutuhkan planogram** sebagai input. Tanpa planogram, tidak ada t
 | WH Pusat Box | `core.stock_with_product` | `WHERE LOWER(nama_gudang) = 'warehouse pusat'` (DDD + LJBB) |
 | WH Pusat Protol | `core.stock_with_product` | `WHERE LOWER(nama_gudang) = 'warehouse pusat protol'` (DDD only) |
 | Sales (3 month) | `core.sales_with_product` | `WHERE tanggal >= NOW() - INTERVAL '3 months'` + exclude intercompany |
-| Planogram targets | DB table `portal.temp_portal_plannogram` | `WHERE store_name ILIKE '%{store_pattern}%'` |
+| Planogram targets | DB table `portal.planogram_existing_q1_2026` | `WHERE store_name ILIKE '%{store_pattern}%'` — 51 stores, 606 articles, 42 size columns (25 individual + 17 paired), BOX column |
 
 ### RO Type Decision Logic — TRANSISI (Count-Based, Box Default)
 
@@ -434,22 +434,19 @@ Output: 5-sheet Excel (Cover Page, Daftar RO Protol, Daftar RO Box, Daftar Surpl
 
 ### Script Reference
 
-**File**: `build_ro_royal_plaza.py` (in `step3-ro-request-transisi/` folder)
+**File**: `build_ro_request.py` — Universal CLI script (any store)
 
 **Dependencies** (must be installed):
 ```bash
 pip install psycopg2-binary openpyxl
 ```
 
-**Key Config Variables** (top of script) — TRANSISI:
+**Key Config Variables** (top of script):
 ```python
-STORE_NAME = "Zuma Royal Plaza"          # Display name
-STORE_DB_PATTERN = "zuma royal plaza"     # For ILIKE match in DB
-STORAGE_CAPACITY = 0                      # Number of storage boxes (0 = no storage)
-RO_PROTOL_MAX_EMPTY = 2                   # <=2 sizes empty -> Protol (minor gap); 3+ -> Box (DEFAULT)
-SURPLUS_CHECK_TIERS = [1, 2, 3]           # Only T1/T2/T3 checked for surplus
-# Script reads planogram from DB: portal.temp_portal_plannogram
-# XLSX no longer used — semua data planogram di-query dari DB
+PLANOGRAM_TABLE = "portal.planogram_existing_q1_2026"  # Planogram source (DB)
+PLANOGRAM_SIZE_COLS = [...]                             # 42 size columns (25 individual + 17 paired)
+SURPLUS_CHECK_TIERS = [1, 2, 3]                         # Only T1/T2/T3 checked for surplus
+# CLI args: --store, --storage, --threshold, --output
 ```
 
 **Key Functions** (TRANSISI additions):
@@ -467,7 +464,7 @@ DB_USER = "openclaw_app"
 DB_PASS = "Zuma-0psCl4w-2026!"
 ```
 
-**To generate for a different store**: Copy the script, change `STORE_NAME`, `STORE_DB_PATTERN`, `STORAGE_CAPACITY`, and ensure the planogram file has rows for that store.
+**To generate for a different store**: `python build_ro_request.py --store "Icon Mall Gresik" --storage 0`
 
 > Known limitations, example output, and pending clarifications: see [`ro-surplus-output-format.md`](ro-surplus-output-format.md#known-limitations--pending-clarifications)
 
@@ -475,10 +472,15 @@ DB_PASS = "Zuma-0psCl4w-2026!"
 
 1. **Load dependencies**: `zuma-data-analyst-skill` (DB connection), `zuma-sku-context` (tier system, Kode Mix), `zuma-warehouse-and-stocks` (WH names, RO flow)
 2. **Check planogram exists**: RO Request requires planogram. If none exists, generate one first using `planogram-zuma` skill
-3. **Run script or generate equivalent**: Either execute `build_ro_royal_plaza.py` directly, or replicate its logic in a new script for a different store
+3. **Run script**: `python build_ro_request.py --store "Royal Plaza" --storage 0` — works for any store in the planogram table
 4. **TRANSISI flow is sequential**: Script runs TAHAP 0 (`identify_urgent_surplus`) -> TAHAP 1 (restock with `cap_ro_to_budget` if urgent > 0) -> `simulate_restock()` -> TAHAP 2 (surplus: urgent + regular). Do NOT calculate surplus from pre-restock stock.
 5. **Output validation**: Check that all 5 sheets are populated, totals match, WH availability is checked. Cover page should show 3 surplus rows (URGENT, REGULAR, TOTAL). Sheet 4 should have orange URGENT section + purple REGULAR section.
-6. **Hand to user**: The Excel is ready to print and hand from AS to WH Supervisor
+6. **Deliver output**: After XLSX generation, the task is NOT complete until the file is uploaded to Google Drive and the share link is sent to the requesting user.
+7. **Delivery workflow (MANDATORY)**:
+   - Upload XLSX to Google Drive (Zuma shared folder)
+   - Share the GDrive link with the user who requested the RO
+   - If GDrive upload fails → escalate to Wayan (+628983539659) via WhatsApp ONLY. Do NOT contact anyone else.
+   - Task is complete ONLY when the user receives the GDrive link (or Wayan is notified of the failure)
 
 ---
 
@@ -488,4 +490,4 @@ DB_PASS = "Zuma-0psCl4w-2026!"
 |------|----------|
 | [`ro-surplus-output-format.md`](ro-surplus-output-format.md) | Full cycle ASCII diagram, Excel 5-sheet output specification (cover page, column layouts per sheet), openpyxl styling/branding reference, worked example output (Royal Plaza), known limitations & pending clarifications |
 | [`section-for-planogram.md`](section-for-planogram.md) | Distribution flow TRANSISI section formatted for planogram context — gudang types, RO decision tree, surplus tiers, T8 lifecycle, edge cases (standalone reference for planogram skill integration) |
-| `build_ro_royal_plaza.py` | Working Python script for generating RO Request & Surplus Pull for Royal Plaza — use as template for other stores |
+| `build_ro_request.py` | Universal CLI Python script for generating RO Request & Surplus Pull for any store — `--store`, `--storage`, `--threshold`, `--output` args |

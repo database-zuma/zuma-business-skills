@@ -67,7 +67,7 @@ All raw tables live in the `raw` schema. Each entity (DDD, MBB, UBB, LJBB) has s
 | Table | Description |
 |-------|-------------|
 | `raw.iseller_sales` | POS sales from iSeller (evolving structure) |
-| `raw.iseller_2023` / `_2025` / `_2026` | Historical iSeller POS data by year |
+| `raw.iseller_2023` / `_2025` / `_2026` | Historical iSeller POS data by year. **For refresh pipeline:** see `iseller-data-refresh` skill |
 | `raw.accurate_item_transfer_{ddd,ljbb,mbb,ubb}` | Inter-warehouse stock transfers (4 tables, per-entity) |
 | `raw.accurate_purchase_invoice_{ddd,ljbb,mbb,ubb}` | Purchase invoices from suppliers (4 tables) |
 | `raw.accurate_purchase_order_{ddd,ljbb,mbb,ubb}` | Purchase orders to suppliers (4 tables) |
@@ -161,7 +161,7 @@ WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM raw.accurate_stock_{enti
 
 ### 3.8 Mart Schema
 
-**UNSTABLE** — tables created/dropped per request. Current semi-permanent: `mart.purchasing_monthly`, `mart.purchasing_top10_monthly`.
+**UNSTABLE** — tables created/dropped per request. Current semi-permanent: `mart.purchasing_monthly`, `mart.purchasing_top10_monthly`. **iSeller marts** (`mart.iseller_daily`, `mart.iseller_txn`, `mart.mv_iseller_summary`, `mart.mv_iseller_promo`, `mart.mv_iseller_txn_agg`) — refreshed via `iseller-data-refresh` skill pipeline.
 
 ### 3.6 Dimension Views
 > Full output column lists for all views: see `database-column-reference.md`
@@ -382,9 +382,14 @@ Track significant database fixes here for future reference.
 | `database-column-reference.md` | Full column-level definitions for raw tables (sales 20 cols, stock 10 cols), unique constraint details, view output columns, ETL script internals |
 | `database-troubleshooting.md` | Detailed fix procedures (dedup, constraints, columns, views), all maintenance SQL templates, troubleshooting decision trees |
 
+### Related Skills
+
+| Skill | Path | Use When |
+|-------|------|----------|
+| `iseller-data-refresh` | `ops/iseller-data-refresh/SKILL.md` | Refreshing iSeller POS data (GDrive CSV → raw → mart → MVs). Full pipeline: download, forward fill, truncate+reload, mart refresh, verification. |
 ---
 
 **Status:** Complete
 **Created:** 13 Feb 2026
-**Updated:** 25 Feb 2026 — Added missing raw tables (item_transfer, logistics, purchase_invoice, purchase_order × 4 entities + 3 iseller), portal tables (temp_portal_plannogram, store_coordinates, store_display_options, store_monthly_target, store_name_map), core views (item_transfer, iseller, bm_metrics, per-entity fact views), mart tables, and corrected stock row counts (total ~1.66M, up from ~142K documented previously)
+**Updated:** 27 Feb 2026 — Added cross-reference to `iseller-data-refresh` skill (raw tables, mart schema, reference files sections)
 **Covers:** Raw table schemas (columns, constraints), view architecture (dedup logic), ETL pipeline (sales/stock scripts, cron, credentials), common fix patterns (dedup, constraints, columns, views), maintenance SQL templates, troubleshooting guide, historical fixes log, all 5 schemas (raw, portal, core, mart, public)

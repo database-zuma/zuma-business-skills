@@ -7,7 +7,7 @@
   based on planogram targets vs actual store stock.
 
   Data sources:
-    - Planogram: portal.temp_portal_plannogram (DB)
+    - Planogram: portal.planogram_existing_q1_2026 (DB)
     - Stock:     openclaw_ops DB (core.stock_with_product)
     - Sales:     openclaw_ops DB (core.sales_with_product)
     - Warehouse: Warehouse Pusat Box (DDD+LJBB), Warehouse Pusat Protol (DDD)
@@ -75,16 +75,24 @@ DB_CONFIG = {
 }
 
 # =============================================================================
-# PLANOGRAM — size columns in portal.temp_portal_plannogram
+# PLANOGRAM — size columns in portal.planogram_existing_q1_2026
 # =============================================================================
 
+PLANOGRAM_TABLE = "portal.planogram_existing_q1_2026"
+
+# 42 size columns: 25 individual + 17 paired
 PLANOGRAM_SIZE_COLS = [
+    # Individual sizes (25)
+    "size_21", "size_22", "size_23", "size_24", "size_25",
+    "size_27", "size_28", "size_29", "size_30", "size_31",
+    "size_32", "size_33", "size_34", "size_35", "size_36",
+    "size_37", "size_38", "size_39", "size_40", "size_41",
+    "size_42", "size_43", "size_44", "size_45", "size_46",
+    # Paired sizes (17)
     "size_18_19", "size_20_21", "size_21_22", "size_22_23", "size_23_24",
     "size_24_25", "size_25_26", "size_27_28", "size_29_30", "size_31_32",
-    "size_33_34", "size_34", "size_35", "size_35_36", "size_36",
-    "size_37", "size_37_38", "size_38", "size_39", "size_39_40",
-    "size_40", "size_41", "size_41_42", "size_42", "size_43",
-    "size_43_44", "size_44", "size_45_46",
+    "size_33_34", "size_35_36", "size_37_38", "size_39_40", "size_41_42",
+    "size_43_44", "size_45_46",
 ]
 
 # Surplus tiers to check (T1, T2, T3 only — T4/T5 excluded, T8 protected)
@@ -131,7 +139,7 @@ def col_to_size_label(col_name: str) -> str:
 
 def build_plano_pattern(store_arg: str) -> str:
     """
-    Build a flexible ILIKE pattern for portal.temp_portal_plannogram.store_name.
+    Build a flexible ILIKE pattern for planogram store_name.
     Removes common bridging words ('Mall', 'Icon' by itself) that sometimes
     differ between the planogram table and the stock table.
 
@@ -184,12 +192,11 @@ def auto_width(ws, min_width=10, max_width=35):
 
 def read_planogram(conn, store_arg: str) -> dict:
     """
-    Read planogram targets from portal.temp_portal_plannogram.
+    Read planogram targets from portal.planogram_existing_q1_2026.
     Uses ILIKE '%{pattern}%' on store_name (flexible — handles naming differences).
 
     Returns:
-      { kode_mix: {gender, series, article, tier, kode_mix, sizes, total_planogram,
-                   avg_sales_3m_pairs, avg_sales_3m_box} }
+      { kode_mix: {gender, series, article, tier, kode_mix, sizes, total_planogram, box} }
     """
     plano_pattern = build_plano_pattern(store_arg)
     print(f"[1/8] Reading planogram from DB (store_name ILIKE '{plano_pattern}')...")
@@ -199,8 +206,8 @@ def read_planogram(conn, store_arg: str) -> dict:
     cur.execute(f"""
         SELECT article_mix, article, gender, series, tier,
                {size_cols_sql},
-               avg_sales_3_months_pairs, avg_sales_3_months_box
-        FROM portal.temp_portal_plannogram
+               box
+        FROM {PLANOGRAM_TABLE}
         WHERE LOWER(store_name) ILIKE LOWER(%s)
         ORDER BY article_mix
     """, (plano_pattern,))
@@ -214,8 +221,8 @@ def read_planogram(conn, store_arg: str) -> dict:
         cur.execute(f"""
             SELECT article_mix, article, gender, series, tier,
                    {size_cols_sql},
-                   avg_sales_3_months_pairs, avg_sales_3_months_box
-            FROM portal.temp_portal_plannogram
+                   box
+            FROM {PLANOGRAM_TABLE}
             WHERE LOWER(store_name) ILIKE LOWER(%s)
             ORDER BY article_mix
         """, (f"%{store_arg}%",))
@@ -232,8 +239,7 @@ def read_planogram(conn, store_arg: str) -> dict:
         series      = row[3]
         tier_raw    = row[4]
         size_values = row[5:5 + n_size_cols]
-        avg_sales   = row[5 + n_size_cols]
-        avg_box     = row[6 + n_size_cols]
+        box_val     = row[5 + n_size_cols]
 
         if not article_mix:
             continue
@@ -266,8 +272,9 @@ def read_planogram(conn, store_arg: str) -> dict:
             "kode_mix":          kode_mix,
             "sizes":             sizes,
             "total_planogram":   total_planogram,
-            "avg_sales_3m_pairs": to_float(avg_sales),
-            "avg_sales_3m_box":   to_float(avg_box),
+            "box":               to_float(box_val),
+            "avg_sales_3m_pairs": 0.0,
+            "avg_sales_3m_box":   0.0,
         }
 
     print(f"       → {len(rows)} planogram rows from DB, {len(articles)} with sizes")
@@ -1307,7 +1314,7 @@ def main():
     if not planogram:
         print(f"\nERROR: No planogram data found for store '{store_display}'.")
         print("       Check store name spelling or run:")
-        print("       SELECT DISTINCT store_name FROM portal.temp_portal_plannogram;")
+        print(f"       SELECT DISTINCT store_name FROM {PLANOGRAM_TABLE};")
         conn.close()
         sys.exit(1)
 
