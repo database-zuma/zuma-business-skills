@@ -3,7 +3,7 @@
   <br/>
   <img src="https://img.shields.io/badge/Claude_Code-Skills_Library-7C3AED?style=flat-square" alt="Claude Code"/>
   <img src="https://img.shields.io/badge/Status-Active-00E273?style=flat-square" alt="Active"/>
-  <img src="https://img.shields.io/badge/Skills-21_Installed-FF6B35?style=flat-square" alt="21 Skills"/>
+  <img src="https://img.shields.io/badge/Skills-22_Installed-FF6B35?style=flat-square" alt="22 Skills"/>
   <img src="https://img.shields.io/badge/Updated-Feb_2026-blue?style=flat-square" alt="Updated"/>
 </p>
 
@@ -175,6 +175,9 @@ zuma-business-skills/
 |
 |-- skills/                               SKILL BARU COLLECTION
 |   +-- finance/
+|       |-- coretax-faktur-generator/
+|       |   |-- SKILL.md                    Coretax Faktur Generator (tax doc)
+|       |   +-- coretax_faktur.py            Python script for Coretax XLSX
 |       +-- fp-rekon-stock/
 |           |-- SKILL.md                    Financial reconciliation & stock
 |           +-- fp_rekon.py                 Python script for reconciliation
@@ -208,7 +211,7 @@ Folder departemen baru akan ditambahkan seiring ekspansi automasi AI Zuma.
 
 ---
 
-## Daftar Skill (21 Skills)
+## Daftar Skill (22 Skills)
 
 ### General (Lintas Departemen) — 6 Skills
 
@@ -221,7 +224,7 @@ Folder departemen baru akan ditambahkan seiring ekspansi automasi AI Zuma.
 | 5 | **zuma-image-gen-skill** | SKILL.md | AI image generation & visual asset creation |
 | 6 | **zuma-ppt-design** | SKILL.md + TEMPLATE.html | PowerPoint design templates & styling guidelines |
 
-### Operations — 15 Skills
+### Operations — 16 Skills
 
 #### Core Context Skills (4)
 
@@ -256,12 +259,13 @@ Folder departemen baru akan ditambahkan seiring ekspansi automasi AI Zuma.
 | 18 | **step2-visualizations** | SKILL.md + visualization-examples.md + visualization-rendering-details.md | Planogram visualization, heatmaps, stock comparison, color coding |
 | 19 | **step3-zuma-ro-surplus-skills** | SKILL.md + ro-surplus-output-format.md | RO request & surplus distribution, restock rules, WH sourcing |
 
-#### Operational Workflow Skills (2)
+#### Operational Workflow Skills (3)
 
 | # | Skill | File | Apa yang Diketahui |
 |---|-------|------|-------------------|
 | 20 | **dn-to-po** | SKILL.md | DN to PO conversion workflow & document processing |
 | 21 | **fp-rekon-stock** (under skills/finance/) | SKILL.md + fp_rekon.py | Financial reconciliation & stock matching |
+| 22 | **coretax-faktur-generator** (under skills/finance/) | SKILL.md + coretax_faktur.py | Generate Coretax DJP-ready Faktur + DetailFaktur XLSX dari Register Penjualan bulanan, DPP Nilai Lain tax math, multi-entity support (DDD/MBB/UBB) |
 
 ---
 
