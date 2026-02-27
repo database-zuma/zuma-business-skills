@@ -18,6 +18,8 @@ import argparse
 import os
 import re
 import sys
+import subprocess
+import json
 from collections import OrderedDict
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
@@ -617,6 +619,39 @@ def write_coretax_xlsx(
     return output_path
 
 
+def upload_to_gdrive(file_path: str) -> Optional[str]:
+    """Upload file to Google Drive via gog CLI. Returns shareable link or None."""
+    gog_bin = os.environ.get("GOG_BIN", "gog")
+    account = os.environ.get("GOOGLE_ACCOUNT", "harveywayan@gmail.com")
+    # Unlock macOS keychain silently
+    subprocess.run(
+        ["security", "unlock-keychain", "-p", "database_2112",
+         os.path.expanduser("~/Library/Keychains/login.keychain-db")],
+        capture_output=True,
+    )
+    try:
+        # Upload
+        result = subprocess.run(
+            [gog_bin, "drive", "upload", file_path, "--account", account, "--json"],
+            capture_output=True, text=True, timeout=60,
+        )
+        if result.returncode != 0:
+            print(f"[gdrive] upload failed: {result.stderr.strip()}", file=sys.stderr)
+            return None
+        data = json.loads(result.stdout)
+        file_id = data["file"]["id"]
+        # Share anyone+editor
+        subprocess.run(
+            [gog_bin, "drive", "share", file_id, "--account", account,
+             "--anyone", "--role", "writer"],
+            capture_output=True, timeout=30,
+        )
+        return f"https://docs.google.com/spreadsheets/d/{file_id}/edit?usp=drivesdk"
+    except Exception as exc:
+        print(f"[gdrive] error: {exc}", file=sys.stderr)
+        return None
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -654,6 +689,9 @@ def main():
         "--dry-run",
         action="store_true",
         help="Parse and show summary without generating output",
+    )
+    parser.add_argument(
+        "--no-gdrive", action="store_true", help="Skip GDrive upload"
     )
     args = parser.parse_args()
 
@@ -758,6 +796,13 @@ def main():
     print(f"   Faktur: {len(faktur_rows)} invoices")
     print(f"   DetailFaktur: {len(detail_rows)} line items")
 
+    # GDrive upload
+    if not args.no_gdrive:
+        gdrive_link = upload_to_gdrive(output_path)
+        if gdrive_link:
+            print(f"\n📎 GDrive: {gdrive_link}")
+        else:
+            print("\n⚠️  GDrive upload skipped (auth not available). Run: gog auth add harveywayan@gmail.com --services drive")
     wb.close()
 
 
