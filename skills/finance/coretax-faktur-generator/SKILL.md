@@ -23,7 +23,7 @@ Register Penjualan `[bulan].xlsx` dari Bu Aulia (Accounting).
 
 ## Usage
 
-**Standard (DDD entity, auto-detect month sheet):**
+**Standard (DDD entity, all non-retail customers, auto-detect month, auto GDrive upload):**
 ```bash
 python3 coretax_faktur.py "/path/to/Register_Penjualan_Januari_Tax_2026.xlsx"
 ```
@@ -33,19 +33,24 @@ python3 coretax_faktur.py "/path/to/Register_Penjualan_Januari_Tax_2026.xlsx"
 python3 coretax_faktur.py "/path/to/Register.xlsx" --entity DDD --output "/path/to/outbox/"
 ```
 
-**Filter specific customers (default: MBB pattern):**
+**MBB only:**
 ```bash
-python3 coretax_faktur.py "/path/to/Register.xlsx" --customers "MAKMUR BESAR BERSAMA"
+python3 coretax_faktur.py "/path/to/Register.xlsx" --mbb-only
 ```
 
-**All NON-RETAIL customers:**
+**Filter specific customers:**
 ```bash
-python3 coretax_faktur.py "/path/to/Register.xlsx" --all-nonretail
+python3 coretax_faktur.py "/path/to/Register.xlsx" --customers "MAKMUR BESAR BERSAMA" "MITRA BELANJA ANDA"
 ```
 
-**Dry-run (parse and show summary, no file output):**
+**Dry-run (no output, no upload):**
 ```bash
 python3 coretax_faktur.py "/path/to/Register.xlsx" --dry-run
+```
+
+**Skip GDrive upload:**
+```bash
+python3 coretax_faktur.py "/path/to/Register.xlsx" --no-gdrive
 ```
 
 ## Output

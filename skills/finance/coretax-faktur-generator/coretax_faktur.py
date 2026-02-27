@@ -65,8 +65,8 @@ MONTH_SHEETS = {
     "DES": "DES",
 }
 
-# Default customer filter (Bu Aulia's pattern: MBB only)
-DEFAULT_CUSTOMERS = ["MAKMUR BESAR BERSAMA"]
+# Default: all non-retail customers
+DEFAULT_CUSTOMERS = None  # None = all non-retail
 
 # Non-retail Jenis Pelanggan values
 NON_RETAIL_TYPES = {"WHOLESALE", "CONSIGNMENT"}
@@ -675,10 +675,10 @@ def main():
         "--customers",
         nargs="+",
         default=None,
-        help="Customer name filter (default: MAKMUR BESAR BERSAMA)",
+        help="Customer name filter (default: all non-retail)",
     )
     parser.add_argument(
-        "--all-nonretail", action="store_true", help="Include ALL non-retail customers"
+        "--mbb-only", action="store_true", help="Only MBB (Makmur Besar Bersama) customer"
     )
     parser.add_argument(
         "--month-sheet",
@@ -724,11 +724,19 @@ def main():
     print(f"Master Pelanggan: {len(customers)} entries loaded")
 
     # Determine customer filter
-    customer_filter = args.customers or DEFAULT_CUSTOMERS
+    if args.mbb_only:
+        customer_filter = ["MAKMUR BESAR BERSAMA"]
+        all_nonretail = False
+    elif args.customers:
+        customer_filter = args.customers
+        all_nonretail = False
+    else:
+        customer_filter = None
+        all_nonretail = True
 
     # Read line items
     print(f"Reading line items from '{month_sheet}'...")
-    if args.all_nonretail:
+    if all_nonretail:
         print("  Filter: ALL non-retail customers")
     else:
         print(f"  Filter: {customer_filter}")
@@ -737,7 +745,7 @@ def main():
         wb,
         month_sheet,
         customer_filter=customer_filter,
-        all_nonretail=args.all_nonretail,
+        all_nonretail=all_nonretail,
     )
     print(f"  Found: {len(items)} line items")
 
