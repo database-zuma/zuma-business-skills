@@ -16,22 +16,37 @@ Generic workflow for shipping any project from local machine to production. Work
 
 ### GitHub Personal Access Token (PAT)
 
+Read from local env file (never hardcoded — prevents GitHub auto-revocation):
+
+```bash
+# PAT is stored in ~/.openclaw/workspace/.env as GITHUB_TOKEN
+# Load it before any git operations:
+source ~/.openclaw/workspace/.env
+# or:
+export GITHUB_TOKEN=$(grep '^GITHUB_TOKEN=' ~/.openclaw/workspace/.env | cut -d= -f2)
 ```
-Token: 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
+
+```
 Org: database-zuma
 Scope: repo, workflow
+Env key: GITHUB_TOKEN (in ~/.openclaw/workspace/.env)
 ```
 
 **Usage in git commands:**
+
 ```bash
+# Load PAT from env
+source ~/.openclaw/workspace/.env
+
 # Clone with auth
-git clone https://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@github.com/database-zuma/{repo-name}.git
+git clone https://${GITHUB_TOKEN}@github.com/database-zuma/{repo-name}.git
 
 # Set remote with auth (existing repo)
-git remote set-url origin https://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@github.com/database-zuma/{repo-name}.git
+git remote set-url origin https://${GITHUB_TOKEN}@github.com/database-zuma/{repo-name}.git
 
-# Push (after setting authenticated remote)
-git push -u origin main
+# Push (bypass credential helper issues)
+GIT_CONFIG_NOSYSTEM=1 git -c credential.helper= push \
+  "https://x-access-token:${GITHUB_TOKEN}@github.com/database-zuma/{repo-name}.git" main
 ```
 
 ### Vercel CLI Token
@@ -116,13 +131,16 @@ git commit -m "feat: initial commit"
 ### Phase 3: Push to GitHub
 
 ```bash
-# 1. Set authenticated remote (replace {repo-name} with actual name)
-git remote add origin https://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@github.com/database-zuma/{repo-name}.git
+# 1. Load PAT from env
+source ~/.openclaw/workspace/.env
+
+# 2. Set authenticated remote (replace {repo-name} with actual name)
+git remote add origin https://${GITHUB_TOKEN}@github.com/database-zuma/{repo-name}.git
 
 # If remote already exists:
-git remote set-url origin https://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@github.com/database-zuma/{repo-name}.git
+git remote set-url origin https://${GITHUB_TOKEN}@github.com/database-zuma/{repo-name}.git
 
-# 2. Push to main
+# 3. Push to main
 git push -u origin main
 
 # If rejected (remote has commits local doesn't):
@@ -197,7 +215,8 @@ vercel env rm VAR_NAME production --yes --token=WNWvm9fjTerfhyG9zqiSEzdx
 gh repo create database-zuma/{repo-name} --public --source=. --remote=origin --push
 
 # Or using GitHub API with token
-curl -H "Authorization: token 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" \
+source ~/.openclaw/workspace/.env
+curl -H "Authorization: token ${GITHUB_TOKEN}" \
   https://api.github.com/orgs/database-zuma/repos \
   -d '{"name": "{repo-name}", "private": false}'
 ```
@@ -394,8 +413,15 @@ export default function Page() {
 
 ### 5.8 Authentication Expired
 
-If tokens are expired or revoked, ask the user for new tokens. Current tokens:
-- **GitHub PAT**: `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` (org: database-zuma)
+If GitHub operations fail with 401/403:
+1. Check `~/.openclaw/workspace/.env` has a valid `GITHUB_TOKEN`
+2. Test: `curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token $(grep GITHUB_TOKEN ~/.openclaw/workspace/.env | cut -d= -f2)" https://api.github.com/user`
+3. If 401 → PAT expired or revoked. Create new PAT at https://github.com/settings/tokens (scopes: repo, workflow), update `GITHUB_TOKEN` in `~/.openclaw/workspace/.env`
+
+**IMPORTANT:** Never hardcode PATs in skill files or any git-tracked file. GitHub auto-revokes live PATs found in public repos.
+
+Current tokens:
+- **GitHub PAT**: stored in `~/.openclaw/workspace/.env` → key: `GITHUB_TOKEN`
 - **Vercel Token**: `WNWvm9fjTerfhyG9zqiSEzdx` (team: database-zumas-projects)
 
 ---
@@ -415,7 +441,10 @@ git init
 git add -A
 git status   # ← VERIFY: all source files listed, no secrets
 git commit -m "feat: initial commit"
-git remote add origin https://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@github.com/database-zuma/{REPO_NAME}.git
+
+# Load PAT from env
+source ~/.openclaw/workspace/.env
+git remote add origin https://${GITHUB_TOKEN}@github.com/database-zuma/{REPO_NAME}.git
 git push -u origin main
 
 # 3. Vercel deploy
