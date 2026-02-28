@@ -5,29 +5,65 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZUMA — PRESENTATION TITLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
         /* ============================================
-           ZUMA PRESENTATION TEMPLATE
-           Version: 2.0 (2026-02-17)
-           Style: KBI Finance Report + Zuma Brand
+           ZUMA PRESENTATION — GOLDEN TEMPLATE
+           Version: 4.0 (2026-02-28)
+           
+           DESIGN SYSTEM:
+           - Scroll-based layout (NOT overlay) — all slides visible on scroll
+           - Ctrl+P prints all pages (A4 Landscape)
+           - Chart.js with IntersectionObserver (lazy-load animation)
+           - Gradient blobs on dark slides (premium feel)
+           - So-What boxes on every content slide (mandatory)
+           - Header bands on light content slides
+           - Filled layouts — NO empty lower sections
            
            PRIMARY COLORS:
-           - Teal:  #002A3A (backgrounds, authority)
-           - Green: #00E273 (accents, highlights, success)
-           - Dark:  #111827 (dramatic dark slides)
+           - Teal:  #002A3A (dark backgrounds, header bands, authority)
+           - Green: #00E273 (accents, highlights, KPI numbers, success)
+           - Neg:   #FF4D4D (negative indicators, alerts)
+           - Warn:  #FFB800 (warnings, cautions)
+           
+           SLIDE ARRANGEMENT:
+           - Cover (front) = DARK (slide-dark)
+           - Content/Chart slides = LIGHT (default .slide)
+           - 1-2 highlight slides = DARK (optional, don't overdo)
+           - Closing (end) = DARK (slide-dark)
            
            USAGE:
-           1. Copy this file to new project folder
-           2. Replace content only — KEEP CSS structure
-           3. Add slides by copy-pasting slide patterns
-           4. Deploy: node ~/homebrew/Cellar/node/25.6.0/bin/node ~/homebrew/lib/node_modules/vercel/dist/index.js --prod --yes --token $VERCEL_TOKEN
+           1. Iris pre-copies this file to Eos outbox BEFORE spawning Eos
+           2. Eos EDITS this file — replaces placeholders with real data
+           3. Eos adds/removes slides as needed by copying patterns
+           4. Eos deploys to Vercel
+           
+           DEPLOY:
+           source ~/.openclaw/workspace/.env
+           mkdir -p outbox/{name}-vercel
+           cp outbox/{name}.html outbox/{name}-vercel/index.html
+           cd outbox/{name}-vercel
+           ~/homebrew/Cellar/node/25.6.0/bin/node ~/homebrew/lib/node_modules/vercel/dist/index.js --prod --yes --token "$VERCEL_TOKEN"
         ============================================ */
 
-        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-        
-        body { background: #1a1a1a; padding: 2rem; }
+        :root {
+            --zuma-teal: #002A3A;
+            --zuma-green: #00E273;
+            --zuma-dark: #1A1A1A;
+            --zuma-neg: #FF4D4D;
+            --zuma-warn: #FFB800;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #1a1a1a;
+            padding: 2rem;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
 
         /* ── SLIDE BASE ── */
         .slide {
@@ -38,530 +74,569 @@
             min-height: 600px;
             position: relative;
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            overflow: hidden;
         }
 
-        /* ── SLIDE VARIANTS ── */
-        .slide-teal  { background: #002A3A; color: white; }
-        .slide-dark  { background: #111827; color: white; }
-        .slide-green { background: linear-gradient(135deg, #00E273 0%, #00b359 100%); color: #002A3A; }
-        .slide-red   { background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; }
-        .slide-amber { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #1c1917; }
+        /* ── DARK SLIDES (cover + closing + highlights) ── */
+        .slide-dark {
+            background: var(--zuma-teal);
+            color: white;
+        }
 
-        /* ── PRINT / PDF (A4 Landscape) ──
-           Ensures each slide = 1 page when Cmd+P → Save as PDF.
-           MANDATORY in every deck. Added 2026-02-17.
-           User must: Margins=None, Layout=Landscape, ✅Background graphics
-        ── */
+        /* ── Gradient blob — blurred green orb for premium dark slides ──
+           Use on dark slides ONLY. Place 2 blobs: top-right + bottom-left.
+           Hidden in print to save ink. Pointer-events:none so no interaction. */
+        .gradient-blob {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(0, 226, 115, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(60px);
+            z-index: 0;
+            pointer-events: none;
+        }
+        .gradient-blob-tr { top: -150px; right: -100px; }
+        .gradient-blob-bl { bottom: -150px; left: -100px; }
+
+        /* ── HEADER BAND — used on light content slides ──
+           Full-width teal band at top with white title.
+           Negative margin pulls it to slide edges. */
+        .header-band {
+            background: var(--zuma-teal);
+            color: white;
+            padding: 1.25rem 3rem;
+            margin: -3rem -3rem 2rem -3rem;
+            display: flex;
+            align-items: center;
+        }
+
+        /* ── SO-WHAT BOX — MANDATORY on every content slide ──
+           Placed at bottom of slide. margin-top:auto pushes it down
+           when parent is display:flex, flex-direction:column. */
+        .so-what {
+            border-left: 4px solid var(--zuma-green);
+            background: rgba(0, 226, 115, 0.06);
+            padding: 1rem 1.25rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            margin-top: auto;
+        }
+
+        /* ── KPI CARDS ── */
+        .kpi-card {
+            background: white;
+            border: 1px solid rgba(0,42,58,0.08);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+        .kpi-card-dark {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+        }
+
+        /* ── STAT BOXES (legacy support) ── */
+        .stat-box       { background: #002A3A; color: white; padding: 2rem; border-radius: 8px; }
+        .stat-box-green { background: #00E273; color: #002A3A; padding: 2rem; border-radius: 8px; }
+        .stat-box-red   { background: #dc2626; color: white; padding: 2rem; border-radius: 8px; }
+        .stat-box-light { background: white; border: 2px solid #e5e7eb; padding: 1.5rem; border-radius: 8px; }
+
+        /* ── BADGES ── */
+        .badge-green  { background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+        .badge-red    { background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+        .badge-amber  { background: #fef3c7; color: #d97706; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+        .badge-teal   { background: #002A3A; color: #00E273; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+
+        /* ── TEXT HELPERS ── */
+        .grow    { color: #16a34a; font-weight: 700; }
+        .decline { color: #dc2626; font-weight: 700; }
+
+        /* ── CALLOUT BOXES ── */
+        .callout-green  { background: #f0fdf4; border-left: 4px solid #00E273; padding: 1rem 1.5rem; border-radius: 0 8px 8px 0; }
+        .callout-amber  { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 1rem 1.5rem; border-radius: 0 8px 8px 0; }
+        .callout-red    { background: #fff5f5; border-left: 4px solid #dc2626; padding: 1rem 1.5rem; border-radius: 0 8px 8px 0; }
+
+        /* ── CHART CONTAINER ── */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+
+        /* ── TABLE ── */
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #002A3A; color: white; padding: 0.75rem 1rem; text-align: left; font-size: 0.875rem; }
+        td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; font-size: 0.875rem; }
+        tr:hover td { background: #f0fdf4; }
+
+        /* ── SLIDE NUMBER ── */
+        .slide-number {
+            position: absolute;
+            bottom: 1rem;
+            right: 2rem;
+            font-size: 0.875rem;
+            color: #8CA3AD;
+        }
+        .slide-dark .slide-number { color: rgba(255,255,255,0.3); }
+
+        /* ── PRINT BUTTON (floating, fixed) ── */
+        .print-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--zuma-green);
+            color: var(--zuma-teal);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.875rem;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,226,115,0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .print-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,226,115,0.4);
+        }
+
+        /* ── FOOTNOTE ── */
+        .footnote { font-size: 0.75rem; color: #9ca3af; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; }
+
+        /* ── PRINT STYLES (A4 Landscape) ── */
         @media print {
             @page { size: A4 landscape; margin: 0; }
             html, body { background: white !important; padding: 0 !important; margin: 0 !important; }
             .slide {
                 page-break-after: always;
                 break-after: page;
-                border-radius: 0 !important;
-                box-shadow: none !important;
-                margin: 0 !important;
-                padding: 2.25rem 2.5rem !important;
-                min-height: 0 !important;
                 height: 190mm !important;
-                overflow: hidden !important;
-                box-sizing: border-box;
+                min-height: unset;
+                margin-bottom: 0;
+                border-radius: 0;
+                box-shadow: none;
+                padding: 2rem;
+                overflow: hidden;
             }
             .slide:last-child { page-break-after: avoid; break-after: avoid; }
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .slide-teal { background: #002A3A !important; }
-            .slide-dark { background: #111827 !important; }
+            .slide-dark { background: var(--zuma-teal) !important; }
             .gradient-blob { display: none !important; }
-            #print-btn { display: none !important; }
-        }
-
-        /* ── DECORATIVE BLOB ── */
-        .gradient-blob {
-            position: absolute; top: -100px; right: -100px;
-            width: 400px; height: 400px;
-            background: linear-gradient(135deg, #00E273 0%, rgba(0,226,115,0.1) 100%);
-            border-radius: 50%; filter: blur(80px); z-index: 0;
-        }
-        .content { position: relative; z-index: 1; }
-
-        /* ── SLIDE NUMBER ── */
-        .slide-label {
-            position: absolute; top: 1.5rem; right: 2rem;
-            font-size: 0.875rem; font-weight: 600; color: #999;
-        }
-        .slide-teal .slide-label,
-        .slide-dark .slide-label,
-        .slide-red .slide-label,
-        .slide-green .slide-label,
-        .slide-amber .slide-label { color: rgba(255,255,255,0.5); }
-
-        /* ── TYPOGRAPHY ── */
-        .big-number { font-size: 4rem; font-weight: 900; line-height: 1; }
-        .metric-label { font-size: 0.875rem; color: #666; margin-top: 0.5rem; }
-
-        /* ── STAT BOXES ── */
-        .stat-box       { background: #002A3A; color: white; padding: 2rem; border-radius: 8px; }
-        .stat-box-green { background: #00E273; color: #002A3A; padding: 2rem; border-radius: 8px; }
-        .stat-box-red   { background: #dc2626; color: white; padding: 2rem; border-radius: 8px; }
-        .stat-box-light { background: white; border: 2px solid #e5e7eb; padding: 1.5rem; border-radius: 8px; }
-
-        /* ── BADGES (inline status pills) ── */
-        .badge-green  { background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
-        .badge-red    { background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
-        .badge-amber  { background: #fef3c7; color: #d97706; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
-        .badge-blue   { background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
-        .badge-teal   { background: #002A3A; color: #00E273; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
-
-        /* ── TEXT COLORS ── */
-        .grow    { color: #16a34a; font-weight: 700; }
-        .decline { color: #dc2626; font-weight: 700; }
-        .neutral { color: #6b7280; }
-
-        /* ── PROGRESS / TIER BARS ── */
-        .tier-bar  { height: 8px; border-radius: 4px; background: #e5e7eb; overflow: hidden; margin-top: 4px; }
-        .tier-fill { height: 100%; border-radius: 4px; }
-
-        /* ── TABLE (data slides) ── */
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #002A3A; color: white; padding: 0.75rem 1rem; text-align: left; font-size: 0.875rem; }
-        td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; font-size: 0.875rem; }
-        tr:hover td { background: #f0fdf4; }
-
-        /* ── CALLOUT / HIGHLIGHT BOX ── */
-        .callout-green  { background: #f0fdf4; border-left: 4px solid #00E273; padding: 1rem 1.5rem; border-radius: 0 8px 8px 0; }
-        .callout-amber  { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 1rem 1.5rem; border-radius: 0 8px 8px 0; }
-        .callout-red    { background: #fff5f5; border-left: 4px solid #dc2626; padding: 1rem 1.5rem; border-radius: 0 8px 8px 0; }
-
-        /* ── FOOTNOTE ── */
-        .footnote { font-size: 0.75rem; color: #9ca3af; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; }
-
-        /* ── PRINT ── */
-        @media print {
-            body { background: white; padding: 0; }
-            .slide { page-break-after: always; box-shadow: none; margin-bottom: 0; }
+            .print-btn { display: none !important; }
+            canvas { max-height: 350px !important; }
         }
     </style>
 </head>
 <body>
 
-<!-- PRINT BUTTON — shown in browser, hidden when printing -->
-<div id="print-btn" style="text-align:right; margin-bottom:1rem;">
-    <button onclick="window.print()" style="background:#00E273; color:#002A3A; border:none; padding:0.6rem 1.5rem; border-radius:6px; font-weight:700; font-size:0.875rem; cursor:pointer;">🖨️ Print / Save PDF (Landscape A4)</button>
-</div>
+    <button class="print-btn" onclick="window.print()">🖨️ Print All Slides</button>
 
-<!-- ══════════════════════════════════════════
-     SLIDE 1: COVER (Teal — always use for cover)
-     Pattern: Logo + Title + 3 hero metrics + subtitle
-══════════════════════════════════════════ -->
-<div class="slide slide-teal" style="min-height: 500px;">
-    <div class="gradient-blob"></div>
-    <div class="content">
-        <!-- Logo + context label -->
-        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 4rem;">
-            <div style="background: #00E273; color: #002A3A; font-weight: 900; font-size: 1.25rem; padding: 0.5rem 1.25rem; border-radius: 6px;">ZUMA</div>
-            <div style="color: rgba(255,255,255,0.5); font-size: 0.875rem;">Internal Review · [Department]</div>
-        </div>
-
-        <!-- Main title -->
-        <h1 style="font-size: 3.5rem; font-weight: 900; line-height: 1.1; margin-bottom: 1.5rem;">
-            Presentation Title<br>
-            <span style="color: #00E273;">Subtitle / Period</span>
-        </h1>
-        <p style="color: rgba(255,255,255,0.6); font-size: 1rem; max-width: 500px; line-height: 1.7;">
-            One-line description of what this deck covers and why it matters.
-        </p>
-
-        <!-- 3 hero numbers -->
-        <div style="margin-top: 3rem; display: flex; gap: 3rem;">
-            <div>
-                <div style="font-size: 2.5rem; font-weight: 900; color: #00E273;">XX%</div>
-                <div style="color: rgba(255,255,255,0.6); font-size: 0.875rem;">Key metric 1</div>
+    <!-- ══════════════════════════════════════════
+         SLIDE 1: COVER (Dark — gradient blobs + logo + big KPIs)
+         ALWAYS dark. ALWAYS first slide. ALWAYS has logo.
+         Pattern: Logo → Badge+Context → Title → Description → Big KPI numbers → Metadata
+    ══════════════════════════════════════════ -->
+    <div class="slide slide-dark" id="slide-1">
+        <div class="gradient-blob gradient-blob-tr"></div>
+        <div class="gradient-blob gradient-blob-bl" style="width:350px;height:350px;opacity:0.6"></div>
+        <div style="position:relative;z-index:1;display:flex;flex-direction:column;height:100%;min-height:520px;">
+            <!-- Logo + Context -->
+            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:3rem;">
+                <img src="data:image/png;base64,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" alt="ZUMA" style="height:36px;filter:brightness(1.1);">
+                <div style="color:rgba(255,255,255,0.45);font-size:0.85rem;letter-spacing:0.04em;">Internal Review · [Department/Topic]</div>
             </div>
-            <div>
-                <div style="font-size: 2.5rem; font-weight: 900; color: #00E273;">XXX</div>
-                <div style="color: rgba(255,255,255,0.6); font-size: 0.875rem;">Key metric 2</div>
-            </div>
-            <div>
-                <div style="font-size: 2.5rem; font-weight: 900; color: #00E273;">XXK</div>
-                <div style="color: rgba(255,255,255,0.6); font-size: 0.875rem;">Key metric 3</div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div style="margin-top: 4rem; color: rgba(255,255,255,0.3); font-size: 0.8rem;">
-            Prepared by Iris · [Date] · Source: [data source]
-        </div>
-    </div>
-</div>
-
-
-<!-- ══════════════════════════════════════════
-     SLIDE 2: OVERVIEW / SNAPSHOT (White — KPI grid)
-     Pattern: 3 big stats + 3 supporting stats + callout
-══════════════════════════════════════════ -->
-<div class="slide">
-    <div class="slide-label">02 / XX</div>
-    <h2 style="font-size: 1.75rem; font-weight: 900; color: #002A3A; margin-bottom: 2rem;">Headline / Snapshot Title</h2>
-    
-    <!-- Row 1: 3 big stat boxes -->
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem;">
-        <div class="stat-box">
-            <div class="big-number" style="color: #00E273;">76K</div>
-            <div style="color: rgba(255,255,255,0.8); font-size: 0.875rem; margin-top: 0.5rem;">Primary metric label</div>
-        </div>
-        <div class="stat-box">
-            <div class="big-number" style="color: rgba(255,255,255,0.4);">91K</div>
-            <div style="color: rgba(255,255,255,0.7); font-size: 0.875rem; margin-top: 0.5rem;">Comparison metric label</div>
-        </div>
-        <div style="background: #fef2f2; border: 2px solid #fecaca; padding: 2rem; border-radius: 8px;">
-            <div class="big-number" style="color: #dc2626;">-16.7%</div>
-            <div style="color: #991b1b; font-size: 0.875rem; margin-top: 0.5rem;">YoY / delta label</div>
-        </div>
-    </div>
-
-    <!-- Row 2: 3 lighter supporting stats -->
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
-        <div class="stat-box-light">
-            <div style="font-size: 2rem; font-weight: 900; color: #002A3A;">569K</div>
-            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Supporting metric 1</div>
-            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">context / note</div>
-        </div>
-        <div class="stat-box-light">
-            <div style="font-size: 2rem; font-weight: 900; color: #002A3A;">303</div>
-            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Supporting metric 2</div>
-            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">context / note</div>
-        </div>
-        <div class="stat-box-light">
-            <div style="font-size: 2rem; font-weight: 900; color: #d97706;">30</div>
-            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Supporting metric 3</div>
-            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">context / note</div>
-        </div>
-    </div>
-
-    <!-- Callout / key takeaway -->
-    <div class="callout-green" style="margin-top: 1.5rem;">
-        <strong style="color: #002A3A;">Key insight:</strong>
-        <span style="color: #374151; font-size: 0.95rem;"> One sentence summary that frames the story of this slide.</span>
-    </div>
-    
-    <div class="footnote">⚠️ Methodology note / data source caveat if needed.</div>
-</div>
-
-
-<!-- ══════════════════════════════════════════
-     SLIDE 3: DARK — GROWTH/CONTRAST STORY
-     Pattern: Badge + title + 2-col (left: winners, right: losers + insight)
-══════════════════════════════════════════ -->
-<div class="slide slide-dark">
-    <div class="slide-label">03 / XX</div>
-    <div class="content">
-        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
-            <span class="badge-green" style="font-size: 0.875rem; padding: 4px 12px;">GROWTH STORY</span>
-            <span style="color: rgba(255,255,255,0.5); font-size: 0.875rem;">Context label</span>
-        </div>
-        <h2 style="font-size: 2rem; font-weight: 900; color: white; margin-bottom: 0.5rem;">Slide Title — The Story</h2>
-        <p style="color: rgba(255,255,255,0.6); margin-bottom: 2rem;">Supporting subtitle with key insight framing.</p>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-            <!-- Left: winners -->
-            <div>
-                <div style="font-size: 0.75rem; font-weight: 700; color: #00E273; letter-spacing: 0.1em; margin-bottom: 1rem;">🚀 GROWING</div>
-                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                    <!-- Row pattern: copy/paste as needed -->
-                    <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; border-left: 3px solid #00E273;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: white; font-size: 0.875rem; font-weight: 600;">Article / Item Name</span>
-                            <span style="color: #00E273; font-weight: 900; font-size: 1.1rem;">+XX%</span>
-                        </div>
-                        <div style="color: rgba(255,255,255,0.4); font-size: 0.75rem; margin-top: 0.25rem;">X,XXX pairs — additional context</div>
-                    </div>
-                </div>
-            </div>
-            <!-- Right: losers + insight box -->
-            <div>
-                <div style="font-size: 0.75rem; font-weight: 700; color: #f87171; letter-spacing: 0.1em; margin-bottom: 1rem;">📉 DECLINING</div>
-                <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
-                    <div style="background: rgba(255,255,255,0.04); padding: 1rem; border-radius: 8px; border-left: 3px solid #f87171;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: rgba(255,255,255,0.8); font-size: 0.875rem;">Article / Item Name</span>
-                            <span style="color: #f87171; font-weight: 700;">-XX%</span>
-                        </div>
-                        <div style="color: rgba(255,255,255,0.4); font-size: 0.75rem; margin-top: 0.25rem;">X,XXX pairs — context</div>
-                    </div>
-                </div>
-                <!-- Insight box -->
-                <div style="background: rgba(0,226,115,0.1); border: 1px solid rgba(0,226,115,0.3); padding: 1.25rem; border-radius: 8px;">
-                    <div style="color: #00E273; font-weight: 700; margin-bottom: 0.5rem;">💡 Insight</div>
-                    <div style="color: rgba(255,255,255,0.7); font-size: 0.875rem; line-height: 1.6;">
-                        One actionable insight derived from the data comparison above.
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-<!-- ══════════════════════════════════════════
-     SLIDE 4: TIER / CATEGORY BREAKDOWN (White)
-     Pattern: Horizontal bars with label + badge + description
-══════════════════════════════════════════ -->
-<div class="slide">
-    <div class="slide-label">04 / XX</div>
-    <h2 style="font-size: 1.75rem; font-weight: 900; color: #002A3A; margin-bottom: 0.5rem;">Breakdown Title</h2>
-    <p style="color: #6b7280; margin-bottom: 2rem; font-size: 0.9rem;">Subtitle — context and methodology note.</p>
-
-    <div style="display: flex; flex-direction: column; gap: 1rem;">
-        <!-- Bar row pattern: copy/paste as needed -->
-        <div style="background: #f9fafb; border-radius: 8px; padding: 1.25rem; border-left: 4px solid #002A3A;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <!-- Title -->
+            <h1 style="font-size:3.5rem;font-weight:900;line-height:1.08;margin-bottom:1.25rem;">
+                Presentation Title<br>
+                <span style="color:#00E273;">Subtitle / Period</span>
+            </h1>
+            <p style="color:rgba(255,255,255,0.55);font-size:1rem;max-width:560px;line-height:1.7;margin-bottom:auto;">
+                One-line description of what this deck covers and why it matters. Include scope, period, and key context.
+            </p>
+            <!-- Big KPI numbers — 3-4 hero metrics -->
+            <div style="display:flex;gap:3.5rem;margin-top:2.5rem;margin-bottom:1.5rem;">
                 <div>
-                    <span style="font-weight: 700; color: #002A3A;">Tier / Category Name</span>
-                    <span style="color: #6b7280; font-size: 0.875rem; margin-left: 0.5rem;">XX,XXX units · Forecast ~XXXK</span>
+                    <div style="font-size:2.75rem;font-weight:900;color:#00E273;line-height:1;">XX</div>
+                    <div style="color:rgba(255,255,255,0.5);font-size:0.85rem;margin-top:0.25rem;">Metric 1 Label</div>
                 </div>
-                <span class="badge-amber">-XX%</span>
-            </div>
-            <div class="tier-bar"><div class="tier-fill" style="width: 78%; background: #002A3A;"></div></div>
-            <div style="color: #6b7280; font-size: 0.75rem; margin-top: 0.35rem;">Context: from → to · interpretation</div>
-        </div>
-
-        <!-- Concern row (red border) -->
-        <div style="background: #fff5f5; border-radius: 8px; padding: 1.25rem; border-left: 4px solid #dc2626; border: 1px solid #fecaca;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                 <div>
-                    <span style="font-weight: 700; color: #dc2626;">⚠️ Concern Category</span>
-                    <span style="color: #6b7280; font-size: 0.875rem; margin-left: 0.5rem;">X,XXX units · Forecast ~XK</span>
+                    <div style="font-size:2.75rem;font-weight:900;color:#00E273;line-height:1;">Rp XXJt</div>
+                    <div style="color:rgba(255,255,255,0.5);font-size:0.85rem;margin-top:0.25rem;">Metric 2 Label</div>
                 </div>
-                <span class="badge-red">-XX%</span>
-            </div>
-            <div class="tier-bar"><div class="tier-fill" style="width: 27%; background: #dc2626;"></div></div>
-            <div style="color: #991b1b; font-size: 0.75rem; margin-top: 0.35rem; font-weight: 600;">SHARP DROP — action required: describe what to investigate</div>
-        </div>
-
-        <!-- New/positive row (green border) -->
-        <div style="background: #f0fdf4; border-radius: 8px; padding: 1.25rem; border-left: 4px solid #00E273; border: 1px solid #bbf7d0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                 <div>
-                    <span style="font-weight: 700; color: #16a34a;">✨ New / Growing</span>
-                    <span style="color: #6b7280; font-size: 0.875rem; margin-left: 0.5rem;">XX,XXX units · New tier/category</span>
+                    <div style="font-size:2.75rem;font-weight:900;color:#00E273;line-height:1;">X,XXX</div>
+                    <div style="color:rgba(255,255,255,0.5);font-size:0.85rem;margin-top:0.25rem;">Metric 3 Label</div>
                 </div>
-                <span class="badge-blue">NEW</span>
+                <div>
+                    <div style="font-size:2.75rem;font-weight:900;color:#00E273;line-height:1;">Rp XXXk</div>
+                    <div style="color:rgba(255,255,255,0.5);font-size:0.85rem;margin-top:0.25rem;">Metric 4 Label</div>
+                </div>
             </div>
-            <div style="color: #166534; font-size: 0.75rem; margin-top: 0.35rem;">Description of what this category contains and why it's positive.</div>
+            <!-- Metadata line -->
+            <div style="color:rgba(255,255,255,0.25);font-size:0.8rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.08);">
+                Prepared by Iris · [Date] · [Period] · Source: [data_source]
+            </div>
         </div>
+        <div class="slide-number">1 / X</div>
     </div>
-</div>
 
-
-<!-- ══════════════════════════════════════════
-     SLIDE 5: TABLE (White — ranked data)
-     Pattern: Ranked table with badge status column
-══════════════════════════════════════════ -->
-<div class="slide">
-    <div class="slide-label">05 / XX</div>
-    <h2 style="font-size: 1.75rem; font-weight: 900; color: #002A3A; margin-bottom: 0.5rem;">Top N — Table Title</h2>
-    <p style="color: #6b7280; margin-bottom: 1.5rem; font-size: 0.9rem;">Ranked by [metric]. YoY = same-period comparison.</p>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 30px;">#</th>
-                <th>Item Name</th>
-                <th style="text-align: right;">Current</th>
-                <th style="text-align: right;">Prior</th>
-                <th style="text-align: right;">YoY</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td style="color: #002A3A; font-weight: 700;">1</td>
-                <td><span style="font-weight: 600;">Item Name</span></td>
-                <td style="text-align: right; font-weight: 700;">X,XXX</td>
-                <td style="text-align: right; color: #6b7280;">X,XXX</td>
-                <td style="text-align: right;" class="grow">+XX%</td>
-                <td><span class="badge-green">▲ Growing</span></td>
-            </tr>
-            <tr>
-                <td style="color: #002A3A; font-weight: 700;">2</td>
-                <td><span style="font-weight: 600;">Item Name</span></td>
-                <td style="text-align: right; font-weight: 700;">X,XXX</td>
-                <td style="text-align: right; color: #6b7280;">X,XXX</td>
-                <td style="text-align: right;" class="decline">-XX%</td>
-                <td><span class="badge-amber">▼ Moderate</span></td>
-            </tr>
-        </tbody>
-    </table>
-    <div class="callout-green" style="margin-top: 1.5rem;">
-        <strong style="color: #002A3A;">Summary insight</strong>
-        <span style="color: #374151; font-size: 0.9rem;"> — one sentence takeaway from the table data.</span>
+    <!-- ══════════════════════════════════════════
+         SLIDE 2: EXEC SUMMARY (Light — KPI grid + bullets + so-what)
+         Pattern: Header band → 4 KPI cards → Key bullets → So-What box
+    ══════════════════════════════════════════ -->
+    <div class="slide" id="slide-2">
+        <div class="header-band">
+            <h2 class="text-3xl font-bold">Ringkasan Eksekutif: [Assertion Statement]</h2>
+        </div>
+        <div class="grid grid-cols-4 gap-6 mb-6">
+            <div class="kpi-card">
+                <p class="text-gray-500 text-sm uppercase">Metric 1</p>
+                <p class="text-3xl font-bold text-[#1A202C] mt-2">Rp XX Jt</p>
+            </div>
+            <div class="kpi-card">
+                <p class="text-gray-500 text-sm uppercase">Metric 2</p>
+                <p class="text-3xl font-bold text-[#1A202C] mt-2">X,XXX psg</p>
+            </div>
+            <div class="kpi-card">
+                <p class="text-gray-500 text-sm uppercase">Metric 3</p>
+                <p class="text-3xl font-bold text-[#1A202C] mt-2">Rp XXXk</p>
+            </div>
+            <div class="kpi-card">
+                <p class="text-gray-500 text-sm uppercase">Metric 4</p>
+                <p class="text-3xl font-bold text-[#1A202C] mt-2">XX</p>
+            </div>
+        </div>
+        <ul class="list-disc pl-6 text-lg text-gray-700 space-y-3">
+            <li><strong class="text-[#002A3A]">Finding 1:</strong> Description with key number.</li>
+            <li><strong class="text-[#002A3A]">Finding 2:</strong> Description with key number.</li>
+            <li><strong class="text-[#002A3A]">Finding 3:</strong> Description with key number.</li>
+        </ul>
+        <div class="so-what">
+            <p class="text-xs font-bold uppercase text-[#00E273] mb-1">→ So What</p>
+            <p class="text-sm font-medium text-gray-800">Actionable insight for management — what to do with this information.</p>
+        </div>
+        <div class="slide-number">2 / X</div>
     </div>
-</div>
 
-
-<!-- ══════════════════════════════════════════
-     SLIDE 6: CONCERN / DEEP DIVE (White — 2-col)
-     Pattern: Left: stat + description | Right: cause analysis + action
-══════════════════════════════════════════ -->
-<div class="slide">
-    <div class="slide-label">06 / XX</div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start;">
-        <div>
-            <div style="display: inline-block; background: #fee2e2; color: #dc2626; font-weight: 700; font-size: 0.75rem; padding: 4px 12px; border-radius: 999px; margin-bottom: 1rem;">⚠️ AREA OF CONCERN</div>
-            <h2 style="font-size: 2rem; font-weight: 900; color: #002A3A; margin-bottom: 1rem; line-height: 1.2;">Concern Title<br>Drop / Issue</h2>
-            <p style="color: #374151; font-size: 0.95rem; line-height: 1.7; margin-bottom: 1.5rem;">Describe the concern clearly. Include magnitude and comparison context.</p>
-            <div style="background: #fff5f5; border: 1px solid #fecaca; padding: 1.25rem; border-radius: 8px;">
-                <div style="font-weight: 700; color: #dc2626; margin-bottom: 0.5rem;">Forecast Impact:</div>
-                <div style="font-size: 2rem; font-weight: 900; color: #dc2626;">~XX,XXX units</div>
-                <div style="color: #6b7280; font-size: 0.875rem; margin-top: 0.25rem;">vs XX,XXX in prior year</div>
-            </div>
+    <!-- ══════════════════════════════════════════
+         SLIDE 3: CHART — TREND (Light — bar/line chart + so-what)
+         Pattern: Header band → Chart container → So-What box
+         Chart.js with dual Y axes (revenue + volume)
+    ══════════════════════════════════════════ -->
+    <div class="slide" id="slide-3">
+        <div class="header-band">
+            <h2 class="text-3xl font-bold">Tren Bulanan: [Assertion Statement]</h2>
         </div>
-        <div>
-            <div style="font-size: 0.75rem; font-weight: 700; color: #6b7280; letter-spacing: 0.1em; margin-bottom: 1rem;">POSSIBLE CAUSES</div>
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                <div class="callout-amber" style="border-radius: 0 8px 8px 0;">
-                    <strong style="color: #92400e;">Hypothesis 1</strong>
-                    <p style="color: #374151; font-size: 0.875rem; margin-top: 0.25rem;">Explanation of possible cause.</p>
-                </div>
-                <div class="callout-amber" style="border-radius: 0 8px 8px 0;">
-                    <strong style="color: #92400e;">Hypothesis 2</strong>
-                    <p style="color: #374151; font-size: 0.875rem; margin-top: 0.25rem;">Explanation of possible cause.</p>
-                </div>
-                <div class="callout-green" style="margin-top: 0.5rem; border-radius: 0 8px 8px 0;">
-                    <strong style="color: #166534;">Action:</strong>
-                    <p style="color: #374151; font-size: 0.875rem; margin-top: 0.25rem;">Specific next step to investigate or resolve.</p>
-                </div>
-            </div>
+        <div class="chart-container" style="flex:1;">
+            <canvas id="trendChart"></canvas>
         </div>
+        <div class="so-what">
+            <p class="text-xs font-bold uppercase text-[#00E273] mb-1">→ So What</p>
+            <p class="text-sm font-medium text-gray-800">Actionable insight about the trend — what it means for business.</p>
+        </div>
+        <div class="slide-number">3 / X</div>
     </div>
-</div>
 
-
-<!-- ══════════════════════════════════════════
-     SLIDE 7: FORECAST (Teal — scenarios)
-     Pattern: Left: headline forecast + formula | Right: scenario table
-══════════════════════════════════════════ -->
-<div class="slide slide-teal">
-    <div class="gradient-blob"></div>
-    <div class="content">
-        <div class="slide-label">07 / XX</div>
-        <h2 style="font-size: 1.75rem; font-weight: 900; color: white; margin-bottom: 0.5rem;">Annual Forecast / Projection</h2>
-        <p style="color: rgba(255,255,255,0.6); margin-bottom: 2rem; font-size: 0.9rem;">Methodology: same-period growth rate × full prior year.</p>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-            <div>
-                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-bottom: 0.75rem;">BASE SCENARIO</div>
-                <div class="big-number" style="color: #00E273;">XXXK</div>
-                <div style="color: rgba(255,255,255,0.7); margin-top: 0.5rem;">units forecast full year</div>
-                <div style="color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-top: 0.25rem;">vs XXXK prior year (±XX%)</div>
-                <div style="margin-top: 1.5rem; font-size: 0.875rem; color: rgba(255,255,255,0.7);">
-                    <strong style="color: white;">Formula:</strong><br>
-                    <code style="background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">
-                        prior_year × (ytd_now / ytd_last)
-                    </code>
-                </div>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-bottom: 0.25rem;">SCENARIOS</div>
-                <div style="background: rgba(255,255,255,0.07); padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between;">
-                    <span style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Optimistic</span>
-                    <span style="color: #00E273; font-weight: 700;">~XXXK</span>
-                </div>
-                <div style="background: rgba(0,226,115,0.15); border: 1px solid rgba(0,226,115,0.3); padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between;">
-                    <span style="color: white; font-size: 0.875rem; font-weight: 600;">Base (current trend)</span>
-                    <span style="color: #00E273; font-weight: 900;">~XXXK</span>
-                </div>
-                <div style="background: rgba(255,255,255,0.04); padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between;">
-                    <span style="color: rgba(255,255,255,0.5); font-size: 0.875rem;">Pessimistic</span>
-                    <span style="color: #f87171; font-weight: 700;">~XXXK</span>
-                </div>
-            </div>
+    <!-- ══════════════════════════════════════════
+         SLIDE 4: CHART — RANKING (Light — horizontal bar + so-what)
+         Pattern: Header band → Horizontal bar chart → So-What box
+    ══════════════════════════════════════════ -->
+    <div class="slide" id="slide-4">
+        <div class="header-band">
+            <h2 class="text-3xl font-bold">Top 10 [Category]: [Assertion Statement]</h2>
         </div>
+        <div class="chart-container" style="flex:1;">
+            <canvas id="rankingChart"></canvas>
+        </div>
+        <div class="so-what">
+            <p class="text-xs font-bold uppercase text-[#00E273] mb-1">→ So What</p>
+            <p class="text-sm font-medium text-gray-800">Actionable insight about the ranking — concentration risk, leaders, opportunities.</p>
+        </div>
+        <div class="slide-number">4 / X</div>
     </div>
-</div>
 
-
-<!-- ══════════════════════════════════════════
-     SLIDE 8: RECOMMENDATIONS (White — 2x2 grid)
-     Pattern: 4 numbered action items with priority borders
-══════════════════════════════════════════ -->
-<div class="slide">
-    <div class="slide-label">08 / XX</div>
-    <h2 style="font-size: 1.75rem; font-weight: 900; color: #002A3A; margin-bottom: 2rem;">Rekomendasi Tindakan</h2>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-
-        <!-- Priority 1 (Teal border — main action) -->
-        <div style="border: 2px solid #002A3A; border-radius: 8px; padding: 1.5rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-                <div style="background: #002A3A; color: #00E273; font-weight: 900; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">1</div>
-                <span style="font-weight: 700; color: #002A3A;">Action Title</span>
-            </div>
-            <p style="color: #374151; font-size: 0.875rem; line-height: 1.6;">Action description — what to do, why, expected outcome.</p>
-            <div style="margin-top: 0.75rem; font-size: 0.75rem; color: #6b7280;"><strong>Target:</strong> Measurable success metric</div>
+    <!-- ══════════════════════════════════════════
+         SLIDE 5: BREAKDOWN (Light — 3-column cards + so-what)
+         Pattern: Header band → 3-col grid with lists → So-What box
+         Use for: branch breakdown, category breakdown, region analysis
+    ══════════════════════════════════════════ -->
+    <div class="slide" id="slide-5">
+        <div class="header-band">
+            <h2 class="text-3xl font-bold">Breakdown: [Assertion Statement]</h2>
         </div>
-
-        <!-- Priority 2 (Red border — urgent concern) -->
-        <div style="border: 2px solid #dc2626; border-radius: 8px; padding: 1.5rem; background: #fff5f5;">
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-                <div style="background: #dc2626; color: white; font-weight: 900; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">2</div>
-                <span style="font-weight: 700; color: #dc2626;">Urgent Action</span>
-            </div>
-            <p style="color: #374151; font-size: 0.875rem; line-height: 1.6;">Urgent action description — time-sensitive, high impact.</p>
-            <div style="margin-top: 0.75rem; font-size: 0.75rem; color: #6b7280;"><strong>Target:</strong> Measurable success metric</div>
-        </div>
-
-        <!-- Priority 3 (Amber border — monitoring) -->
-        <div style="border: 2px solid #d97706; border-radius: 8px; padding: 1.5rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-                <div style="background: #d97706; color: white; font-weight: 900; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">3</div>
-                <span style="font-weight: 700; color: #92400e;">Monitor / Review</span>
-            </div>
-            <p style="color: #374151; font-size: 0.875rem; line-height: 1.6;">Monitoring action — track and respond if threshold crossed.</p>
-            <div style="margin-top: 0.75rem; font-size: 0.75rem; color: #6b7280;"><strong>Target:</strong> Measurable success metric</div>
-        </div>
-
-        <!-- Priority 4 (Green border — opportunity) -->
-        <div style="border: 2px solid #00E273; border-radius: 8px; padding: 1.5rem; background: #f0fdf4;">
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-                <div style="background: #00E273; color: #002A3A; font-weight: 900; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">4</div>
-                <span style="font-weight: 700; color: #166534;">Opportunity</span>
-            </div>
-            <p style="color: #374151; font-size: 0.875rem; line-height: 1.6;">Growth opportunity — invest/expand/accelerate.</p>
-            <div style="margin-top: 0.75rem; font-size: 0.75rem; color: #6b7280;"><strong>Target:</strong> Measurable success metric</div>
-        </div>
-    </div>
-</div>
-
-
-<!-- ══════════════════════════════════════════
-     LAST SLIDE: SUMMARY / CLOSING (Teal)
-     Pattern: Left: summary bullets | Right: methodology note
-══════════════════════════════════════════ -->
-<div class="slide slide-teal" style="min-height: 400px;">
-    <div class="gradient-blob"></div>
-    <div class="content">
-        <div class="slide-label">XX / XX</div>
-        <h2 style="font-size: 2rem; font-weight: 900; color: white; margin-bottom: 1.5rem;">Summary</h2>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
-            <div>
-                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-bottom: 1rem;">KEY FINDINGS</div>
-                <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.75rem;">
-                    <li style="color: white; font-size: 0.9rem;">📊 Finding 1 — key number and context</li>
-                    <li style="color: white; font-size: 0.9rem;">📈 Finding 2 — growth/opportunity</li>
-                    <li style="color: white; font-size: 0.9rem;">⚠️ Finding 3 — concern / action needed</li>
-                    <li style="color: white; font-size: 0.9rem;">✅ Finding 4 — positive signal</li>
+        <div class="grid grid-cols-3 gap-6 mb-6">
+            <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <h3 class="text-xl font-bold text-[#002A3A] mb-4">📍 Category A</h3>
+                <ul class="space-y-3 text-gray-700">
+                    <li class="flex justify-between border-b pb-2"><span>Item 1</span> <strong>Rp XX Jt</strong></li>
+                    <li class="flex justify-between border-b pb-2"><span>Item 2</span> <strong>Rp XX Jt</strong></li>
+                    <li class="flex justify-between border-b pb-2"><span>Item 3</span> <strong>Rp XX Jt</strong></li>
                 </ul>
             </div>
-            <div>
-                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-bottom: 1rem;">METHODOLOGY</div>
-                <div style="background: rgba(255,255,255,0.07); padding: 1.25rem; border-radius: 8px; font-size: 0.8rem; color: rgba(255,255,255,0.7); line-height: 1.7;">
-                    Data source, calculation method, important caveats, and links to full data if needed.
+            <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <h3 class="text-xl font-bold text-[#002A3A] mb-4">📍 Category B</h3>
+                <ul class="space-y-3 text-gray-700">
+                    <li class="flex justify-between border-b pb-2"><span>Item 1</span> <strong>Rp XX Jt</strong></li>
+                    <li class="flex justify-between border-b pb-2"><span>Item 2</span> <strong>Rp XX Jt</strong></li>
+                </ul>
+            </div>
+            <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <h3 class="text-xl font-bold text-[#002A3A] mb-4">📍 Category C</h3>
+                <ul class="space-y-3 text-gray-700">
+                    <li class="flex justify-between border-b pb-2"><span>Item 1</span> <strong>Rp XX Jt</strong></li>
+                </ul>
+            </div>
+        </div>
+        <div class="so-what">
+            <p class="text-xs font-bold uppercase text-[#00E273] mb-1">→ So What</p>
+            <p class="text-sm font-medium text-gray-800">Actionable insight about distribution across categories.</p>
+        </div>
+        <div class="slide-number">5 / X</div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         SLIDE 6: CHART — PRODUCT/DETAIL (Light — bar chart + so-what)
+         Pattern: Header band → Chart → So-What box
+         Use for: top products, top articles, category comparison
+    ══════════════════════════════════════════ -->
+    <div class="slide" id="slide-6">
+        <div class="header-band">
+            <h2 class="text-3xl font-bold">Top 5 [Items]: [Assertion Statement]</h2>
+        </div>
+        <div class="chart-container" style="flex:1;">
+            <canvas id="detailChart"></canvas>
+        </div>
+        <div class="so-what">
+            <p class="text-xs font-bold uppercase text-[#00E273] mb-1">→ So What</p>
+            <p class="text-sm font-medium text-gray-800">Actionable insight about product/item performance.</p>
+        </div>
+        <div class="slide-number">6 / X</div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         SLIDE 7: INSIGHT & ANALYSIS (Light — 2x2 card grid, FILLED)
+         Pattern: Header band → 2x2 grid cards → each card with icon, title, bullets
+         IMPORTANT: Use height:640px + flex:1 on grid to FILL vertical space.
+         Each card uses display:flex;flex-direction:column to stretch content.
+    ══════════════════════════════════════════ -->
+    <div class="slide" id="slide-7" style="display:flex;flex-direction:column;height:640px;">
+        <div class="header-band">
+            <h2 class="text-3xl font-bold">Insight & Analisis [Topic]</h2>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1rem;flex:1;">
+            <div class="bg-gray-50 p-5 rounded-xl border border-gray-200" style="display:flex;flex-direction:column;">
+                <h3 class="text-lg font-bold text-[#002A3A] mb-2">🛍️ Insight Category 1</h3>
+                <ul class="list-disc pl-5 space-y-1.5 text-gray-700 text-sm" style="flex:1;">
+                    <li><strong>Key point 1</strong> with supporting data.</li>
+                    <li><strong>Key point 2</strong> with supporting data.</li>
+                    <li><strong>Key point 3</strong> with supporting data.</li>
+                </ul>
+            </div>
+            <div class="bg-gray-50 p-5 rounded-xl border border-gray-200" style="display:flex;flex-direction:column;">
+                <h3 class="text-lg font-bold text-[#002A3A] mb-2">👟 Insight Category 2</h3>
+                <ul class="list-disc pl-5 space-y-1.5 text-gray-700 text-sm" style="flex:1;">
+                    <li><strong>Key point 1</strong> with supporting data.</li>
+                    <li><strong>Key point 2</strong> with supporting data.</li>
+                    <li><strong>Key point 3</strong> with supporting data.</li>
+                </ul>
+            </div>
+            <div class="bg-gray-50 p-5 rounded-xl border border-gray-200" style="display:flex;flex-direction:column;">
+                <h3 class="text-lg font-bold text-[#002A3A] mb-2">📈 Insight Category 3</h3>
+                <ul class="list-disc pl-5 space-y-1.5 text-gray-700 text-sm" style="flex:1;">
+                    <li><strong>Key point 1</strong> with supporting data.</li>
+                    <li><strong>Key point 2</strong> with supporting data.</li>
+                    <li><strong>Key point 3</strong> with supporting data.</li>
+                </ul>
+            </div>
+            <div class="bg-gray-50 p-5 rounded-xl border border-gray-200" style="display:flex;flex-direction:column;">
+                <h3 class="text-lg font-bold text-[#002A3A] mb-2">⚠️ Insight Category 4</h3>
+                <ul class="list-disc pl-5 space-y-1.5 text-gray-700 text-sm" style="flex:1;">
+                    <li><strong>Key point 1</strong> with supporting data.</li>
+                    <li><strong>Key point 2</strong> with supporting data.</li>
+                    <li><strong>Key point 3</strong> with supporting data.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="slide-number">7 / X</div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         SLIDE 8: CLOSING — RECOMMENDATIONS (Dark — 3 priority cards + branding)
+         ALWAYS dark. ALWAYS last slide.
+         Pattern: Section label → Title → 3 priority cards (color-coded) → Branding bar
+         Cards use flex:1 to fill height. Each card has badge + title + description + target.
+    ══════════════════════════════════════════ -->
+    <div class="slide slide-dark" id="slide-8">
+        <div class="gradient-blob gradient-blob-tr" style="opacity:0.8"></div>
+        <div class="gradient-blob gradient-blob-bl" style="width:300px;height:300px;opacity:0.5"></div>
+        <div style="position:relative;z-index:1;display:flex;flex-direction:column;height:100%;min-height:520px;">
+            <div style="margin-bottom:2rem;">
+                <p style="color:#00E273;font-size:0.75rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.75rem;">Rekomendasi & Tindak Lanjut</p>
+                <h2 style="font-size:2.5rem;font-weight:800;line-height:1.15;">3 Prioritas Aksi<br><span style="color:#00E273;">untuk Bulan Depan</span></h2>
+            </div>
+            <div class="grid grid-cols-3 gap-6" style="flex:1;">
+                <!-- Priority 1 — Green (main action) -->
+                <div style="background:rgba(0,226,115,0.08);border:1px solid rgba(0,226,115,0.2);border-radius:12px;padding:2rem;display:flex;flex-direction:column;">
+                    <div style="background:#00E273;color:#002A3A;font-weight:800;font-size:0.75rem;padding:0.3rem 0.75rem;border-radius:4px;width:fit-content;margin-bottom:1rem;">PRIORITAS 1</div>
+                    <h3 style="font-size:1.25rem;font-weight:700;color:#00E273;margin-bottom:0.75rem;">Action Title</h3>
+                    <p style="color:rgba(255,255,255,0.65);font-size:0.9rem;line-height:1.6;flex:1;">Description of what to do, why it matters, and expected impact.</p>
+                    <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid rgba(0,226,115,0.15);font-size:0.8rem;color:rgba(255,255,255,0.4);">Target: Measurable outcome</div>
+                </div>
+                <!-- Priority 2 — Amber (optimization) -->
+                <div style="background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.2);border-radius:12px;padding:2rem;display:flex;flex-direction:column;">
+                    <div style="background:#FFB800;color:#002A3A;font-weight:800;font-size:0.75rem;padding:0.3rem 0.75rem;border-radius:4px;width:fit-content;margin-bottom:1rem;">PRIORITAS 2</div>
+                    <h3 style="font-size:1.25rem;font-weight:700;color:#FFB800;margin-bottom:0.75rem;">Action Title</h3>
+                    <p style="color:rgba(255,255,255,0.65);font-size:0.9rem;line-height:1.6;flex:1;">Description of what to do, why it matters, and expected impact.</p>
+                    <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid rgba(255,184,0,0.15);font-size:0.8rem;color:rgba(255,255,255,0.4);">Target: Measurable outcome</div>
+                </div>
+                <!-- Priority 3 — Cyan (growth/opportunity) -->
+                <div style="background:rgba(0,184,212,0.08);border:1px solid rgba(0,184,212,0.2);border-radius:12px;padding:2rem;display:flex;flex-direction:column;">
+                    <div style="background:#00B8D4;color:#002A3A;font-weight:800;font-size:0.75rem;padding:0.3rem 0.75rem;border-radius:4px;width:fit-content;margin-bottom:1rem;">PRIORITAS 3</div>
+                    <h3 style="font-size:1.25rem;font-weight:700;color:#00B8D4;margin-bottom:0.75rem;">Action Title</h3>
+                    <p style="color:rgba(255,255,255,0.65);font-size:0.9rem;line-height:1.6;flex:1;">Description of what to do, why it matters, and expected impact.</p>
+                    <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid rgba(0,184,212,0.15);font-size:0.8rem;color:rgba(255,255,255,0.4);">Target: Measurable outcome</div>
+                </div>
+            </div>
+            <!-- Closing branding bar -->
+            <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <img src="data:image/png;base64,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" alt="ZUMA" style="height:24px;filter:brightness(1.1);">
+                    <span style="color:rgba(255,255,255,0.35);font-size:0.8rem;">[Topic] · [Report Type]</span>
+                </div>
+                <div style="color:rgba(255,255,255,0.25);font-size:0.75rem;">
+                    Prepared by Iris · [Date]
                 </div>
             </div>
         </div>
-        <div style="color: rgba(255,255,255,0.3); font-size: 0.8rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
-            Prepared by Iris · [Date] · Source: [table/view name] · [URL if deployed]
-        </div>
+        <div class="slide-number">8 / X</div>
     </div>
-</div>
 
+    <script>
+        // ── Chart.js Global Defaults — Zuma brand ──
+        Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+        Chart.defaults.color = '#4A5568';
+
+        // ══════════════════════════════════════════
+        // CHART INIT FUNCTIONS
+        // Naming convention: initChart_{canvasId}
+        // IntersectionObserver auto-discovers and calls these
+        // when the slide scrolls into view.
+        //
+        // Eos: Replace these with actual data from Argus handoff JSON.
+        // ══════════════════════════════════════════
+
+        // CHART 1: Trend (dual Y-axis — revenue bars + volume bars)
+        window.initChart_trendChart = function() {
+            new Chart(document.getElementById('trendChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Month 1', 'Month 2', 'Month 3'],
+                    datasets: [
+                        {
+                            label: 'Revenue (Juta Rp)',
+                            data: [100, 150, 140],
+                            backgroundColor: '#00E273',
+                            borderRadius: 4,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Volume (Pasang)',
+                            data: [500, 700, 680],
+                            backgroundColor: '#002A3A',
+                            borderRadius: 4,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 800, easing: 'easeOutQuart' },
+                    plugins: { legend: { labels: { padding: 20, usePointStyle: true, pointStyleWidth: 12 } } },
+                    scales: {
+                        y: { type: 'linear', position: 'left', title: { display: true, text: 'Revenue (Jt)', font: { size: 11, weight: '600' } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false } },
+                        y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Volume', font: { size: 11, weight: '600' } }, border: { display: false } }
+                    }
+                }
+            });
+        };
+
+        // CHART 2: Ranking (horizontal bar — top 10)
+        window.initChart_rankingChart = function() {
+            new Chart(document.getElementById('rankingChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5', 'Item 6', 'Item 7', 'Item 8', 'Item 9', 'Item 10'],
+                    datasets: [{
+                        label: 'Revenue (Juta Rp)',
+                        data: [50, 45, 40, 35, 30, 28, 25, 22, 20, 18],
+                        backgroundColor: '#002A3A',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 800, easing: 'easeOutQuart' },
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false } },
+                        y: { grid: { display: false }, border: { display: false } }
+                    }
+                }
+            });
+        };
+
+        // CHART 3: Detail (vertical bar — top 5 products/items)
+        window.initChart_detailChart = function() {
+            new Chart(document.getElementById('detailChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Product A', 'Product B', 'Product C', 'Product D', 'Product E'],
+                    datasets: [{
+                        label: 'Volume (Pasang)',
+                        data: [680, 420, 400, 330, 260],
+                        backgroundColor: '#00E273',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 800, easing: 'easeOutQuart' },
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, border: { display: false } },
+                        y: { grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false } }
+                    }
+                }
+            });
+        };
+
+        // ── IntersectionObserver — lazy chart init on scroll ──
+        var chartObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    var canvases = entry.target.querySelectorAll('canvas');
+                    canvases.forEach(function(canvas) {
+                        var initFn = 'initChart_' + canvas.id;
+                        if (typeof window[initFn] === 'function' && !canvas.dataset.initialized) {
+                            canvas.dataset.initialized = 'true';
+                            window[initFn]();
+                        }
+                    });
+                    chartObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.3 });
+
+        document.querySelectorAll('.slide').forEach(function(slide) {
+            chartObserver.observe(slide);
+        });
+    </script>
 </body>
 </html>

@@ -1,40 +1,29 @@
 ---
 name: zuma-ppt-design
-description: Professional presentation design guidelines for Zuma Indonesia. KBI Finance Report-inspired layout with Zuma brand colors (Teal #002A3A + Green #00E273). Modern, data-focused, clean composition.
+description: Professional presentation design for Zuma Indonesia. frontend-slides visual system with Zuma brand colors (#002A3A teal, #00E273 green). 12 curated style presets, distinctive typography, animated HTML decks, Vercel deployment. Modern, expressive — NOT McKinsey/KBI Financial Report.
 ---
 
 # Zuma PPT Design Guidelines
 
-**Style Inspiration:** Korea Banking Institute Finance Report layout
-**Brand Colors:** Zuma Teal #002A3A + Zuma Green #00E273
-**Tone:** Modern, professional, data-driven
+**Visual System:** frontend-slides (https://github.com/zarazhangrui/frontend-slides)
+**Brand Colors:** Zuma Teal `#002A3A` + Zuma Green `#00E273`
+**Tone:** Distinctive, expressive, modern — explicitly NOT generic AI slop
 
-> 📁 **Role-specific deck references (real examples per role):** `zuma-business-skills/references/decks.md`
-> Use this skill for design & framework guidelines. Use `references/decks.md` as starting point when building for a specific role.
+> 📁 **Role-specific deck references:** `zuma-business-skills/references/decks.md`
 
 ---
 
-## ⚠️ MANDATORY: Use Canonical Template (2026-02-17)
+## ⚠️ MANDATORY: Start from TEMPLATE.html
 
 **CRITICAL RULE:** ALL presentations MUST start from `TEMPLATE.html` in this folder.
 
-**Why:** Ensures visual consistency across all decks. Proven layout from "Zuma Performance Analysis" deck.
-
 **Workflow:**
 1. Copy `TEMPLATE.html` to new project folder
-2. Replace content (titles, data, stats) — KEEP structure
-3. Add/remove slides as needed — COPY slide patterns from template
+2. Replace content — KEEP viewport fitting structure
+3. Add/remove slides — COPY slide patterns from template
 4. Deploy to Vercel
 
 **DO NOT create HTML from scratch.** Always start from template.
-
-**Template Features:**
-- Dark background (#1a1a1a) + white cards (.slide)
-- Gradient blob accents
-- Slide variants: `.slide`, `.slide-teal`, `.slide-red`, `.slide-green`
-- Grid layouts for stats
-- Proper spacing & typography
-- Print-friendly CSS
 
 **Location:** `/Users/database-zuma/.openclaw/workspace/zuma-business-skills/general/zuma-ppt-design/TEMPLATE.html`
 
@@ -42,100 +31,631 @@ description: Professional presentation design guidelines for Zuma Indonesia. KBI
 
 ## Color Palette
 
-### Primary Colors
-- **Zuma Teal (Dark):** `#002A3A` — Headers, primary backgrounds, emphasis
-- **Zuma Green (Bright):** `#00E273` — Accents, highlights, success indicators, CTAs
+### Primary Brand Colors
+- **Zuma Teal (Dark):** `#002A3A` — dark backgrounds, header bands, card fills on dark slides
+- **Zuma Green (Bright):** `#00E273` — accents, CTAs, positive indicators, highlights
 
 ### Supporting Colors
-- **White:** `#FFFFFF` — Backgrounds, text on dark
-- **Light Gray:** `#F5F7FA` — Alternate backgrounds, subtle sections
-- **Dark Gray:** `#2C3E50` — Body text, secondary headers
-- **Mid Gray:** `#7F8C8D` — Captions, metadata
+- **Dark Base:** `#1A1A1A` — dark slide backgrounds
+- **White:** `#FFFFFF` — light slide backgrounds, text on dark
+- **Card Alt:** `#0A3D50` — secondary cards on dark backgrounds
+- **Text Dark:** `#1A202C` — body text on light slides
+- **Text Secondary:** `#4A5568` — labels on light slides
+- **Text Muted:** `#718096` — captions on light slides
+- **Text On Dark:** `#8CA3AD` — labels on dark slides
+- **Red (negative):** `#FF4D4D`
+- **Amber (warning):** `#FFB800`
 
-### Gradients (Optional)
-- Teal gradient: `#002A3A → #004D5C` (subtle depth)
-- Green accent: Use sparingly for highlights/callouts
-
----
-
-## Typography
-
-**Font Family:** Sans-serif modern (Calibri, Arial, Montserrat, Open Sans)
-
-**Hierarchy:**
-1. **Hero Numbers:** 72-96pt, bold, Zuma Teal
-2. **Section Titles:** 36-44pt, bold, ALL CAPS, Zuma Teal
-3. **Slide Titles:** 28-32pt, bold, Zuma Teal
-4. **Headers:** 18-20pt, semi-bold, Dark Gray
-5. **Body Text:** 14-16pt, regular, Dark Gray
-6. **Captions:** 10-12pt, regular, Mid Gray
-
-**Style:**
-- Bold headers for emphasis
-- ALL CAPS for section dividers
-- Regular weight for body/readability
+### Color Rule in Style Presets
+When adapting frontend-slides presets:
+- All **dark accent colors** → `#002A3A` (Zuma Teal)
+- All **bright accent colors** → `#00E273` (Zuma Green)
+- Keep font pairings and layout patterns exactly as in preset
 
 ---
 
-## Layout Principles (KBI-Inspired)
+## ⚠️ CRITICAL: Viewport Fitting (Non-Negotiable)
 
-### 1. Grid-Based Structure
-- Most slides: **2-column layout** (60/40 or 50/50)
-- Left: Text/context | Right: Visual/data
-- Consistent alignment across slides
+**Every slide MUST fit exactly in the viewport. No scrolling within slides, ever.**
 
-### 2. White Space
-- **Generous margins** (min 1 inch all sides)
-- Clear section breaks
-- Don't overcrowd — breathable layouts
-- Use white space to guide eye flow
+### Content Density Limits
 
-### 3. Data-Focused Composition
-- **Big numbers** as focal points (center or top-right)
-- Charts integrated with text (not floating)
-- Tables with Teal headers, white/light gray rows
-- Mix visual types: avoid repetition
+| Slide Type | Maximum Content |
+|------------|-----------------|
+| Title slide | 1 heading + 1 subtitle |
+| Content slide | 1 heading + 4-6 bullets (max 2 lines each) |
+| Feature grid | 1 heading + 6 cards (2×3 or 3×2) |
+| Code slide | 1 heading + 8-10 lines of code |
+| Quote slide | 1 quote (max 3 lines) + attribution |
 
-### 4. Visual Balance
-- Align elements to grid
-- Even spacing between sections
-- Symmetry where appropriate
-- Use contrast (dark Teal vs white) for drama
+**Too much content? → Split into multiple slides. NEVER scroll.**
+
+### Mandatory Viewport CSS (Include in ALL Presentations)
+
+```css
+/* ===========================================
+   VIEWPORT FITTING — MANDATORY
+   Copy into every presentation
+   =========================================== */
+
+html, body {
+    height: 100%;
+    overflow-x: hidden;
+}
+
+html {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+}
+
+.slide {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile */
+    overflow: hidden; /* CRITICAL: No overflow ever */
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.slide-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-height: 100%;
+    overflow: hidden;
+    padding: var(--slide-padding);
+}
+
+:root {
+    --title-size: clamp(1.5rem, 5vw, 4rem);
+    --h2-size: clamp(1.25rem, 3.5vw, 2.5rem);
+    --body-size: clamp(0.75rem, 1.5vw, 1.125rem);
+    --small-size: clamp(0.65rem, 1vw, 0.875rem);
+    --slide-padding: clamp(1rem, 4vw, 4rem);
+    --content-gap: clamp(0.5rem, 2vw, 2rem);
+}
+
+.card, .container {
+    max-width: min(90vw, 1000px);
+    max-height: min(80vh, 700px);
+}
+
+img {
+    max-width: 100%;
+    max-height: min(50vh, 400px);
+    object-fit: contain;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    gap: clamp(0.5rem, 1.5vw, 1rem);
+}
+
+@media (max-height: 700px) {
+    :root {
+        --slide-padding: clamp(0.75rem, 3vw, 2rem);
+        --content-gap: clamp(0.4rem, 1.5vw, 1rem);
+        --title-size: clamp(1.25rem, 4.5vw, 2.5rem);
+    }
+}
+
+@media (max-height: 600px) {
+    :root {
+        --slide-padding: clamp(0.5rem, 2.5vw, 1.5rem);
+        --title-size: clamp(1.1rem, 4vw, 2rem);
+        --body-size: clamp(0.7rem, 1.2vw, 0.95rem);
+    }
+    .nav-dots, .keyboard-hint, .decorative { display: none; }
+}
+
+@media (max-height: 500px) {
+    :root {
+        --slide-padding: clamp(0.4rem, 2vw, 1rem);
+        --title-size: clamp(1rem, 3.5vw, 1.5rem);
+        --body-size: clamp(0.65rem, 1vw, 0.85rem);
+    }
+}
+
+@media (max-width: 600px) {
+    .grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+}
+```
+
+### ⚠️ CSS Gotcha — Negating CSS Functions
+
+**WRONG — silently ignored by browsers, no console error:**
+```css
+right: -clamp(28px, 3.5vw, 44px);   /* ❌ Browser discards this */
+margin-left: -min(10vw, 100px);      /* ❌ Browser discards this */
+```
+
+**CORRECT — always wrap in calc():**
+```css
+right: calc(-1 * clamp(28px, 3.5vw, 44px));  /* ✅ */
+margin-left: calc(-1 * min(10vw, 100px));     /* ✅ */
+```
+
+**Rule: ALWAYS use `calc(-1 * ...)` to negate CSS function values.**
 
 ---
 
-## Analytical Frameworks by Context (2026-02-17)
+## Style System — 12 Curated Presets
 
-**Rule:** Pick framework based on the *type of question* being asked. Don't force one framework for all contexts.
+All 12 presets from frontend-slides, adapted with Zuma colors. Accent colors replaced:
+- Dark accent → `#002A3A` (Zuma Teal)
+- Bright accent → `#00E273` (Zuma Green)
+
+Font pairings and layout patterns preserved exactly.
+
+### Style Selection Guide
+
+| Scenario | Recommended Preset |
+|---|---|
+| Executive pitch, keynote | **Bold Signal** |
+| Agency/client presentation | **Electric Studio** |
+| Creative product pitch | **Creative Voltage** |
+| Premium brand review | **Dark Botanical** |
+| Reports, editorial decks | **Notebook Tabs** |
+| Product overviews, friendly | **Pastel Geometry** |
+| Creative agencies, playful | **Split Pastel** |
+| Personal brand, witty | **Vintage Editorial** |
+| Tech products, startups | **Neon Cyber** |
+| Dev tools, APIs | **Terminal Green** |
+| Corporate, data-heavy | **Swiss Modern** |
+| Storytelling, narrative | **Paper & Ink** |
+
+---
+
+### Preset 1: Bold Signal
+
+**Vibe:** Confident, high-impact, bold — for keynotes and pitch decks
+
+**Typography:**
+- Display: `Archivo Black` (900)
+- Body: `Space Grotesk` (400/500)
+
+```css
+:root {
+    --bg-primary: #1a1a1a;
+    --bg-gradient: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
+    --card-bg: #002A3A;           /* Zuma Teal replaces original orange */
+    --accent: #00E273;            /* Zuma Green */
+    --text-primary: #ffffff;
+    --text-on-card: #00E273;
+}
+```
+
+**Font import:**
+```html
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500&display=swap" rel="stylesheet">
+```
+
+**Signature:**
+- Bold colored card as focal point (Zuma Teal background, Green text)
+- Large section numbers (01, 02, 03…)
+- Navigation breadcrumbs with opacity states
+- Grid-based layout for precision
+
+---
+
+### Preset 2: Electric Studio
+
+**Vibe:** Clean, professional, high contrast — agency presentations
+
+**Typography:**
+- Display: `Manrope` (800)
+- Body: `Manrope` (400/500)
+
+```css
+:root {
+    --bg-dark: #0a0a0a;
+    --bg-white: #ffffff;
+    --accent-blue: #002A3A;       /* Zuma Teal replaces blue */
+    --accent-green: #00E273;      /* Zuma Green */
+    --text-dark: #0a0a0a;
+    --text-light: #ffffff;
+}
+```
+
+**Font import:**
+```html
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;800&display=swap" rel="stylesheet">
+```
+
+**Signature:**
+- Two-panel vertical split (dark + light)
+- Accent bar on panel edge using `#00E273`
+- Quote typography as hero element
+- Minimal, confident spacing
+
+---
+
+### Preset 3: Creative Voltage
+
+**Vibe:** Bold, energetic, retro-modern — creative pitches
+
+**Typography:**
+- Display: `Syne` (700/800)
+- Mono: `Space Mono` (400/700)
+
+```css
+:root {
+    --bg-primary: #002A3A;        /* Zuma Teal replaces electric blue */
+    --bg-dark: #0a0a14;
+    --accent-neon: #00E273;       /* Zuma Green replaces neon yellow */
+    --text-light: #ffffff;
+}
+```
+
+**Font import:**
+```html
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+```
+
+**Signature:**
+- Teal + Green high contrast split
+- Halftone texture patterns
+- Neon Green badges/callouts
+- Script typography for creative flair
+
+---
+
+### Preset 4: Dark Botanical
+
+**Vibe:** Elegant, sophisticated, artistic — premium brand reviews
+
+**Typography:**
+- Display: `Cormorant` (400/600) — elegant serif
+- Body: `IBM Plex Sans` (300/400)
+
+```css
+:root {
+    --bg-primary: #0f0f0f;
+    --text-primary: #e8e4df;
+    --text-secondary: #9a9590;
+    --accent-warm: #002A3A;       /* Zuma Teal as warm accent */
+    --accent-bright: #00E273;     /* Zuma Green as bright accent */
+    --accent-gold: #8CA3AD;       /* Muted teal-gray */
+}
+```
+
+**Font import:**
+```html
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@300;400&display=swap" rel="stylesheet">
+```
+
+**Signature:**
+- Abstract soft gradient circles (blurred, overlapping) in `#002A3A`
+- `#00E273` accent lines (thin, vertical)
+- Italic signature typography
+- No illustrations — only abstract CSS shapes
+
+---
+
+### Preset 5: Notebook Tabs
+
+**Vibe:** Editorial, organized, tactile — reports, structured decks
+
+**Typography:**
+- Display: `Bodoni Moda` (400/700) — classic editorial
+- Body: `DM Sans` (400/500)
+
+```css
+:root {
+    --bg-outer: #002A3A;          /* Zuma Teal as outer frame */
+    --bg-page: #f8f6f1;           /* Cream paper */
+    --text-primary: #1a1a1a;
+    --tab-1: #00E273;             /* Zuma Green as primary tab */
+    --tab-2: #8CA3AD;             /* Muted teal */
+    --tab-3: #0A3D50;
+    --tab-4: #004D5C;
+    --tab-5: #002A3A;
+}
+```
+
+**Font import:**
+```html
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@400;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+```
+
+**Signature:**
+- Cream paper container with subtle shadow on Teal dark outer
+- Teal/Green section tabs on right edge (vertical text)
+- Tab text: `font-size: clamp(0.5rem, 1vh, 0.7rem)` (MUST scale)
+- Binder hole decorations on left
+
+---
+
+### Preset 6: Pastel Geometry
+
+**Vibe:** Friendly, approachable, modern — product overviews
+
+**Typography:**
+- Display: `Plus Jakarta Sans` (700/800)
+- Body: `Plus Jakarta Sans` (400/500)
+
+```css
+:root {
+    --bg-primary: #002A3A;        /* Zuma Teal as outer */
+    --card-bg: #faf9f7;
+    --pill-1: #00E273;            /* Zuma Green */
+    --pill-2: #8CA3AD;
+    --pill-3: #0A3D50;
+    --pill-4: #004D5C;
+    --pill-5: #002A3A;
+}
+```
+
+**Font import:**
+```html
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+```
+
+**Signature:**
+- Rounded card with soft shadow on Teal background
+- **Vertical pills on right edge** — varying heights (short→medium→tall→medium→short)
+- Download/action icon corner using `#00E273`
+
+---
+
+### Preset 7: Split Pastel
+
+**Vibe:** Playful, modern, friendly — creative agencies
+
+**Typography:**
+- Display: `Outfit` (700/800)
+- Body: `Outfit` (400/500)
+
+```css
+:root {
+    --bg-left: #002A3A;           /* Zuma Teal replaces peach */
+    --bg-right: #0A3D50;          /* Teal alt replaces lavender */
+    --text-on-dark: #ffffff;
+    --badge-1: #00E273;           /* Zuma Green badge */
+    --badge-2: rgba(0,226,115,0.3);
+    --badge-3: rgba(0,226,115,0.15);
+}
+```
+
+**Font import:**
+```html
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet">
+```
+
+**Signature:**
+- Split background (Teal + Teal Alt)
+- `#00E273` badge pills with icons
+- Grid pattern overlay on right panel
+- Rounded CTA buttons in Green
+
+---
+
+### Preset 8: Vintage Editorial
+
+**Vibe:** Witty, editorial, personality-driven — personal brand, storytelling
+
+**Typography:**
+- Display: `Fraunces` (700/900) — distinctive serif
+- Body: `Work Sans` (400/500)
+
+```css
+:root {
+    --bg-cream: #f5f3ee;
+    --text-primary: #1a1a1a;
+    --text-secondary: #555;
+    --accent: #002A3A;            /* Zuma Teal as warm accent */
+    --highlight: #00E273;         /* Zuma Green for highlights */
+}
+```
+
+**Font import:**
+```html
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;900&family=Work+Sans:wght@400;500&display=swap" rel="stylesheet">
+```
+
+**Signature:**
+- Abstract geometric shapes in `#002A3A` (circle outline + line + dot)
+- Bold bordered CTA boxes with `#00E273` fill
+- Witty, conversational copy style
+- No illustrations — geometric CSS shapes only
+
+---
+
+### Preset 9: Neon Cyber
+
+**Vibe:** Futuristic, techy, confident — tech startups, SaaS
+
+**Typography:**
+- Display: `Clash Display` (Fontshare)
+- Body: `Satoshi` (Fontshare)
+
+```css
+:root {
+    --bg-primary: #0a0f1c;
+    --accent-primary: #00E273;    /* Zuma Green replaces cyan */
+    --accent-secondary: #002A3A;  /* Zuma Teal */
+    --text-primary: #ffffff;
+}
+```
+
+**Font import:**
+```html
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@700&f[]=satoshi@400,500&display=swap">
+```
+
+**Signature:**
+- Particle backgrounds (canvas)
+- `#00E273` neon glow: `box-shadow: 0 0 20px rgba(0,226,115,0.4)`
+- Grid patterns in `rgba(0,42,58,0.3)`
+- Monospaced number accents
+
+---
+
+### Preset 10: Terminal Green
+
+**Vibe:** Developer-focused, hacker aesthetic — dev tools, APIs, CLI apps
+
+**Typography:**
+- Display: `JetBrains Mono` (monospace only)
+- Body: `JetBrains Mono`
+
+```css
+:root {
+    --bg-primary: #0d1117;        /* GitHub dark */
+    --accent: #00E273;            /* Zuma Green as terminal green */
+    --text-primary: #ffffff;
+    --text-secondary: #8CA3AD;
+}
+```
+
+**Font import:**
+```html
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+```
+
+**Signature:**
+- Scan lines effect with `rgba(0,226,115,0.03)` horizontal lines
+- Blinking cursor `#00E273`
+- Code syntax highlighting in Zuma Green
+- ASCII-style borders
+
+---
+
+### Preset 11: Swiss Modern
+
+**Vibe:** Clean, precise, Bauhaus-inspired — corporate, data-heavy
+
+**Typography:**
+- Display: `Archivo` (800)
+- Body: `Nunito` (400)
+
+```css
+:root {
+    --bg-primary: #ffffff;
+    --bg-dark: #1a1a1a;
+    --accent: #002A3A;            /* Zuma Teal replaces red */
+    --accent-bright: #00E273;     /* Zuma Green */
+    --text-primary: #000000;
+}
+```
+
+**Font import:**
+```html
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@800&family=Nunito:wght@400&display=swap" rel="stylesheet">
+```
+
+**Signature:**
+- Visible grid system
+- Asymmetric layouts with `#002A3A` geometric blocks
+- `#00E273` rule lines
+- Maximum whitespace, minimum decoration
+
+---
+
+### Preset 12: Paper & Ink
+
+**Vibe:** Editorial, literary, thoughtful — storytelling decks, narrative reports
+
+**Typography:**
+- Display: `Cormorant Garamond` (serif)
+- Body: `Source Serif 4`
+
+```css
+:root {
+    --bg-cream: #faf9f7;
+    --text-primary: #1a1a1a;
+    --accent: #002A3A;            /* Zuma Teal as crimson equivalent */
+    --highlight: #00E273;         /* Zuma Green for pull quotes */
+}
+```
+
+**Font import:**
+```html
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,400&family=Source+Serif+4:wght@400&display=swap" rel="stylesheet">
+```
+
+**Signature:**
+- Drop caps in `#002A3A`
+- Pull quotes with `#00E273` left border
+- Elegant horizontal rules (`border-top: 1px solid #002A3A`)
+- Literary spacing and margins
+
+---
+
+## Anti-AI-Slop Rules
+
+**NEVER use these fonts as display fonts:**
+- Inter, Roboto, Arial, system fonts
+
+**NEVER use these colors/patterns:**
+- `#6366f1` (generic indigo)
+- Purple gradients on white
+- Generic hero sections (centered logo + tagline + CTA button — only)
+- Identical card grids with same height, same padding, same content type
+- Everything centered (boring)
+
+**INSTEAD use:**
+- Distinctive font pairings from the 12 presets above
+- Color themes with personality (Zuma Teal + Green has enough contrast to be distinctive)
+- Atmospheric backgrounds (gradients, subtle patterns, depth)
+- Asymmetric layouts, varied card sizes
+- Signature animation moments
+
+---
+
+## Presentation Workflow
+
+### Phase 1 — Content Discovery
+Before designing, identify:
+- Deck purpose (pitch / report / review / update)
+- Target audience (CEO / BM / internal team / client)
+- Slide count (5-10 short / 10-20 standard / 20+ deep dive)
+- Content available (all ready / rough notes / topic only)
+
+### Phase 2 — Style Selection
+Choose preset based on context (see Style Selection Guide above).
+If user wants to explore: generate 3 mini-preview HTML files in `.claude-design/slide-previews/`.
+
+### Phase 3 — Generate
+Build single HTML file. Apply selected preset's font + color system.
+Apply Zuma color substitutions (dark accent → `#002A3A`, bright → `#00E273`).
+
+### Phase 4 — Deploy to Vercel
+See Deployment section below.
+
+---
+
+## Analytical Frameworks by Context
+
+**Rule:** Pick framework based on the *type of question* being asked.
 
 ---
 
 ### 🛍️ Product Context → BCG Matrix + Product Life Cycle
 
-**Use when:** Analyzing SKU performance, portfolio health, investment decisions per article.
+**Use when:** Analyzing SKU performance, portfolio health, investment decisions.
 
 **BCG Matrix** — classify articles by growth rate × sales volume:
 | Quadrant | Criteria | Action |
-|----------|----------|--------|
+|---|---|---|
 | ⭐ Stars | High YoY growth + high volume | Invest, expand, ensure stock |
-| 🐄 Cash Cows | Low/flat growth + high volume | Maintain, milk margin, don't over-invest |
+| 🐄 Cash Cows | Low/flat growth + high volume | Maintain, milk margin |
 | ❓ Question Marks | High growth + low volume | Evaluate: scale up or cut? |
 | 🐕 Dogs | Declining + low volume | Phase out or fix urgently |
 
-*Zuma examples (Jan-Feb 2026):*
-- Stars → BLACKSERIES STONE BLUE +37.5%, PEANUT +36.2%, BROWN STONE +979%
-- Cash Cows → STRIPE BLACK BLUE RED (terlaris, +4.2% flat)
-- Question Marks → Tier 8 articles (new, growing but small volume)
-- Dogs → Tier 4 articles (-72.6%)
-
-**Product Life Cycle (PLC)** — explains *why* growth/decline is happening:
-- Introduction → Tier 8 new articles
-- Growth → BLACKSERIES series
-- Maturity → Classic Jet Black (stable, mild decline)
-- Decline → Tier 4, old Classic variants
-
-**Axes for BCG visualization:**
-- X-axis: YTD volume (or revenue) = `SUM(now_jan_qty + now_feb_qty)`
+**Axes:**
+- X-axis: YTD volume = `SUM(now_jan_qty + now_feb_qty)`
 - Y-axis: YoY same-period growth = `(ytd_now / ytd_last - 1) × 100`
 - Bubble size: optional (stock, turnover)
 
@@ -143,66 +663,50 @@ description: Professional presentation design guidelines for Zuma Indonesia. KBI
 
 ### 🏪 Store Context → ABC Pareto + Growth × Revenue Matrix
 
-**Use when:** Comparing store performance, prioritizing resources, store health review.
+**Use when:** Comparing store performance, prioritizing resources.
 
-**ABC Pareto** — tier stores by revenue contribution:
-- **A stores** (top 20% stores → ~80% revenue) → Full attention, premium assortment, planogram priority
+**ABC Pareto:**
+- **A stores** (top 20% → ~80% revenue) → Full attention, premium assortment
 - **B stores** (middle 50% → ~15% revenue) → Maintain, standard assortment
 - **C stores** (bottom 30% → ~5% revenue) → Minimal investment, review viability
 
-**Growth × Revenue Matrix** (BCG equivalent for stores):
+**Growth × Revenue Matrix:**
 | Quadrant | Criteria | Action |
-|----------|----------|--------|
+|---|---|---|
 | ⭐ Star Stores | High YoY growth + high revenue | Invest, expand format |
 | 🐄 Anchor Stores | Flat growth + high revenue | Protect, don't disrupt |
 | 🌱 Rising Stores | High growth + low revenue | Nurture, increase assortment |
 | ⚠️ At-Risk Stores | Declining + low revenue | Audit, restructure, or close |
 
-**Data sources:** `core.sales_with_product` + `portal.store` JOIN for branch/area
-
 ---
 
 ### 💰 Finance Context → Revenue Bridge + Contribution Margin
 
-**Use when:** Explaining why revenue changed, profitability analysis, budget variance.
+**Use when:** Explaining why revenue changed, profitability analysis.
 
-**Revenue Bridge (Waterfall Analysis)** — decompose revenue change into drivers:
+**Revenue Bridge (Waterfall Analysis):**
 ```
 Revenue Change = Volume Effect + Price Effect + Mix Effect + New/Lost articles
 ```
-Example: "Revenue -16.7% karena: volume -22% tapi mix shift ke higher-tier (+5%) dan price increase (+0.3%)"
-
-**Components:**
-- **Volume effect:** more/fewer units sold
-- **Price effect:** avg selling price change
-- **Mix effect:** shift toward higher/lower-tier products
-- **Portfolio effect:** new articles added vs discontinued
 
 **Contribution Margin per tier/store:**
 ```
 Contribution Margin = Revenue - COGS - Direct selling costs
 ```
-Shows *where* Zuma actually makes money — top-line revenue ≠ profitability.
 
 ---
 
 ### 📐 Framework Selection Guide
 
-| User's Question | Framework to Use |
-|-----------------|-----------------|
+| User's Question | Framework |
+|---|---|
 | "Artikel mana yang harus di-invest?" | BCG Matrix |
 | "Kenapa artikel X declining?" | Product Life Cycle |
-| "Toko mana yang performa paling bagus?" | ABC Pareto + Growth×Revenue Matrix |
+| "Toko mana yang performa paling bagus?" | ABC Pareto + Growth×Revenue |
 | "Kenapa revenue bulan ini turun?" | Revenue Bridge (Waterfall) |
 | "Toko mana yang actually profitable?" | Contribution Margin |
-| "Strategi pertumbuhan Zuma harus ke mana?" | Ansoff Matrix (market × product expansion) |
-| "Kompetitor environment kita kayak apa?" | Porter's Five Forces |
-
-**Default flow for any analysis:**
-1. Identify question type (product / store / finance)
-2. Pick framework above
-3. Map Zuma data to framework axes/quadrants
-4. Build narrative: SCQA → findings → recommendation (SMART)
+| "Strategi pertumbuhan Zuma ke mana?" | Ansoff Matrix |
+| "Kompetitor environment kita?" | Porter's Five Forces |
 
 ---
 
@@ -210,509 +714,70 @@ Shows *where* Zuma actually makes money — top-line revenue ≠ profitability.
 
 **Goal:** Transform descriptive data → compelling narrative with actionable insights
 
-**Critical:** Design beautiful slides ≠ effective presentation. Story first, visuals second.
-
----
-
 ### Framework 1: SCQA (Situation-Complication-Question-Answer)
-
-**McKinsey/consulting standard structure:**
 
 1. **Situation:** Where we are today (context, facts)
 2. **Complication:** Problem/opportunity/tension (what's wrong?)
 3. **Question:** What should we do about it?
 4. **Answer:** Recommendation with rationale + data
 
-**Application:**
-- **Open with complication** (not situation) — grab attention
-- **Every slide answers one question** in the Q→A flow
-- **Tension is key** — no conflict = boring presentation
-
-**Example:**
-- ❌ "Zuma has 598 SKU across 6 branches" (situation, boring)
-- ✅ "19 of top 20 SKU declining -70% YoY — revenue at risk" (complication, urgent)
-
----
+**Key:** Open with complication (not situation) — grab attention immediately.
 
 ### Framework 2: Pyramid Principle (Barbara Minto)
 
-**Structure:**
 - **Top:** Main conclusion/recommendation (answer first!)
 - **Layer 1:** 3-4 key supporting arguments
 - **Layer 2:** Data/evidence for each argument
-- **Layer 3:** Detailed analysis (appendix)
 
 **Golden rule:** Start with the answer, not the data.
 
-**Slide application:**
-- Headline = conclusion (not topic)
-- Body = supporting evidence
-- Footer = "So what?" implication
-
-**Example headlines:**
+**Headline examples:**
 - ❌ "Top 20 SKU Performance" (topic)
 - ✅ "Top 20 SKU face 80% decline — urgent product refresh needed" (conclusion)
 
----
+### Framework 3: Narrative Arc
 
-### Framework 3: Insight Hierarchy (Gartner Model)
+1. **Setup:** Where we are (brief context)
+2. **Conflict:** What's wrong or at stake (tension is key!)
+3. **Journey:** What we discovered in the data
+4. **Resolution:** What we should do
+5. **Call to Action:** Next steps with urgency
 
-**4 levels of analysis:**
+### Framework 4: SMART Recommendations
 
-1. **Descriptive:** What happened? (data reporting)
-   - "Revenue is Rp 27.6B"
-   - Charts, tables, metrics
-   
-2. **Diagnostic:** Why did it happen? (root cause)
-   - "Revenue declining because of product lifecycle maturity + competition"
-   - Analysis, comparisons, breakdowns
-   
-3. **Predictive:** What will happen? (forecast)
-   - "If trend continues, we lose Rp 2.3B by Q4"
-   - Scenarios, projections, trend lines
-   
-4. **Prescriptive:** What should we do? (action)
-   - "Launch 10-15 new SKU per quarter to recover Rp 500M by Q3"
-   - Recommendations, roadmap, metrics
-
-**Most presentations fail at Diagnostic/Predictive/Prescriptive — they just report data (Descriptive).**
-
-**Quality bar:** Every insight must answer "So what?" and progress through hierarchy.
-
----
-
-### Framework 4: Narrative Arc for Business
-
-**Classic story structure:**
-
-1. **Setup:** Where we are (brief, establishes context)
-2. **Conflict/Challenge:** What's wrong or at stake (tension!)
-3. **Journey:** What we discovered in the data (insights)
-4. **Resolution:** What we should do (recommendations)
-5. **Call to action:** Next steps with urgency
-
-**Critical:** Without conflict, presentation is flat. Find the "villain":
-- Market threat
-- Declining performance
-- Missed opportunity
-- Resource constraint
-
-**Example narrative:**
-- Setup: "Zuma operates 6 branches across Indonesia"
-- Conflict: "But 19 of top 20 SKU declining -80% YoY — revenue collapsing"
-- Journey: "We analyzed the data and found 3 patterns..."
-- Resolution: "We can reverse decline with 3-play strategy"
-- CTA: "Approve product pipeline by end of Q2"
-
----
-
-### Best Practices: McKinsey Slide Structure
-
-**Every slide must have:**
-
-1. **Insight headline** (not topic title)
-   - Answer "So what?" in the headline itself
-   - Make it actionable/decision-oriented
-   
-2. **Supporting visual** (chart/table/diagram)
-   - Data that proves the headline
-   - Annotate key points
-   
-3. **Bottom-line implication** (1-2 sentences)
-   - What this means for the business
-   - Call to action or next question
-
-**Example slide:**
-```
-[Headline] Top 20 SKU face 80% YoY decline — urgent product refresh needed
-
-[Visual] Bar chart showing YoY decline by SKU
-         - 19/20 declining
-         - Avg decline -83%
-         - Only 1 SKU growing (Merci +31%)
-
-[Implication] Without new product pipeline, we risk Rp 2.3B revenue loss by Q4.
-              Recommend launching 10-15 new SKU per quarter starting Q2.
-```
-
----
-
-### Actionable Recommendations: SMART Format
-
-**Every recommendation must be:**
-
+Every recommendation must be:
 - **Specific:** Not "improve products" but "launch 10-15 new SKU in Men's & Baby"
 - **Measurable:** "Recover Rp 500M revenue by Q3"
 - **Achievable:** Within resource/time constraints
 - **Relevant:** Addresses root cause identified
 - **Time-bound:** "By end of Q2 2025"
 
-**Template:**
-1. **What:** The action (clear, specific)
-2. **Why:** Rationale tied to insight (diagnostic)
-3. **How:** Implementation approach (high-level)
-4. **When:** Timeline with milestones
-5. **Impact:** Expected outcome (quantified)
-6. **Investment:** Resources needed (budget, headcount)
-7. **Owner:** Who's accountable
-
 ---
 
-### Common Pitfalls
+## Deployment Workflow
 
-**❌ Descriptive-only presentation:**
-- Just shows data without interpretation
-- "Revenue is X, Cost is Y, Profit is Z"
-- Audience reaction: "So what?"
+### Option A: HTML Deck (Primary — MANDATORY default)
 
-**❌ Missing "why" analysis:**
-- Shows WHAT happened but not WHY
-- "Sales declined 80%" → But why? Competition? Product? Market?
+**Format 1: Slide-Based (Prev/Next Navigation)**
+Reference: https://bm-jatim.vercel.app
+Use for: Formal presentations, BM decks, executive reviews
 
-**❌ No forecast/projection:**
-- Doesn't answer "What if we don't act?"
-- No sense of urgency
-
-**❌ Generic recommendations:**
-- "Improve products", "Expand market", "Increase sales"
-- Not specific, measurable, or time-bound
-
-**❌ No prioritization:**
-- Lists 10 recommendations without ranking
-- Everything seems equally important = nothing is
-
-**✅ Good presentation:**
-- Answers WHY (diagnostic)
-- Shows WHAT IF (predictive)
-- Recommends WHAT TO DO (prescriptive)
-- Quantifies everything (metrics, timelines, investment, ROI)
-- Prioritizes actions (urgent vs important)
-- Creates urgency (deadline, risk, opportunity cost)
-
----
-
-### Quality Checklist
-
-Before finalizing deck, verify:
-
-- [ ] **Headline = insight** (not topic) on every slide
-- [ ] **Story arc clear:** Setup → Conflict → Journey → Resolution → CTA
-- [ ] **Diagnostic level:** WHY analysis included (not just WHAT)
-- [ ] **Predictive level:** Forecast/scenario analysis (what if we don't act?)
-- [ ] **Prescriptive level:** SMART recommendations with metrics
-- [ ] **Quantified impact:** Investment, ROI, timeline for each recommendation
-- [ ] **Prioritization:** Urgent vs important, sequenced roadmap
-- [ ] **Risk mitigation:** What could go wrong? How do we address it?
-- [ ] **Success criteria:** How do we measure progress?
-- [ ] **Call to action:** Clear next steps with ownership + deadline
-
----
-
-## Slide Templates
-
-### Template 1: Title Slide
-**Layout:**
-- Full background: Zuma Teal (#002A3A) with subtle gradient
-- Title: Large, white, left-aligned or centered
-- Subtitle: Smaller, white or light gray
-- Footer: Date, presenter, logo (small, bottom-right)
-
-**Example:**
-```
-[Full Teal Background]
-
-TITLE IN WHITE
-72pt Bold
-
-Subtitle or Context
-28pt Regular
-
-Date | Presenter | Small Zuma logo
-```
-
-### Template 2: Section Divider
-**Layout:**
-- 50% Teal (#002A3A) | 50% White
-- Section title: ALL CAPS, white on Teal side
-- Optional: Green accent line on white side
-
-**Example:**
-```
-[Left 50%: Teal]        [Right 50%: White]
-SECTION TITLE           [Green accent bar]
-ALL CAPS WHITE
-```
-
-### Template 3: Data Slide (2-Column)
-**Layout:**
-- Left (40%): Context, headline, key takeaway
-- Right (60%): Chart/visual
-- Header: Slide title (Teal, top)
-
-**Example:**
-```
-SLIDE TITLE (Teal, 32pt)
-
-[Left Column]           [Right Column]
-Key Insight Text        [Chart/Graph]
-Supporting details      - Blue bars
-Call-to-action          - Green highlights
-                        - Clean axes
-```
-
-### Template 4: Metrics Highlight
-**Layout:**
-- Hero number: Center or top-right, huge (72-96pt), Teal
-- Context below: What the number means
-- Optional: Comparison (YoY, vs target) in Green
-
-**Example:**
-```
-METRIC TITLE
-
-       194,498
-       [Teal, 96pt Bold]
-
-Description of metric
-+25% YoY [Green accent]
-```
-
-### Template 5: Table + Insight
-**Layout:**
-- Top: Brief intro/headline
-- Middle: Clean table (Teal header, white rows, borders)
-- Bottom: Key insight or action item
-
-**Example:**
-```
-TABLE TITLE
-
-[Table]
-| Header 1 [Teal bg] | Header 2 | Header 3 |
-| Data row 1         | ...      | ...      |
-| Data row 2         | ...      | ...      |
-
-→ Key Insight: [Green arrow] Brief takeaway
-```
-
----
-
-## Visual Guidelines
-
-### ⚠️ IMPORTANT: Match Visuals to Content
-
-**Use charts ONLY when presenting data/metrics.**
-**Use flowcharts/diagrams for processes/workflows/concepts.**
-
-Don't force charts where they don't belong!
-
-### Data Visualization (Charts)
-Use when presenting: sales numbers, performance metrics, comparisons, trends
-
-- **Bar Charts:** Solid Teal bars, Green for highlights/comparison
-- **Line Charts:** Teal primary line, Green secondary/target line
-- **Area Charts:** Teal fill with gradient (semi-transparent)
-- **Pie/Donut:** Teal shades (light to dark), Green for key segment
-- **Tables:** Teal header row, alternating white/light gray rows
-
-### Process Visualization (Flowcharts/Diagrams)
-Use when presenting: workflows, decision trees, system architecture, timelines
-
-- **Flowcharts:** Teal boxes/shapes, Green arrows for flow, white text
-- **Timelines:** Horizontal with Teal milestones, Green current phase
-- **Org Charts:** Teal header boxes, white/light gray sub-boxes
-- **Decision Trees:** Teal decision nodes, Green paths
-- **Process Flows:** Simple boxes + arrows (Teal/Green palette)
-
-### Chart Styling
-- **Clean axes** (no heavy borders)
-- **Minimal gridlines** (light gray, subtle)
-- **Data labels** where helpful (not cluttered)
-- **Legends** simple (top-right or bottom)
-- **Consistent colors** across all charts
-
-### Avoid
-- 3D effects
-- Drop shadows (unless very subtle)
-- Overly decorative elements
-- Chart junk (excessive borders, backgrounds)
-- **Forcing charts when content is conceptual** (use flowcharts instead)
-
----
-
-## Do's & Don'ts
-
-### ✅ DO
-- Use Teal for authority, Green for highlights
-- Keep white space generous
-- Align everything to grid
-- Use big numbers for impact
-- **Match visuals to content** (charts for data, flowcharts for processes)
-- Mix visual types for variety (when appropriate)
-- Stay consistent with typography
-- Use gradients sparingly (Teal only)
-
-### ❌ DON'T
-- Mix too many colors (stick to Teal + Green palette)
-- Crowd slides (less is more)
-- Use decorative fonts
-- Add random shapes/icons
-- Make text too small (<14pt body)
-- Center-align body text (left-align for readability)
-- Use animations (unless specifically requested)
-
----
-
-## Implementation (python-pptx)
-
-### Key Libraries
-```python
-from pptx import Presentation
-from pptx.util import Inches, Pt
-from pptx.enum.text import PP_ALIGN
-from pptx.dml.color import RGBColor
-```
-
-### Color Definitions
-```python
-ZUMA_TEAL = RGBColor(0, 42, 58)      # #002A3A
-ZUMA_GREEN = RGBColor(0, 226, 115)    # #00E273
-WHITE = RGBColor(255, 255, 255)
-LIGHT_GRAY = RGBColor(245, 247, 250)
-DARK_GRAY = RGBColor(44, 62, 80)
-MID_GRAY = RGBColor(127, 140, 141)
-```
-
-### Slide Sizing
-```python
-prs = Presentation()
-prs.slide_width = Inches(16)   # 16:9 aspect ratio
-prs.slide_height = Inches(9)
-```
-
-### Typography Helper
-```python
-def set_text_format(text_frame, font_size, bold=False, color=DARK_GRAY, align=PP_ALIGN.LEFT):
-    for paragraph in text_frame.paragraphs:
-        paragraph.font.size = Pt(font_size)
-        paragraph.font.bold = bold
-        paragraph.font.color.rgb = color
-        paragraph.alignment = align
-```
-
----
-
-## Reference Examples
-
-**Style Inspiration:** KBI Finance Report (layout, composition, spacing)
-**Brand Colors:** Zuma Teal #002A3A + Green #00E273
-**Adaptability:** Chart types flex based on data (not exact replica)
-
-**Key Elements from KBI to Adopt:**
-- Grid-based 2-column layouts
-- Big metric callouts
-- Clean chart integration
-- Generous white space
-- Data-first composition
-
-**Zuma Customizations:**
-- Replace blue → Teal (#002A3A)
-- Replace accent → Green (#00E273)
-- Add Zuma logo/branding where appropriate
-- Adjust charts to match data needs (not force KBI chart types)
-
----
-
-## Alternative Approach: HTML Deck (Vercel)
-
-**When to use:** When python-pptx struggles with complex layouts or user wants web-based deck
-
----
-
-## 🎨 Two HTML Deck Formats — Choose Based on Context
-
-### Format 1: Slide-Based (Prev/Next Navigation)
-**Reference:** https://bm-jatim.vercel.app
-**Use when:** Formal presentations, BM decks, executive reviews — mimics PowerPoint behavior
-
-**Characteristics:**
-- Each slide = `height: 100vh` (full screen, no scroll)
-- Prev ← / Next → navigation buttons (bottom center)
-- Dot indicators showing current slide number
-- Keyboard arrow support (optional)
-- One slide visible at a time
-
-**CSS Pattern:**
 ```css
 .slide { height: 100vh; width: 100%; display: none; }
 .slide.active { display: flex; flex-direction: column; }
 ```
 
-**JS Navigation:**
-```javascript
-let current = 0;
-function goTo(n) {
-    slides[current].classList.remove('active');
-    current = (n + slides.length) % slides.length;
-    slides[current].classList.add('active');
-    updateDots();
-}
-document.addEventListener('keydown', e => {
-    if (e.key === 'ArrowRight') goTo(current + 1);
-    if (e.key === 'ArrowLeft') goTo(current - 1);
-});
-```
+**Format 2: Scroll-Down (Card Layout)**
+Reference: https://ladies-wedges-deck.vercel.app
+Use for: Product analysis, detailed reports, content-heavy decks
 
-**Best for:** BM Review, executive briefing, structured multi-section decks
-
----
-
-### Format 2: Scroll-Down (Card Layout)
-**Reference:** https://ladies-wedges-deck.vercel.app
-**Use when:** Product analysis, detailed reports, content-heavy decks
-
-**Characteristics:**
-- All slides visible, scroll down to navigate
-- Each slide = a card (fixed aspect ratio, e.g. `aspect-[16/10]`)
-- 1-column or 2-column grid of cards
-- No JS required — pure HTML/CSS
-- More scannable, better for dense content
-
-**CSS Pattern:**
 ```css
 .deck { display: flex; flex-direction: column; gap: 2rem; }
 .slide { aspect-ratio: 16/10; width: 100%; border-radius: 1rem; }
-/* OR grid layout: */
-.deck { display: grid; grid-template-columns: 1fr; gap: 2rem; }
 ```
 
-**Best for:** Product analysis decks, detailed reports, data-heavy content, R&D reviews
+### Deploy to Vercel
 
----
-
-### When to Use Which Format
-
-| Scenario | Format | Example |
-|----------|--------|---------|
-| BM Review presentation | Format 1 (slide nav) | bm-jatim.vercel.app |
-| Executive briefing | Format 1 (slide nav) | — |
-| Product/SKU analysis | Format 2 (scroll) | ladies-wedges-deck.vercel.app |
-| Detailed data report | Format 2 (scroll) | — |
-| Store performance deep dive | Format 2 (scroll) | — |
-| Quick pitch (3-5 slides) | Format 1 (slide nav) | — |
-
----
-
-### Workflow
-
-**1. Generate HTML Deck**
-- Single HTML file with Tailwind CSS
-- Swiss Style / Bold typography (Inter font)
-- Grid-based card layouts (3-column for overview)
-- Absolute positioning for precise element placement
-- Zuma colors: Green #00E273 accent, Teal #002A3A text, off-white #F5F5F0 backgrounds
-
-**2. Deploy to Vercel**
 ```bash
 # Setup
 mkdir ~/Desktop/project-name-vercel
@@ -726,143 +791,64 @@ cd ~/Desktop/project-name-vercel
   --prod --yes --token "$VERCEL_TOKEN"
 ```
 
-⚠️ **Note:** `vercel` command not in $PATH on this machine. Always use full node + vercel paths above.
+⚠️ `vercel` command not in $PATH on this machine. Always use full node + vercel paths above.
 
-**3. Print to PDF (from web)**
+### Print to PDF
 
-⚠️ **MANDATORY: Include `@media print` CSS in every deck** (added to TEMPLATE.html v2.0 — always use template so this is automatic). Without it, slides kepotong-potong ketika di-PDF.
+⚠️ **MANDATORY: Include `@media print` CSS in every deck.**
 
-The `@media print` block in TEMPLATE.html handles:
-- `@page { size: A4 landscape; margin: 0; }` — auto landscape
-- `page-break-after: always` per slide — 1 slide = 1 page
-- `height: 190mm; overflow: hidden` — clip to page, no cutoff
-- `print-color-adjust: exact` — background colors print correctly
-- `.gradient-blob { display: none }` — hide heavy decorative elements
-- `#print-btn { display: none }` — hide UI button in PDF output
-
-User instructions:
-- Open Vercel URL in browser (Chrome recommended)
-- Click 🖨️ button (or Cmd+P)
-- Settings:
-  - **Background graphics:** ✅ ON (CRITICAL!)
-  - **Layout:** Landscape (auto from CSS)
-  - **Margins:** None
-  - **Save as PDF**
-
-### Benefits
-- ✅ Web-shareable link (permanent URL)
-- ✅ Better print fidelity (browser render > headless Chrome)
-- ✅ Interactive (scrollable, responsive)
-- ✅ Easy iteration (re-deploy in seconds)
-- ✅ No python-pptx layout struggles
-
-### HTML Template Structure
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-        /* Custom styles with Zuma colors */
-    </style>
-</head>
-<body class="bg-[#1a1a1a] p-10">
-    <div class="max-w-7xl mx-auto grid grid-cols-3 gap-5">
-        <!-- Slide cards -->
-        <div class="bg-[#f5f5f0] rounded-2xl p-12 aspect-[16/10] relative">
-            <!-- Content -->
-        </div>
-    </div>
-</body>
-</html>
+```css
+@media print {
+    @page { size: A4 landscape; margin: 0; }
+    .slide { page-break-after: always; height: 190mm; overflow: hidden; }
+    print-color-adjust: exact;
+    .gradient-blob, #print-btn { display: none; }
+}
 ```
 
-### Reference
-**Example:** RO Benchmark deck → https://ro-benchmark-vercel.vercel.app
-**Style:** Swiss Design (bold Grotesk, high contrast, generous whitespace, grid system)
-**Deployment date:** 2026-02-16
-**Deployment time:** ~10 seconds (Vercel)
+User instructions:
+- Open Vercel URL in Chrome
+- Cmd+P → Background graphics: ✅ ON → Layout: Landscape → Margins: None → Save as PDF
 
-### ⚙️ Implementation Decision: Direct Coding vs Delegation
+### Option B: python-pptx (Only when .pptx explicitly requested)
 
-**✅ DIRECT CODING (Iris writes code herself):**
-Use when task is simple and straightforward:
-- Single file HTML updates (content, layout, styling)
-- Clear requirements (add screenshot, change text to Bahasa, fix grid)
-- Pure HTML + Tailwind CSS (no complex logic)
-- Quick iterations (user feedback loop)
-- **Speed advantage:** Write → deploy → done (no AI interpretation layer)
+```python
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from pptx.dml.color import RGBColor
 
-**Example tasks:**
-- Update deck content (slide text, add images)
-- Fix layout (grid → scrollable, responsive tweaks)
-- Add Bahasa Indonesia translation
-- Insert screenshots into existing slides
-
-**⚠️ DELEGATE TO OPENCODE/CLAUDE CODE:**
-Use when task requires exploration or complex logic:
-- Multi-file projects (backend + frontend)
-- Large codebases (need to explore structure)
-- Complex algorithms or calculations
-- Python scripts with dependencies/imports
-- Database operations (multi-step queries, schema changes)
-- **When python-pptx fails repeatedly:** Switch to direct HTML scripting
-
-**Example tasks:**
-- Full app development
-- Data pipelines with error handling
-- Interactive charts with libraries
-- Backend API integration
-
-**Rule of thumb:** Simple HTML/CSS = Direct (faster). Everything else = Delegate (leverage AI reasoning).
-
-**Proven workflow (2026-02-16):**
-- RO Benchmark deck updates: Direct coding → 3 iterations → 10 sec deploys ✓
-- Complex PPT generation: OpenCode → multiple failures → switched to direct scripting ✓
+ZUMA_TEAL = RGBColor(0, 42, 58)      # #002A3A
+ZUMA_GREEN = RGBColor(0, 226, 115)    # #00E273
+```
 
 ---
 
-## Usage
+## Implementation Decision: Direct vs Delegate
 
-🚨 **CRITICAL: DEFAULT WORKFLOW FOR ALL PPT REQUESTS** 🚨
+### ✅ DIRECT CODING (write HTML directly):
+- Single file HTML updates (content, layout, styling)
+- Clear requirements
+- Pure HTML + Tailwind CSS (no complex logic)
+- Quick iterations
 
-**When ANY user requests PPT/presentation:**
-1. **Generate HTML deck** (single file with Tailwind CSS)
-2. **Deploy to Vercel** (web-based, permanent URL)
-3. **Share link** — NOT static file download
+### ⚠️ DELEGATE TO OPENCODE/CLAUDE CODE:
+- Multi-file projects (backend + frontend)
+- Complex algorithms or calculations
+- Python scripts with dependencies
+- Database operations
 
-**Why HTML + Vercel is mandatory:**
-- ✅ Web-shareable (permanent URL, accessible anywhere)
-- ✅ Better print quality (user can print to PDF themselves)
-- ✅ Fast iteration (re-deploy in 10 seconds)
-- ✅ No python-pptx layout struggles
-- ✅ Scrollable, responsive, modern UX
+---
+
+## Standard Workflow
+
+🚨 **CRITICAL: DEFAULT FOR ALL PPT REQUESTS** 🚨
+
+1. Generate HTML deck (single file, chosen preset, Zuma colors)
+2. Deploy to Vercel
+3. Share permanent URL — NOT static file download
 
 **ONLY use python-pptx if:**
 - User explicitly requests .pptx file format
-- Or: HTML approach fails multiple times
+- HTML approach fails multiple times
 
----
-
-**Standard workflow:**
-
-1. Read this SKILL.md for design guidelines
-2. Use Zuma colors (Teal #002A3A + Green #00E273, NOT other palettes)
-3. Follow KBI-inspired or Swiss Style layout principles
-4. Generate HTML with Tailwind CSS (scrollable vertical slides)
-5. Deploy to Vercel (full path — see Section above for correct command)
-6. Share permanent URL
-
-**Output specifications:**
-- Format: Scrollable HTML (vertical 1-column layout)
-- Responsive: Works on desktop/mobile/tablet
-- Printable: User can Cmd+P → Save as PDF (with background graphics ON)
-- Shareable: Permanent Vercel URL
-- Professional quality: CEO-level audience ready
-
-**Tools:**
-- **Primary (MANDATORY):** HTML + Tailwind CSS → Vercel deployment
-- **Fallback:** python-pptx → gog CLI for Google Drive upload (only when explicitly requested)
-
-**Quality Bar:** Corporate presentation-ready, web-first, shareable
+**Quality bar:** Corporate presentation-ready, web-first, shareable, distinctive visual design that reflects Zuma brand personality.

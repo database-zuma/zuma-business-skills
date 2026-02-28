@@ -1,20 +1,20 @@
-# eos-visual-skill — Zuma McKinsey PPT System
+# eos-visual-skill — Zuma Visual Presentation System
 
 **Who uses this:** Eos (Visual/PPT Nanobot, Gemini 3.1 Pro)
-**Purpose:** End-to-end system for generating McKinsey-quality consulting decks in Zuma Mixed Executive Report aesthetic. This file is the single source of truth — narrative logic, deck structure, slide types, framework templates, visual components, and design system.
+**Purpose:** End-to-end system for generating distinctive, high-quality consulting decks in Zuma brand aesthetic. Visual system based on frontend-slides (https://github.com/zarazhangrui/frontend-slides) with Zuma colors (`#002A3A` teal, `#00E273` green). Narrative logic, deck structure, slide types, framework templates, and visual components are the single source of truth.
 
 **Audience:** Zuma management & directors — busy, decision-focused. Every slide must earn its place.
 **Primary deck types:** Sales Analysis · Stock Analysis · Combined (Sales + Stock)
 
 ---
 
-## DESIGN SYSTEM (v4.0 — 2026-02-25 — Mixed Executive Report)
-#TX|
-#SK|**This is the canonical design standard. All HTML patterns in §3, §4, §5, §6 use this palette. No overrides.**
-#BY|
-#ZV|**MANDATORY LANGUAGE RULE: ALL OUTPUT MUST BE IN BAHASA INDONESIA. Label, heading, narasi, insight, judul slide, konten — semuanya dalam BI. TIDAK ADA PENGECUALIAN.**
+## DESIGN SYSTEM (v5.0 — 2026-02-28 — frontend-slides + Zuma Brand)
+
+**This is the canonical design standard. All HTML patterns in §3, §4, §5, §6 use this palette. No overrides.**
+
+**MANDATORY LANGUAGE RULE: ALL OUTPUT MUST BE IN BAHASA INDONESIA. Label, heading, narasi, insight, judul slide, konten — semuanya dalam BI. TIDAK ADA PENGECUALIAN.**
 #VP|
-### Color Tokens (bm-jatim palette — MANDATORY — DUAL MODE)
+### Color Tokens (Zuma Brand — MANDATORY — DUAL MODE)
 #KS|
 ```css
 /* ═══════════════════════════════════════════════════════════
@@ -914,7 +914,88 @@ Six reusable components. Each has: HTML pattern + Imagen prompt for generating i
 
 ---
 
-## §6 MIXED EXECUTIVE REPORT VISUAL SYSTEM
+## ⚠️ CRITICAL: Viewport Fitting (Non-Negotiable)
+
+**Every slide MUST fit exactly in the viewport. No scrolling within slides, ever.**
+
+### Content Density Limits Per Slide
+
+| Slide Type | Maximum Content |
+|---|---|
+| Title slide | 1 heading + 1 subtitle |
+| Content slide | 1 heading + 4-6 bullets (max 2 lines each) |
+| Feature grid | 1 heading + 6 cards (2×3 or 3×2) |
+| Code slide | 1 heading + 8-10 lines |
+| Quote slide | 1 quote (max 3 lines) + attribution |
+
+**Too much content? → Split into multiple slides. NEVER scroll.**
+
+### Mandatory Viewport CSS
+
+```css
+/* VIEWPORT FITTING — MANDATORY for every slide */
+.slide {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile */
+    overflow: hidden; /* CRITICAL: Prevent ANY overflow */
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+
+/* ALL typography and spacing uses clamp() — NO fixed px */
+:root {
+    --title-size: clamp(1.5rem, 5vw, 4rem);
+    --h2-size: clamp(1.25rem, 3.5vw, 2.5rem);
+    --body-size: clamp(0.75rem, 1.5vw, 1.125rem);
+    --slide-padding: clamp(1rem, 4vw, 4rem);
+    --content-gap: clamp(0.5rem, 2vw, 2rem);
+}
+
+/* Breakpoints for short screens */
+@media (max-height: 700px) {
+    :root { --slide-padding: clamp(0.75rem, 3vw, 2rem); --title-size: clamp(1.25rem, 4.5vw, 2.5rem); }
+}
+@media (max-height: 600px) {
+    :root { --slide-padding: clamp(0.5rem, 2.5vw, 1.5rem); --title-size: clamp(1.1rem, 4vw, 2rem); }
+    .nav-dots, .keyboard-hint, .decorative { display: none; }
+}
+@media (max-height: 500px) {
+    :root { --slide-padding: clamp(0.4rem, 2vw, 1rem); --title-size: clamp(1rem, 3.5vw, 1.5rem); }
+}
+```
+
+### ⚠️ CSS Gotcha — Negating CSS Functions
+
+**WRONG — silently ignored by browsers, no console error:**
+```css
+right: -clamp(28px, 3.5vw, 44px);   /* ❌ Browser discards this */
+```
+
+**CORRECT — always wrap in calc():**
+```css
+right: calc(-1 * clamp(28px, 3.5vw, 44px));  /* ✅ */
+```
+
+### Anti-AI-Slop Rules (from frontend-slides)
+
+**NEVER use as display fonts:** Inter, Roboto, Arial, system fonts
+
+**NEVER use:** `#6366f1` (generic indigo), purple gradients on white, centered-only layouts, identical card grids
+
+**INSTEAD:** Distinctive font pairings, Zuma Teal + Green color system, asymmetric layouts when appropriate
+
+### Style Presets Reference
+
+12 curated style presets available in `zuma-ppt-design/SKILL.md`. For PPT-style decks, Eos primarily uses the Zuma Mixed Executive Report system (below). For more expressive decks, reference zuma-ppt-design presets.
+
+---
+
+## §6 ZUMA EXECUTIVE VISUAL SYSTEM
 
 ### §6.1 Color Tokens (Dual Mode)
 
@@ -1282,7 +1363,214 @@ Run before generating any output. Fix failures before proceeding.
 If golden template fails → use style at https://zuma-bm-jatim.vercel.app/  
 Reference screenshots available in workspace.
 
----
+### ⚠️ MANDATORY: Edit-Not-Create Enforcement (Wayan 2026-02-28)
+
+> **Eos TIDAK BOLEH membuat file HTML dari scratch.**
+> Iris/orchestrator WAJIB copy `TEMPLATE.html` ke output path SEBELUM spawn Eos.
+> Eos hanya boleh EDIT file yang sudah ada.
+
+**Rules:**
+1. **IF output file sudah ada di outbox path** → Eos WAJIB edit file itu, BUKAN overwrite dari scratch
+2. **IF output file BELUM ada** → VIOLATION. Iris lupa pre-copy. Eos HARUS STOP dan report error.
+3. **IF output file < 200 baris setelah Eos edit** → VIOLATION. Template alone = 567 baris. Output < 200 = Eos menulis dari scratch, bukan editing template.
+4. **IF Eos menulis "slides omitted for brevity" atau sejenisnya** → VIOLATION. SEMUA slide HARUS ada, lengkap, tanpa shortcut.
+
+**Workflow yang BENAR:**
+```
+1. Iris copy TEMPLATE.html → outbox/{nama-deck}.html
+2. Iris spawn Eos: "EDIT file di outbox/{nama-deck}.html"
+3. Eos baca file yang ada (567+ baris), baca handoff JSON, baca 3 skill
+4. Eos replace placeholder content dengan data aktual
+5. Eos tambah/kurangi slide dengan COPY-PASTE pattern dari slide yang ada
+6. Eos deploy ke Vercel
+7. Output HARUS >400 baris (realistic deck = 500-1200 baris)
+```
+
+**Root cause:** Gemini consistently ignores "use template" instructions when creating from scratch.
+**Solution:** Pre-copy template so Eos only needs to EDIT, not CREATE.
+
+### ⛔ CRITICAL: Scroll-Based Layout Enforcement (Wayan 2026-02-28)
+
+> **DILARANG KERAS mengubah layout dari scroll-based ke overlay/JS-navigation pattern.**
+> Template ZUMA menggunakan scroll-based layout. Semua slide visible saat scroll.
+> User HARUS bisa Ctrl+P / Cmd+P untuk print semua slide sekaligus.
+
+**BANNED patterns (JANGAN PERNAH gunakan):**
+```css
+/* ❌ BANNED — overlay pattern yang bikin Ctrl+P rusak */
+.slide { position: absolute; opacity: 0; visibility: hidden; }
+.slide.active { opacity: 1; visibility: visible; }
+body { overflow: hidden; }  /* blocks scrolling */
+width: 100vw; height: 100vh; overflow: hidden;  /* locks viewport */
+```
+
+```javascript
+// ❌ BANNED — JS slide toggling
+slides.forEach(s => s.classList.remove('active'));
+slides[index].classList.add('active');
+document.addEventListener('keydown', (e) => { ... showSlide(...) ... });
+```
+
+**WAJIB patterns (scroll-based, printable):**
+```css
+/* ✅ CORRECT — scroll-based layout dari TEMPLATE.html */
+body { background: #1a1a1a; padding: 2rem; }
+.slide {
+    background: #f9f9f9;
+    border-radius: 12px;
+    padding: 3rem;
+    margin-bottom: 1.5rem;  /* visible spacing between slides */
+    min-height: 600px;
+    position: relative;  /* NOT absolute! */
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+@media print {
+    .slide { page-break-after: always; height: 190mm !important; }
+}
+```
+
+**Chart.js + Scroll-Based — kompatibel:**
+- Charts TETAP bisa animated — gunakan IntersectionObserver (sudah ada di TEMPLATE.html v3.0)
+- IntersectionObserver triggers chart init saat slide di-scroll ke viewport
+- TIDAK perlu JS navigation untuk lazy-load charts
+- Print button WAJIB ada: `<button onclick="window.print()">`
+
+**Root cause:** Eos pernah mengubah TEMPLATE scroll-based ke overlay pattern. Hasilnya:
+- Ctrl+P hanya print 1 slide (yang active)
+- Slide 2+ blank/hitam karena `position: relative` (bukan `absolute`)
+- User KOMPLAIN karena tidak bisa print semua slide
+
+**ZERO TOLERANCE. Kalau Eos mengubah scroll layout ke overlay = VIOLATION.**
+
+### 🚀 MANDATORY: Vercel Deploy Rules (Wayan 2026-02-28)
+
+> **Setiap deck yang di-deploy ke Vercel WAJIB ikuti pattern ini. Tanpa ini = deck tidak accessible.**
+
+**Deploy command (EXACT — jangan modifikasi):**
+```bash
+source ~/.openclaw/workspace/.env
+mkdir -p outbox/{nama-deck}-vercel
+cp outbox/{nama-deck}.html outbox/{nama-deck}-vercel/index.html
+cd outbox/{nama-deck}-vercel
+~/homebrew/Cellar/node/25.6.0/bin/node ~/homebrew/lib/node_modules/vercel/dist/index.js --prod --yes --token "$VERCEL_TOKEN"
+```
+
+**WAJIB flags:**
+- `--prod` → deploy ke production URL (tanpa ini = preview URL saja, beda setiap deploy)
+- `--yes` → skip confirmation prompt (tanpa ini = nanobot stuck menunggu input)
+- `--token "$VERCEL_TOKEN"` → auth token dari .env (tanpa ini = gagal auth)
+
+**Post-deploy verification (WAJIB):**
+```bash
+# Cek HTTP 200 tanpa auth
+curl -s -o /dev/null -w "%{http_code}" https://{nama-deck}.vercel.app
+# Expected: 200
+```
+
+**BANNED deploy patterns:**
+- ❌ `vercel` tanpa `--prod` → preview URL, bukan production
+- ❌ `vercel` tanpa `--token` → gagal di nanobot (tidak ada interactive login)
+- ❌ Deploy file .html langsung (bukan dari folder/) → Vercel butuh folder dengan index.html
+- ❌ Skip post-deploy curl check → tidak tahu apakah URL accessible
+
+
+### 📊 Chart.js Style Standard (Wayan 2026-02-28)
+
+> **Semua Chart.js visualisasi di deck WAJIB ikuti standard ini. Consistency across decks.**
+
+**Chart.js Global Defaults (set di `<script>` sebelum chart init):**
+```javascript
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+Chart.defaults.color = '#4A5568';
+```
+
+**Dataset colors (WAJIB — Zuma palette):**
+- Primary bar/series: `#00E273` (Zuma green) atau `#002A3A` (Zuma teal)
+- Secondary bar: `#002A3A` jika primary = green, atau sebaliknya
+- Warning/alert: `#FFB800`
+- Negative: `#FF4D4D`
+- JANGAN gunakan warna di luar palette tanpa alasan
+
+**Bar chart options (WAJIB):**
+```javascript
+borderRadius: 4,                          // rounded bar corners
+animation: { duration: 800, easing: 'easeOutQuart' },  // smooth entry
+maintainAspectRatio: false,               // fill container
+```
+
+**Grid & axis styling (WAJIB):**
+```javascript
+scales: {
+    x: { grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false } },
+    y: { grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false } }
+}
+```
+
+**Chart container (WAJIB):**
+```css
+.chart-container { position: relative; height: 400px; width: 100%; }
+```
+
+**Chart init naming convention (WAJIB — IntersectionObserver auto-discovery):**
+```javascript
+// window.initChart_{canvasId} — observer calls this when slide scrolls into view
+window.initChart_trendChart = function() { new Chart(...); };
+window.initChart_storeChart = function() { new Chart(...); };
+```
+
+### 🎨 Dark Slide Gradient Pattern (Wayan 2026-02-28)
+
+> **Dark slides (cover, closing, highlight) menggunakan gradient blob pattern — bukan solid hitam.**
+
+**Background: `#002A3A` (Zuma teal) — BUKAN `#1A1A1A` atau `#000000`**
+
+**Gradient blob (blurred green orb):**
+```css
+.gradient-blob {
+    position: absolute;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(0,226,115,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+    filter: blur(60px);
+    z-index: 0;
+    pointer-events: none;
+}
+/* Posisi: top-right dan/atau bottom-left */
+.gradient-blob-tr { top: -150px; right: -100px; }
+.gradient-blob-bl { bottom: -150px; left: -100px; }
+```
+
+**Kapan pakai dark slides:**
+- ✅ Cover (slide pertama) — SELALU dark + gradient
+- ✅ Closing/Rekomendasi (slide terakhir) — SELALU dark + gradient
+- ✅ Highlight slide (data penting, call-to-action) — OPSIONAL, jangan berlebihan
+- ❌ Content/chart slides — TETAP light background (white/f9f9f9)
+- **Rule of thumb:** Max 2-3 dark slides per deck (cover + closing + optional 1)
+
+**Print CSS — WAJIB hide gradient-blob:**
+```css
+@media print { .gradient-blob { display: none !important; } }
+```
+
+### 📝 So-What Box Pattern (WAJIB di setiap content slide)
+
+```css
+.so-what {
+    border-left: 4px solid #00E273;
+    background: rgba(0,226,115,0.06);
+    padding: 1rem 1.25rem;
+    border-radius: 0 0.5rem 0.5rem 0;
+    margin-top: auto;  /* pushes to bottom of slide */
+}
+```
+```html
+<div class="so-what">
+    <p class="text-xs font-bold uppercase text-[#00E273] mb-1">→ So What</p>
+    <p class="text-sm font-medium text-gray-800">[1-2 kalimat insight actionable]</p>
+</div>
+```
+**Rule:** SETIAP content slide (bukan cover/closing) WAJIB punya So-What box. Ini anchors "kenapa data ini penting" untuk reader.
+
 
 ## 1. Zuma Brand System — Mixed Executive Report
 
@@ -2621,3 +2909,438 @@ vercel --token $VERCEL_TOKEN --yes --prod --name [project-slug] 2>&1 | tail -5
 **All 8 slides reviewed:** Cover ✅ Exec Summary ✅ KPI ✅ Traffic Light Table ✅ Ranking Bar ✅ 2×2 Matrix ✅ Recommendations ✅ Timeline ✅
 
 When building a new deck, **copy the CSS from this file as your starting point**. Replace slide content. Do not reinvent the architecture.
+
+
+---
+
+## §11 KNOWN ISSUES & LESSONS LEARNED (Pipeline Test 2026-02-28)
+
+### §11.1 Eos (Gemini) Template Rewrite Bug
+
+**Severity:** CRITICAL
+**Status:** DOCUMENTED — workaround in place, permanent fix pending
+
+**Problem:** When Iris pre-copies TEMPLATE.html into Eos outbox and instructs Eos to "edit the existing file", Eos (Gemini 3.1 Pro) **completely rewrites the file from scratch** instead of editing it.
+
+**Test details:**
+- Prompt: `"buatkan ppt performa tier 1 di 3 bulan terakhir"`
+- Iris correctly pre-copied TEMPLATE.html (642 lines) → `outbox/tier1-q3m-performance.html`
+- Iris instructed Eos: "Edit the pre-copied template, fill in data from Argus handoff"
+- Eos output: 247 lines, completely new file, NO template patterns preserved
+
+**Wrong CSS pattern (overlay-based — BANNED):**
+```css
+/* ❌ EOS WROTE THIS — overlay navigation, can't Ctrl+P */
+.slide { position: absolute; top: 0; left: 0; width: 100%; height: 100vh; opacity: 0; }
+.slide.active { opacity: 1; z-index: 10; }
+body { overflow: hidden; }
+```
+
+**Correct CSS pattern (scroll-based — REQUIRED):**
+```css
+/* ✅ CORRECT — scroll layout, Ctrl+P prints all pages */
+.slide { min-height: 100vh; display: flex; flex-direction: column; }
+body { overflow-y: auto; }
+@media print { .slide { page-break-after: always; } }
+```
+
+**Impact:**
+- User cannot Ctrl+P to print (only one slide visible at a time)
+- No Tailwind CSS loaded
+- No ZUMA logo
+- No gradient blobs on dark slides
+- No floating print button
+- No IntersectionObserver for chart animations
+- No print CSS
+
+**Root cause:** Gemini 3.1 Pro does NOT reliably follow "edit, don't rewrite" instructions. The model treats every file write as a from-scratch generation regardless of existing content.
+
+**Current workaround:** Manual rebuild after Eos output — copy correct data/narrative from Eos output, paste into scroll-based template structure.
+
+### §11.2 Logo Base64 Truncation Issue
+
+**Severity:** HIGH
+**Status:** FIXED — validation rule added
+
+**Problem:** When writing HTML files with inline base64 logo data, the base64 string gets truncated from 4,318 characters to ~923 characters, producing a blank/transparent image.
+
+**Cause:** Large inline strings are silently truncated during file write operations, especially when embedded in complex HTML with many other elements.
+
+**Fix:** Always validate logo base64 length after writing:
+```bash
+# Validation command — WAJIB RUN setelah setiap file write
+grep -o 'data:image/png;base64,[A-Za-z0-9+/=]*' deck.html | head -1 | wc -c
+# Expected: ~4319 characters (4,318 base64 + newline)
+# If < 4000: TRUNCATED — replace from /tmp/zuma-logo-base64.txt
+```
+
+**Correct logo base64 source:** `/tmp/zuma-logo-base64.txt` (4,318 chars)
+**Backup source:** `~/.openclaw/workspace/zuma-bm-decks/assets/logo-08.png` (regenerate with `base64 < logo-08.png | tr -d '\n'`)
+
+### §11.3 Iris Pipeline Metrics (Baseline)
+
+| Metric | Value | Notes |
+|--------|-------|-------|
+| Total duration | 159,356ms (2.7 min) | End-to-end including Eos spawn |
+| Iris model | claude-sonnet-4-6 | Orchestrator |
+| Eos model | Gemini 3.1 Pro | Visual nanobot |
+| Input tokens | 12 | Minimal (prompt only) |
+| Output tokens | 5,042 | Iris reasoning + instructions |
+| Cache read | 762,670 | Heavy cache usage |
+| Cache write | 5,706 | New context cached |
+| Total tokens | 80,487 | Full session |
+| Argus handoff size | ~2KB | JSON with summary, trends, rankings, products |
+| TEMPLATE.html size | 642 lines | Golden template v4.0 |
+| Eos output size | 247 lines | ❌ Should have been ~400-600 lines |
+| Final fixed deck | 420 lines | After manual rebuild |
+
+### §11.4 Recommended Fix Strategies
+
+**Short-term (implement first):**
+1. **Post-processor QA step** — After Eos writes file, Iris validates:
+   - Contains `<script src="https://cdn.tailwindcss.com">` ✓
+   - Contains `min-height: 100vh` (scroll-based) ✓
+   - Does NOT contain `position: absolute` on `.slide` ✗
+   - Contains `@media print` ✓
+   - Contains `data:image/png;base64` with length > 4000 ✓
+   - Contains `IntersectionObserver` ✓
+   - If ANY check fails → reject and retry (max 2 retries)
+
+**Long-term (architectural):**
+2. **Template locking** — Separate template (CSS/JS/structure) from content (data/text):
+   - Template is READ-ONLY, never passed to Eos for editing
+   - Eos only generates a JSON content payload
+   - A deterministic script merges content into template
+   - Zero risk of template corruption
+
+**Alternative (expensive):**
+3. **Switch Eos to Claude** — Claude respects "edit, don't rewrite" better than Gemini, but higher token cost
+
+### §11.5 ZUMA Logo Placement Rules
+
+**Logo file:** `logo-08.png` (WHITE Z icon + "ZUMA" text, horizontal lockup)
+**Base64 source:** `/tmp/zuma-logo-base64.txt` (4,318 chars)
+
+| Slide | Position | Size | CSS |
+|-------|----------|------|-----|
+| Cover (slide 1) | Top-left | 36×36px display | `width: 36px; height: 36px; object-fit: contain;` |
+| Closing (last slide) | Bottom-left | 24×24px display | `width: 24px; height: 24px; object-fit: contain;` |
+
+**Rules:**
+- SELALU gunakan logo putih (`logo-08.png`) pada slide dengan background gelap
+- JANGAN tampilkan logo pada slide content (background terang)
+- Logo harus inline base64 (bukan external URL) untuk portabilitas
+- Setelah menulis file, WAJIB validasi panjang base64 > 4000 karakter
+
+### §11.6 Verified Live Decks (Reference Table)
+
+| Deck | URL | Slides | Status | Date |
+|------|-----|--------|--------|------|
+| BM Jatim (golden ref) | https://bm-jatim.vercel.app | 8 | ✅ LIVE | 2026-02-25 |
+| Tier 8 Q3M | https://tier8-q3m-performance.vercel.app | 8 | ✅ LIVE | 2026-02-28 |
+| Tier 1 Q3M | https://tier1-q3m-performance.vercel.app | 8 | ✅ LIVE | 2026-02-28 |
+| Tier 1 Q3M (alt) | https://tier1-q3m-vercel.vercel.app | 8 | ✅ LIVE | 2026-02-28 |
+
+**Golden reference untuk copy CSS:** `bm-jatim-GOLDEN-REFERENCE.html`
+**Golden template untuk deck baru:** `TEMPLATE.html` v4.0 (642 lines)
+
+### §11.7 Pipeline Test Command Reference
+
+```bash
+# Test Iris pipeline
+openclaw agent --agent iris --message "buatkan ppt performa tier 1 di 3 bulan terakhir" 2>&1
+
+# Monitor Eos outbox
+ls -la ~/.openclaw/workspace-eos-nanobot/outbox/
+
+# Validate deck after Eos writes
+# 1. Check scroll-based (not overlay)
+grep -c "min-height: 100vh" outbox/deck.html    # Expected: >= 1
+grep -c "position: absolute" outbox/deck.html     # Expected: 0 (for .slide)
+
+# 2. Check Tailwind loaded
+grep -c "cdn.tailwindcss.com" outbox/deck.html    # Expected: 1
+
+# 3. Check logo not truncated
+grep -o 'data:image/png;base64,[A-Za-z0-9+/=]*' outbox/deck.html | head -1 | wc -c  # Expected: ~4319
+
+# 4. Check print CSS exists
+grep -c "@media print" outbox/deck.html            # Expected: >= 1
+
+# 5. Check IntersectionObserver exists
+grep -c "IntersectionObserver" outbox/deck.html    # Expected: >= 1
+```
+
+
+---
+
+## §12 TEMPLATE-LOCKED PIPELINE & CONTENT JSON SCHEMA (2026-02-28)
+
+### §12.1 Architecture Overview
+
+**OLD (broken):** Iris pre-copies TEMPLATE.html → Eos "edits" it → Eos REWRITES from scratch → overlay output
+**NEW (template-locked):** Argus → handoff JSON → Eos → content JSON → `build_deck.py` → HTML → `validate_deck.py` → Vercel
+
+```
+USER PROMPT
+    │
+    ▼
+  IRIS (orchestrator)
+    │
+    ├──→ ARGUS (nanobot) ──→ handoff JSON (raw data + narrative)
+    │                          │
+    ├──→ EOS (nanobot) ◄──────┘ reads handoff
+    │      │
+    │      └──→ content JSON (slide specs, NOT HTML)
+    │              │
+    ├── build_deck.py ◄────┘ reads content JSON + locked TEMPLATE CSS + logo base64
+    │      │
+    │      └──→ deck.html (deterministic, 100% template-safe)
+    │              │
+    ├── validate_deck.py ◄─┘ 15-check QA
+    │      │
+    │      └──→ PASS / FAIL
+    │              │
+    └── Deploy to Vercel (if PASS)
+```
+
+**Key principle:** Eos NEVER writes HTML. Eos ONLY produces structured content JSON. The Python builder handles ALL HTML generation using locked CSS from TEMPLATE.html.
+
+### §12.2 Content JSON Schema
+
+```json
+{
+  "deck": {
+    "title": "string — Deck title (appears on cover)",
+    "subtitle_green": "string — Green subtitle on cover",
+    "period": "string — e.g. 'Des 2025 – Feb 2026'",
+    "date": "string — e.g. '28 Februari 2026'",
+    "department": "string — e.g. 'Sales Analytics'",
+    "source": "string — Data source, e.g. 'Portal Analytics'",
+    "description": "string — One-line description for cover"
+  },
+  "slides": [
+    { "type": "cover | exec_summary | chart_trend | chart_ranking | chart_detail | breakdown | insights | table | closing" }
+  ]
+}
+```
+
+### §12.3 Slide Type Specifications
+
+**1. cover** — Dark slide with gradient blobs, logo, 3-4 hero KPI numbers
+```json
+{
+  "type": "cover",
+  "kpis": [
+    {"value": "50", "label": "Total Toko"},
+    {"value": "Rp 5.97M", "label": "Revenue 3 Bulan"}
+  ]
+}
+```
+Note: title, subtitle_green, description inherited from `deck` section if not specified per-slide.
+
+**2. exec_summary** — Light slide with 4 KPI cards, bullet findings, So-What box
+```json
+{
+  "type": "exec_summary",
+  "title": "Tier 1 Menyumbang Mayoritas Revenue Zuma",
+  "kpis": [
+    {"label": "Total Revenue", "value": "Rp 5.97M"},
+    {"label": "Volume", "value": "51,179 prs"}
+  ],
+  "findings": [
+    {"bold": "Revenue didominasi Bali & Lombok:", "text": "15 toko teratas semuanya dari 2 branch ini."}
+  ],
+  "so_what": "Tier 1 adalah revenue engine utama Zuma..."
+}
+```
+
+**3. chart_trend** — Light slide with dual Y-axis bar chart + So-What
+```json
+{
+  "type": "chart_trend",
+  "title": "Revenue Turun 32% Pasca-Holiday Season",
+  "labels": ["Des 2025", "Jan 2026", "Feb 2026"],
+  "datasets": [
+    {"label": "Revenue (Juta Rp)", "data": [2457, 1849, 1660], "color": "#00E273", "axis": "y"},
+    {"label": "Volume (Pasang)", "data": [22275, 15298, 13606], "color": "#002A3A", "axis": "y1"}
+  ],
+  "so_what": "Penurunan revenue mengikuti pola seasonal normal..."
+}
+```
+
+**4. chart_ranking** — Light slide with horizontal bar chart (top 10) + So-What
+```json
+{
+  "type": "chart_ranking",
+  "title": "Zuma Mataram Memimpin dengan Revenue Rp 477Jt",
+  "labels": ["Mataram", "Tabanan", "Klungkung", "..."],
+  "data": [477, 353, 281],
+  "data_label": "Revenue (Juta Rp)",
+  "bar_color": "#002A3A",
+  "so_what": "Top 5 toko menyumbang 33% total revenue..."
+}
+```
+
+**5. chart_detail** — Light slide with vertical bar chart (top 5-8) + So-What
+```json
+{
+  "type": "chart_detail",
+  "title": "Men's STRIPE Dominasi — 4 dari 10 Top Produk",
+  "labels": ["STRIPE BBR", "CLASSIC JB", "DALLAS JB"],
+  "data": [2464, 2459, 2321],
+  "data_label": "Volume (Pasang)",
+  "bar_color": "#00E273",
+  "so_what": "Men's mendominasi top 5 (4/5 produk)..."
+}
+```
+
+**6. breakdown** — Light slide with 2-3 column card grid + So-What
+```json
+{
+  "type": "breakdown",
+  "title": "Lombok vs Bali — Dua Engine Revenue Tier 1",
+  "columns": [
+    {
+      "icon": "📍",
+      "title": "Lombok (2 toko)",
+      "items": [
+        {"name": "Zuma Mataram", "value": "Rp 477Jt"},
+        {"name": "Total", "value": "Rp 684Jt"}
+      ]
+    }
+  ],
+  "so_what": "Lombok memiliki per-store efficiency 2x lipat Bali..."
+}
+```
+
+**7. insights** — Light slide with 2x2 card grid (4 insight categories)
+```json
+{
+  "type": "insights",
+  "title": "Pola & Observasi Kunci",
+  "cards": [
+    {
+      "icon": "🛍️",
+      "title": "Dominasi Sandal Pria",
+      "bullets": ["<strong>8 dari 10</strong> top produk adalah Men's", "STRIPE series = 4 varian di top 10"]
+    }
+  ]
+}
+```
+Note: bullets support inline `<strong>` tags for emphasis.
+
+**8. table** — Light slide with data table + So-What
+```json
+{
+  "type": "table",
+  "title": "Detail Per-Toko",
+  "headers": ["Toko", "Revenue", "Volume", "ASP"],
+  "rows": [
+    ["Mataram", "Rp 477Jt", "4,247", "Rp 112k"],
+    ["Tabanan", "Rp 353Jt", "3,022", "Rp 117k"]
+  ],
+  "footnote": "Data per Feb 2026",
+  "so_what": "..."
+}
+```
+
+**9. closing** — Dark slide with 3 priority action cards + branding bar
+```json
+{
+  "type": "closing",
+  "section_label": "Rekomendasi & Tindak Lanjut",
+  "title": "3 Prioritas Aksi",
+  "title_green": "untuk Bulan Depan",
+  "priorities": [
+    {"level": 1, "color": "green", "title": "...", "description": "...", "target": "..."},
+    {"level": 2, "color": "amber", "title": "...", "description": "...", "target": "..."},
+    {"level": 3, "color": "cyan", "title": "...", "description": "...", "target": "..."}
+  ],
+  "footer_topic": "Tier 1 Performance",
+  "footer_type": "Quarterly Review"
+}
+```
+Priority colors: `green` (main action), `amber` (optimization), `cyan` (growth), `red` (critical).
+
+### §12.4 Builder & Validator Usage
+
+**Build deck from content JSON:**
+```bash
+python3 ~/.openclaw/workspace-eos-nanobot/build_deck.py \
+  --content outbox/{nama}-content.json \
+  --output outbox/{nama}.html \
+  --validate
+```
+
+**Validate existing deck:**
+```bash
+python3 ~/.openclaw/workspace-eos-nanobot/validate_deck.py outbox/{nama}.html
+# Exit 0 = PASS, 1 = FAIL (critical), 2 = WARN
+```
+
+**Auto-fix known issues:**
+```bash
+python3 ~/.openclaw/workspace-eos-nanobot/validate_deck.py outbox/{nama}.html --fix
+```
+
+**Print schema reference:**
+```bash
+python3 ~/.openclaw/workspace-eos-nanobot/build_deck.py --schema
+```
+
+### §12.5 Validation Checks (15 total)
+
+| # | Check | Severity | What it validates |
+|---|-------|----------|-------------------|
+| 1 | tailwind_cdn | CRITICAL | Tailwind CSS CDN present |
+| 2 | chartjs_cdn | WARNING | Chart.js CDN present |
+| 3 | scroll_layout | CRITICAL | Scroll-based layout (NOT overlay) |
+| 4 | no_overlay | CRITICAL | No banned CSS patterns (.slide.active, position:absolute) |
+| 5 | print_css | CRITICAL | @media print with page-break rules |
+| 6 | logo_base64 | CRITICAL | ZUMA logo present, not truncated (>4000 chars) |
+| 7 | intersection_obs | WARNING | IntersectionObserver for chart animations |
+| 8 | inter_font | INFO | Inter font loaded |
+| 9 | slide_count | CRITICAL | Minimum 3 slides |
+| 10 | file_size | CRITICAL | Minimum 10KB file size |
+| 11 | print_button | WARNING | Floating print button |
+| 12 | gradient_blobs | WARNING | Gradient blobs on dark slides |
+| 13 | so_what_boxes | WARNING | So-What boxes present |
+| 14 | zuma_colors | CRITICAL | #002A3A teal + #00E273 green used |
+| 15 | dark_slides | WARNING | Dark cover/closing slides |
+
+### §12.6 Reference Files
+
+| File | Location | Purpose |
+|------|----------|---------|
+| `build_deck.py` | `~/.openclaw/workspace-eos-nanobot/build_deck.py` | Template-locked HTML builder (746 lines) |
+| `validate_deck.py` | `~/.openclaw/workspace-eos-nanobot/validate_deck.py` | Post-processor QA (524 lines, 15 checks) |
+| `TEMPLATE.html` | `~/.openclaw/workspace/zuma-business-skills/general/zuma-ppt-design/TEMPLATE.html` | Locked CSS source (642 lines, v4.0) |
+| `tier1-3m-content.json` | `~/.openclaw/workspace-eos-nanobot/outbox/tier1-3m-content.json` | Sample content JSON (8 slides, 173 lines) |
+| Logo base64 | `/tmp/zuma-logo-base64.txt` | ZUMA white logo (~4296 chars) |
+| Logo PNG | `assets/zuma-logo-white-200.png` | Source PNG (200px, 3.2KB) |
+
+### §12.7 Eos Prompt Template (untuk Iris)
+
+Saat Iris perlu Eos generate content JSON:
+
+```
+TASK: Buat content JSON untuk deck "{deck_title}".
+
+SCHEMA: Baca zuma-business-skills/general/eos-visual-skill/SKILL.md §12.3 untuk slide type specs.
+
+DATA SOURCE: Baca file {argus-handoff-path} untuk raw data.
+
+OUTPUT: Simpan sebagai outbox/{nama-deck}-content.json
+
+RULES:
+1. Output HANYA valid JSON sesuai schema. BUKAN HTML.
+2. Setiap slide WAJIB punya "so_what" (kecuali cover, insights, closing).
+3. Title setiap slide harus ASSERTION STATEMENT (bukan deskriptif).
+   ✅ "Revenue Turun 32% Pasca-Holiday Season"
+   ❌ "Tren Revenue Bulanan"
+4. Gunakan angka spesifik dari data Argus, jangan dibulatkan terlalu kasar.
+5. Semua teks dalam Bahasa Indonesia.
+6. Slide order: cover → exec_summary → chart(s) → breakdown/table → insights → closing
+7. Chart data harus dalam number (bukan string). Labels dalam string.
+```
