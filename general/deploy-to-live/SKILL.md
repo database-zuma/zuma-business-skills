@@ -17,7 +17,7 @@ Generic workflow for shipping any project from local machine to production. Work
 ### GitHub Personal Access Token (PAT)
 
 ```
-Token: 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
+Token: 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
 Org: database-zuma
 Scope: repo, workflow
 ```
@@ -25,10 +25,10 @@ Scope: repo, workflow
 **Usage in git commands:**
 ```bash
 # Clone with auth
-git clone https://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@github.com/database-zuma/{repo-name}.git
+git clone https://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@github.com/database-zuma/{repo-name}.git
 
 # Set remote with auth (existing repo)
-git remote set-url origin https://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@github.com/database-zuma/{repo-name}.git
+git remote set-url origin https://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@github.com/database-zuma/{repo-name}.git
 
 # Push (after setting authenticated remote)
 git push -u origin main
@@ -117,10 +117,10 @@ git commit -m "feat: initial commit"
 
 ```bash
 # 1. Set authenticated remote (replace {repo-name} with actual name)
-git remote add origin https://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@github.com/database-zuma/{repo-name}.git
+git remote add origin https://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@github.com/database-zuma/{repo-name}.git
 
 # If remote already exists:
-git remote set-url origin https://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@github.com/database-zuma/{repo-name}.git
+git remote set-url origin https://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@github.com/database-zuma/{repo-name}.git
 
 # 2. Push to main
 git push -u origin main
@@ -197,7 +197,7 @@ vercel env rm VAR_NAME production --yes --token=WNWvm9fjTerfhyG9zqiSEzdx
 gh repo create database-zuma/{repo-name} --public --source=. --remote=origin --push
 
 # Or using GitHub API with token
-curl -H "Authorization: token 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" \
+curl -H "Authorization: token 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" \
   https://api.github.com/orgs/database-zuma/repos \
   -d '{"name": "{repo-name}", "private": false}'
 ```
@@ -395,7 +395,7 @@ export default function Page() {
 ### 5.8 Authentication Expired
 
 If tokens are expired or revoked, ask the user for new tokens. Current tokens:
-- **GitHub PAT**: `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` (org: database-zuma)
+- **GitHub PAT**: `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` (org: database-zuma)
 - **Vercel Token**: `WNWvm9fjTerfhyG9zqiSEzdx` (team: database-zumas-projects)
 
 ---
@@ -415,7 +415,7 @@ git init
 git add -A
 git status   # ← VERIFY: all source files listed, no secrets
 git commit -m "feat: initial commit"
-git remote add origin https://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@github.com/database-zuma/{REPO_NAME}.git
+git remote add origin https://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@github.com/database-zuma/{REPO_NAME}.git
 git push -u origin main
 
 # 3. Vercel deploy
