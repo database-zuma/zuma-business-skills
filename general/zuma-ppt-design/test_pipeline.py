@@ -813,6 +813,15 @@ class PipelineTestRunner:
 
     def _query_db_totals(self):
         """Query VPS DB for total sales data."""
+        # Check if deck is store-only to apply appropriate filters
+        store_only = False
+        if self.html_content:
+            store_only = 'store only' in self.html_content.lower() or 'store-only' in self.html_content.lower()
+        
+        store_filter = ""
+        if store_only:
+            store_filter = "AND store_category = 'RETAIL' AND branch != 'Online'"
+        
         sql = f"""
         SELECT SUM(quantity) as total_qty,
                SUM(total_amount)::bigint as total_rev,
@@ -824,12 +833,22 @@ class PipelineTestRunner:
           AND is_intercompany = FALSE
           AND source_entity = 'DDD'
           AND transaction_date >= '2025-01-01'
-          AND UPPER(article) NOT LIKE '%SHOPPING BAG%';
+          AND UPPER(article) NOT LIKE '%SHOPPING BAG%'
+          {store_filter};
         """
         return self._run_sql(sql, single_row=True)
 
     def _query_db_series(self):
         """Query top series by volume from DB."""
+        # Check if deck is store-only to apply appropriate filters
+        store_only = False
+        if self.html_content:
+            store_only = 'store only' in self.html_content.lower() or 'store-only' in self.html_content.lower()
+        
+        store_filter = ""
+        if store_only:
+            store_filter = "AND store_category = 'RETAIL' AND branch != 'Online'"
+        
         sql = f"""
         SELECT series, SUM(quantity) as total_qty
         FROM core.sales_with_product
@@ -838,6 +857,7 @@ class PipelineTestRunner:
           AND source_entity = 'DDD'
           AND transaction_date >= '2025-01-01'
           AND UPPER(article) NOT LIKE '%SHOPPING BAG%'
+          {store_filter}
         GROUP BY series
         ORDER BY total_qty DESC
         LIMIT 10;
