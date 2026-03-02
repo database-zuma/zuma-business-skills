@@ -317,19 +317,19 @@ Warehouse picks order
   → Store stock updated (on_hand_pairs)
 ```
 
-### Real-time Sync
+### Technical Stack
 
-**Current System (Next.js + Supabase):**
-- Real-time stock updates (< 100ms latency)
-- WebSocket connections
-- Live order status tracking
-- Instant notifications
+**Current System (as of March 2026):**
+- **Frontend:** Next.js 15 + React (PWA) — Branch Super App
+- **Backend:** VPS PostgreSQL (`openclaw_ops` on `76.13.194.120:5432`)
+- **Auth:** NextAuth.js (credentials provider, JWT sessions)
+- **Data Sources:** iSeller (POS sales), Accurate Online (stock/ERP), `core.dashboard_cache` (stock MV)
+- **Deploy:** Vercel (`zuma-branch-superapp.vercel.app`)
 
-**Legacy System (AppSheet + Google Sheets):**
-- 1-minute polling delay
-- Manual refresh required
-- Limited real-time capability
+**Note:** Migrated from Supabase to self-hosted VPS PostgreSQL + NextAuth.js in Feb 2026.
 
+**Legacy System (fully replaced):**
+- AppSheet + Google Sheets (no longer in use)
 ## Store Database Structure
 
 ### Core Fields
@@ -434,13 +434,23 @@ store_stock (
 
 ## Integration Points
 
-- **iSeller (POS System)** - Daily sales data, stock movements
-- **Accurate Online (ERP)** - Store master data, financial data
-- **RO App (Internal)** - Replenishment orders, stock requests
-- **Ginee (Marketplace)** - Online order fulfillment from store stock
+- **iSeller (POS System)** — Daily sales data → `mart.mv_iseller_summary`
+- **Accurate Online (ERP)** — Stock data → `core.dashboard_cache`, store master data, financial data
+- **Branch Super App** (`zuma-branch-superapp.vercel.app`) — 5-tab PWA: Home (iSeller sales), WH Stock (warehouse stock), RO (request/process/SOPB), Action, Settings
+- **Ginee (Marketplace)** — Online order fulfillment from store stock
+
+## Branch Super App — Tab Overview
+
+| Tab | Data Source | Description |
+|-----|-------------|-------------|
+| **Home** | `mart.mv_iseller_summary` | iSeller SKU Charts — sales breakdown by gender, series, tier, tipe, size, color, top articles. Hardcoded: Jatim branch, last 60 days. |
+| **WH Stock** | `core.dashboard_cache` | Warehouse stock KPIs + charts. Hardcoded: Warehouse Pusat/Protol/Reject. No date filter (snapshot). |
+| **RO** | `branch_super_app_clawdbot.*` | 3 sub-tabs: Dashboard (stats), RO Process (8-stage timeline + DNPB per entity), SOPB Generator (download XLSX). |
+| **Action** | — | Quick actions (future) |
+| **Settings** | — | System status |
 
 ## Document References
 
-- **RO App README:** `RO App/README.md`
-- **Database Schema:** `RO App/DATABASE_SCHEMA.md`
+- **Branch Super App README:** `zuma-branch-superapp/README.md`
 - **Warehouse & Stock Skill:** See `zuma-warehouse-and-stocks` skill
+- **Database Skill:** See `zuma-database-assistant-skill`

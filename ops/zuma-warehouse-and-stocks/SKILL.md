@@ -40,6 +40,77 @@ This skill provides context about Zuma Indonesia's warehouse operations, invento
 
 **Stock data must be pulled separately per entity** — each entity's Accurate database returns stock positions only for stock owned by that entity at each physical warehouse.
 
+## Technical Infrastructure
+
+### Current Production Stack (as of March 2026)
+
+| Layer | Technology |
+|-------|------------|
+| **Database** | VPS PostgreSQL (`openclaw_ops` on `76.13.194.120:5432`) |
+| **Auth** | NextAuth.js (credentials provider, JWT sessions) |
+| **Frontend** | Next.js 15 + React (PWA) — deployed on Vercel |
+| **ETL** | Python scripts (`pull_accurate_sales.py`, `pull_accurate_stock.py`) running on VPS |
+| **Cron** | VPS cron jobs for daily data refresh (07:00 WIB) |
+
+**Note:** The system was migrated from Supabase to self-hosted VPS PostgreSQL in Feb 2026. Supabase is no longer used.
+
+### Key Database Schemas
+
+| Schema | Purpose |
+|--------|---------|
+| `branch_super_app_clawdbot` | RO tables, stock tables, transaction views |
+| `mart` | iSeller sales mart (`mv_iseller_summary`) |
+| `core` | Stock materialized views (`dashboard_cache`) |
+| `raw` | Accurate raw stock tables (`accurate_stock_*`) |
+| `public` | Shared reference tables (`portal_kodemix`, article metadata) |
+
+### Stock Data Pipeline
+
+```
+Accurate Online API (per entity: DDD, LJBB, MBB, UBB)
+  → pull_accurate_stock.py (ETL, daily cron)
+  → raw.accurate_stock_* tables
+  → core.dashboard_cache (REFRESH MATERIALIZED VIEW CONCURRENTLY, daily 07:00 WIB)
+  → Consumed by Branch Super App WH Stock page + Zuma Stock Dashboard
+```
+
+### WH Stock Page (Branch Super App)
+
+The **WH Stock** tab in the Branch Super App (`zuma-branch-superapp.vercel.app`) is a stock dashboard showing:
+
+- **Data source:** `core.dashboard_cache`
+- **Hardcoded warehouses:** `Warehouse Pusat`, `Warehouse Pusat Protol`, `Warehouse Pusat Reject`
+- **Non-product exclusion:** `kode_besar !~ '^(gwp|hanger|paperbag|shopbag)'`
+- **KPI cards:** Total Pairs, Unique Articles, Dead Stock (T4+T5), Est RSP Value
+- **Charts:** Warehouse×Gender stacked bar, Tipe donut, Tier bar, Size bar, Series horizontal bar
+- **Top Articles table:** Sortable, shows article/kode_besar/series/tier/tipe/gender
+- **Filters:** Gender, series, color, tier, tipe, size, entitas, version, search
+- **No date filter** — stock is a point-in-time snapshot (snapshot_date from last refresh)
+
+### `core.dashboard_cache` Columns
+
+| Column | Description |
+|--------|-------------|
+| kode_barang | Full article code |
+| kode_besar | Base article code (for grouping sizes) |
+| kode | Short code |
+| kode_mix | Mix code |
+| article | Article display name |
+| nama_gudang | Warehouse name (e.g., "Warehouse Pusat") |
+| branch | Branch name |
+| category | Product category |
+| gender_group | Gender grouping (MEN, WOMEN, KIDS, UNISEX) |
+| series | Product series (e.g., AIRMOVE, CLASSIC) |
+| group_warna | Color group |
+| tier | Priority tier (T1-T5) |
+| tipe | Product type (Fashion, Jepit, etc.) |
+| ukuran | Size |
+| v | Version |
+| source_entity | Source entity (DDD, LJBB, MBB, UBB) |
+| pairs | Number of pairs |
+| est_rsp | Estimated RSP (Retail Selling Price) value |
+| snapshot_date | Date of last stock snapshot |
+
 ## Product Structure
 
 ### Product Units
@@ -134,7 +205,7 @@ Example: RO-2511-0007 = Order #7 from November 2025
 ### Order Status Flow
 
 ```
-QUEUE → APPROVED → PICKING → PICK_VERIFIED → READY_TO_SHIP
+QUEUE → APPROVED → PICKING → PICK_VERIFIED → DNPB_PROCESS → READY_TO_SHIP
   → IN_DELIVERY → ARRIVED → COMPLETED
 ```
 
@@ -146,48 +217,16 @@ QUEUE → APPROVED → PICKING → PICK_VERIFIED → READY_TO_SHIP
 | `APPROVED` | WH SPV approved quantities | WH Supervisor |
 | `PICKING` | Being picked from warehouse | WH Helper |
 | `PICK_VERIFIED` | Pick quantities verified | WH Admin |
+| `DNPB_PROCESS` | DNPB being generated, SOPB ready | WH Admin |
 | `READY_TO_SHIP` | DNPB complete, ready for dispatch | WH Admin |
 | `IN_DELIVERY` | Out for delivery to store | WH Helper |
 | `ARRIVED` | Received at store | WH Supervisor confirms |
 | `COMPLETED` | Fully received and closed | WH Supervisor |
 
-### Order Workflow Example
+### SOPB & DNPB Documents
 
-```
-1. Area Supervisor creates order for "Tunjungan Plaza"
-   - Delivery Date: 15 Jan 2026
-   - Items: 10 articles, 1-5 boxes each
-   - Total: ~20 boxes
-   - Gets ID: RO-2511-0007
-
-2. Order enters QUEUE
-   - Visible to WH Supervisor
-   - Stock is reserved (qty_queue updated)
-
-3. WH Supervisor reviews and approves
-   - Can edit quantities if needed
-   - ONE approve button per RO (not per article)
-   - Status: QUEUE → APPROVED
-
-4. WH Helper picks items
-   - Updates actual picked quantities
-   - May differ from approved (variance tracking)
-   - Status: APPROVED → PICKING → PICK_VERIFIED
-
-5. WH Admin verifies pick
-   - Generates DNPB (delivery note)
-   - Creates SOPB document (PDF)
-   - Status: PICK_VERIFIED → READY_TO_SHIP
-
-6. WH Helper delivers
-   - Updates shipment status
-   - Status: READY_TO_SHIP → IN_DELIVERY
-
-7. Store receives
-   - WH Supervisor confirms received quantity
-   - Handles variance if actual ≠ shipped
-   - Status: IN_DELIVERY → ARRIVED → COMPLETED
-```
+- **SOPB (Surat Order Pengiriman Barang):** Generated in the SOPB Generator tab. Number is **user input**. Groups articles by entity.
+- **DNPB (Delivery Note Pengiriman Barang):** Number comes from **Accurate Online** after the SOPB is uploaded. Each entity has its own DNPB number (`dnpb_number_ddd`, `dnpb_number_ljbb`, `dnpb_number_mbb`, `dnpb_number_ubb`).
 
 ### User Roles in RO System
 
@@ -203,182 +242,57 @@ QUEUE → APPROVED → PICKING → PICK_VERIFIED → READY_TO_SHIP
 Products can be distributed to multiple channels:
 
 1. **Retail Stores** (Primary - via RO System)
-   - Store orders via RO App
-   - Status tracking through RO stages
-   - Delivery confirmation required
-
-2. **Online Sales**
-   - Direct distribution for e-commerce
-   - May bypass RO system for direct shipment
-
-3. **Wholesale**
-   - Bulk orders to wholesale partners
-   - May use custom stock grab
-
-4. **Consignment**
-   - Stock placed at consignment locations
-   - Tracked separately from retail stores
-
-5. **Event Sales**
-   - Temporary stock allocation for events
-   - Special category in store system
+2. **Online Sales** (Shopee, Tokopedia, TikTok Shop — via MBB entity)
+3. **Wholesale** (Bulk orders — via DDD/UBB)
+4. **Consignment** (Stock at partner locations — via DDD/UBB)
+5. **Event Sales** (Temporary allocation — WILBEX, IMBEX)
 
 ## Special Stock Operations
 
 ### Custom Stock Grab
 Reserve stock for non-RO purposes (wholesale, consignment, etc.)
-
-```sql
-custom_stock_grab(kode_artikel, warehouse_code, qty, notes, created_by)
-```
-
 **Effect:** Reduces ready stock without creating RO
 
 ### Custom Stock Release
 Release previously grabbed stock back to available inventory
 
-```sql
-custom_stock_release(kode_artikel, warehouse_code, qty, notes, created_by)
-```
-
 ### PO Input
 Add stock from purchase orders (only operation that ADDS to base stock)
-
-```sql
-po_input_stock(kode_artikel, warehouse_code, qty, notes, created_by)
-```
 
 ### Picking Adjustment
 Correct quantity when actual picked differs from requested
 
-```sql
-adjust_picking_qty(session_id, kode_artikel, warehouse_code, actual_qty, notes, created_by)
-```
-
-**Common Scenarios:**
-- Item damaged during pick (actual < requested)
-- Found extra stock during pick (actual > requested, rare)
-- Size not available, different size picked instead
-
 ## Stock Tracking Views
 
 ### Stock Summary (Per Article)
-Aggregates across all warehouses:
-- Total WHS stock
-- Total in queue
-- Total in transit
-- Total ready stock
+Aggregates across all warehouses: total WHS stock, total in queue, total in transit, total ready stock
 
 ### Stock by Warehouse
-Shows per warehouse:
-- Number of articles
-- Total stock
-- Total ready stock
-- Total in queue/delivery
+Per warehouse: number of articles, total stock, total ready stock, total in queue/delivery
 
 ### Low Stock Alert
-Articles with ready stock ≤ 2:
-- OUT_OF_STOCK: ready stock = 0
-- LOW_STOCK: ready stock = 1-2
-- Sorted by urgency
-
-## Database Structure
-
-### Core Tables
-
-**wh_stock** - Main stock tracking
-- Tracks stock per article per warehouse
-- All quantity fields (queue, picked, delivery, etc.)
-- Computed ready_stock field
-
-**wh_stock_history** - Audit trail
-- Logs all stock changes
-- Tracks before/after quantities
-- Links to RO session if applicable
-
-**ro_sessions** - Order headers
-- One record per RO ID
-- Aggregated quantities
-- Status and timestamps
-
-**ro_items** - Order line items
-- One record per article per RO
-- Tracks quantity at each stage
-- Variance tracking (requested vs actual)
-
-## Technical Stack
-
-**Current Production:**
-- **Frontend:** Next.js 14 + React (PWA)
-- **Backend:** Supabase (PostgreSQL + Realtime)
-- **Auth:** Supabase Auth with Row-Level Security (RLS)
-- **Real-time:** WebSocket (< 100ms latency)
-
-**Legacy System (being replaced):**
-- AppSheet + Google Sheets
-- 1-minute polling delay
-- Limited scalability
+Articles with ready stock ≤ 2: OUT_OF_STOCK (0), LOW_STOCK (1-2)
 
 ## Key Business Rules
 
-1. **One RO ID = One Approval**
-   - Not approved at article level
-   - Entire order approved/rejected together
-   - Can edit individual article quantities before approval
-
-2. **Stock Reservation**
-   - Stock is reserved when RO created (qty_queue)
-   - Reservation moves through stages (queue → picked → delivery)
-   - Released only when completed or cancelled
-
-3. **Variance Tracking**
-   - Pick variance = picked - approved
-   - Receive variance = received - shipped
-   - Variances logged for analysis
-
-4. **Stock Never Goes Negative**
-   - Database constraints prevent negative quantities
-   - Operations fail if insufficient stock
-
-5. **Audit Trail**
-   - All stock changes logged in wh_stock_history
-   - Who, what, when for every operation
-   - Linked to RO session if applicable
-
-## Common Use Cases
-
-### Check Stock Availability
-```sql
-SELECT kode_artikel, warehouse_code, qty_ready_stock, qty_whs_stock
-FROM wh_stock
-WHERE kode_artikel = 'M1CAV201'
-ORDER BY warehouse_code;
-```
-
-### View Order Status
-```sql
-SELECT session_id, store_name, status, total_boxes_requested, total_boxes_approved
-FROM ro_sessions
-WHERE status = 'QUEUE';
-```
-
-### Find Low Stock Items
-```sql
-SELECT * FROM v_low_stock_alert
-WHERE stock_status = 'OUT_OF_STOCK'
-ORDER BY kode_artikel;
-```
+1. **One RO ID = One Approval** — entire order approved/rejected together
+2. **Stock Reservation** — reserved when RO created, moves through stages
+3. **Variance Tracking** — pick variance and receive variance logged
+4. **Stock Never Goes Negative** — database constraints prevent negative quantities
+5. **Audit Trail** — all stock changes logged in `wh_stock_history`
+6. **DNPB per Entity** — each entity has its own DNPB number
+7. **Stage Progression** — manual, one stage at a time via "Next Stage" button
 
 ## Integration Points
 
-- **Accurate Online** (ERP) - Sales and inventory data source
-- **Ginee** - Marketplace data integration
-- **iSeller** - POS system integration
-- **Supabase** - Production database and real-time sync
+- **Accurate Online** (ERP) — Sales and inventory data source, per entity
+- **iSeller** (POS System) — Daily sales data for retail stores
+- **Ginee** — Marketplace data integration
+- **Branch Super App** (`zuma-branch-superapp.vercel.app`) — RO management + stock dashboard + sales analytics
+- **Zuma Stock Dashboard** (`zuma-stock-dashboard.vercel.app`) — Dedicated stock analytics (all branches)
 
 ## Document References
 
-- **Database Schema:** `RO App/DATABASE_SCHEMA.md`
-- **SQL Migration:** `RO App/web-app/supabase/migrations/002_wh_stock.sql`
-- **RO App README:** `RO App/README.md`
-- **RO WHS README:** `RO WHS/ro-whs-app/README.md`
+- **Branch Super App:** `zuma-branch-superapp/README.md`
+- **Database Schema:** See `zuma-database-assistant-skill` for full schema reference
+- **Data Analyst Skill:** See `zuma-data-analyst-skill` for SQL templates and query patterns
