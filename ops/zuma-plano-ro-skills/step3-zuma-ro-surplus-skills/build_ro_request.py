@@ -237,13 +237,6 @@ def read_planogram(conn, store_arg: str) -> dict:
         kode_kecil = row[1] if len(row) > 1 else ""
         article     = row[2]
         gender      = row[3]
-        series      = row[4]
-        tier_raw    = row[5]
-        size_values = row[6:6 + n_size_cols]
-        box_val     = row[6 + n_size_cols]
-        article_mix = row[0]
-        article     = row[1]
-        gender      = row[2]
         series      = row[3]
         tier_raw    = row[4]
         size_values = row[5:5 + n_size_cols]
@@ -279,17 +272,6 @@ def read_planogram(conn, store_arg: str) -> dict:
             "tier":              tier,
             "kode_mix":          kode_mix,
             "kode_kecil":        kode_kecil or "",
-            "sizes":             sizes,
-            "total_planogram":   total_planogram,
-            "box":               to_float(box_val),
-            "avg_sales_3m_pairs": 0.0,
-            "avg_sales_3m_box":   0.0,
-        }
-            "gender":            gender or "",
-            "series":            series or "",
-            "article":           article or kode_mix,
-            "tier":              tier,
-            "kode_mix":          kode_mix,
             "sizes":             sizes,
             "total_planogram":   total_planogram,
             "box":               to_float(box_val),
@@ -1016,7 +998,6 @@ def write_excel(
 
     headers3    = ["No", "Article (Kode Mix)", "Kode Kecil", "Tier", "Gender", "Series",
                    "Box Qty", "WH Available"]
-                   "Box Qty", "WH Available"]
     total_cols3 = len(headers3)
 
     row = 1
@@ -1034,6 +1015,7 @@ def write_excel(
     if has_ro_box:
         num = 1
         for art in sorted(ro_box_list, key=lambda x: (x["tier"], x["article"])):
+            ws3.cell(row=row, column=1, value=num)
             ws3.cell(row=row, column=2, value=art["kode_mix"])
             ws3.cell(row=row, column=3, value=art.get("kode_kecil", ""))
             ws3.cell(row=row, column=4, value=art["tier"])
@@ -1041,12 +1023,6 @@ def write_excel(
             ws3.cell(row=row, column=6, value=art["series"])
             ws3.cell(row=row, column=7, value=1)
             ws3.cell(row=row, column=8, value="YES" if art.get("box_available") else "NO")
-            ws3.cell(row=row, column=2, value=art["kode_mix"])
-            ws3.cell(row=row, column=3, value=art["tier"])
-            ws3.cell(row=row, column=4, value=art["gender"])
-            ws3.cell(row=row, column=5, value=art["series"])
-            ws3.cell(row=row, column=6, value=1)
-            ws3.cell(row=row, column=7, value="YES" if art.get("box_available") else "NO")
 
             if not art.get("box_available"):
                 for ci in range(1, total_cols3 + 1):
