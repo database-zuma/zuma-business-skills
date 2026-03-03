@@ -11,6 +11,7 @@
     - Stock:     openclaw_ops DB (core.stock_with_product)
     - Sales:     openclaw_ops DB (core.sales_with_product)
     - Warehouse: Warehouse Pusat Box (DDD+LJBB), Warehouse Pusat Protol (DDD)
+    - WH Available: branch_super_app_clawdbot.ro_whs_readystock (VIEW, total_available)
 
   Business Rules (from SKILL.md — zuma-distribution-flow):
     - RO Protol: when <50% sizes empty → send individual pairs from Gudang Protol
@@ -414,6 +415,19 @@ def query_db(conn, store_arg: str) -> dict:
     snapshot_date = result[0] if result and result[0] else date.today()
     print(f"         Stock snapshot date: {snapshot_date}")
 
+    # --- 2g. WHS Ready Stock (ro_whs_readystock VIEW for WH Available qty) ---
+    print("       \u2192 WHS Ready Stock (ro_whs_readystock VIEW)...")
+    cur.execute("""
+        SELECT article_code, total_available
+        FROM branch_super_app_clawdbot.ro_whs_readystock
+    """)
+
+    whs_readystock = {}
+    for article_code, total_available in cur.fetchall():
+        whs_readystock[str(article_code).strip()] = to_float(total_available)
+
+    print(f"         {len(whs_readystock)} articles in WHS Ready Stock")
+
     cur.close()
 
     return {
@@ -423,6 +437,7 @@ def query_db(conn, store_arg: str) -> dict:
         "sales_3m":           sales_3m,
         "all_store_articles": dict(all_store_articles),
         "snapshot_date":      snapshot_date,
+        "whs_readystock":    whs_readystock,
     }
 
 
@@ -517,6 +532,7 @@ def generate_ro_decisions(gap_results: list, db_data: dict, storage_capacity: in
 
     wh_box    = db_data["wh_box_stock"]
     wh_protol = db_data["wh_protol_stock"]
+    whs_ready = db_data.get("whs_readystock", {})
 
     ro_protol_list  = []
     ro_box_list     = []
@@ -582,6 +598,9 @@ def generate_ro_decisions(gap_results: list, db_data: dict, storage_capacity: in
             art["box_available"]    = total_box_pairs > 0
             art["box_total_pairs"]  = total_box_pairs
             art["box_sizes"]        = dict(box_avail)
+
+            kode_kecil = art.get("kode_kecil", "")
+            art["whs_available_qty"] = whs_ready.get(kode_kecil, 0)
 
             if total_box_pairs > 0 and storage_capacity == 0:
                 sizes_with_stock = [sd for sd in art["sizes_detail"] if sd["actual"] > 0]
@@ -1022,9 +1041,9 @@ def write_excel(
             ws3.cell(row=row, column=5, value=art["gender"])
             ws3.cell(row=row, column=6, value=art["series"])
             ws3.cell(row=row, column=7, value=1)
-            ws3.cell(row=row, column=8, value="YES" if art.get("box_available") else "NO")
+            ws3.cell(row=row, column=8, value=int(art.get("whs_available_qty", 0)))
 
-            if not art.get("box_available"):
+            if art.get("whs_available_qty", 0) <= 0:
                 for ci in range(1, total_cols3 + 1):
                     ws3.cell(row=row, column=ci).fill = FILL_LIGHT_RED
             elif num % 2 == 0:

@@ -150,16 +150,16 @@ Last row: TOTAL PAIRS = {sum}
 
 ```
 Header rows 1-4: title, store, date, source info + "Total: {N} boxes"
-Row 6 (header): No | Article | Kode Mix | Tier | Box Qty | WH Available
+Row 6 (header): No | Article (Kode Mix) | Kode Kecil | Tier | Gender | Series | Box Qty | WH Available
 Row 7+: numbered data rows
 
 Example row:
-  1 | LADIES CLASSIC 1, JET BLACK | SJ2ACAV201 | 1 | 1 | NO
+  1 | LADIES CLASSIC 1, JET BLACK | SJ2ACAV201 | L1CAV201 | 1 | Ladies | Classic | 1 | 155
 
 Last row: TOTAL BOXES = {sum}
 ```
 
-**Key format**: Box Qty is always 1 (1 box = 12 pairs, all sizes). WH Available shows YES/NO based on warehouse stock check.
+**Key format**: Box Qty is always 1 (1 box = 12 pairs, all sizes). WH Available shows the actual total box qty available in warehouse (from `ro_whs_readystock` VIEW). 0 = no stock, rows with 0 are highlighted red.
 
 **Sorting**: By Tier ASC, then by Article name ASC within each tier.
 

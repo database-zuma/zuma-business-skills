@@ -349,6 +349,7 @@ RO Request **membutuhkan planogram** sebagai input. Tanpa planogram, tidak ada t
 | WH Pusat Protol | `core.stock_with_product` | `WHERE LOWER(nama_gudang) = 'warehouse pusat protol'` (DDD only) |
 | Sales (3 month) | `core.sales_with_product` | `WHERE tanggal >= NOW() - INTERVAL '3 months'` + exclude intercompany |
 | Planogram targets | DB table `portal.planogram_existing_q1_2026` | `WHERE store_name ILIKE '%{store_pattern}%'` — 51 stores, 606 articles, 42 size columns (25 individual + 17 paired), BOX column |
+| WH Available (RO Box) | `branch_super_app_clawdbot.ro_whs_readystock` (VIEW) | `SELECT article_code, total_available` — total box qty available across all warehouses |
 
 ### RO Type Decision Logic — TRANSISI (Count-Based, Box Default)
 
