@@ -491,3 +491,4 @@ DB_PASS = "Zuma-0psCl4w-2026!"
 | [`ro-surplus-output-format.md`](ro-surplus-output-format.md) | Full cycle ASCII diagram, Excel 5-sheet output specification (cover page, column layouts per sheet), openpyxl styling/branding reference, worked example output (Royal Plaza), known limitations & pending clarifications |
 | [`section-for-planogram.md`](section-for-planogram.md) | Distribution flow TRANSISI section formatted for planogram context — gudang types, RO decision tree, surplus tiers, T8 lifecycle, edge cases (standalone reference for planogram skill integration) |
 | `build_ro_request.py` | Universal CLI Python script for generating RO Request & Surplus Pull for any store — `--store`, `--storage`, `--threshold`, `--output` args |
+| [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) | Bug history & fixes untuk `build_ro_request.py` — root cause, gejala, fix, dan pelajaran. Cek di sini dulu kalau output aneh. |
