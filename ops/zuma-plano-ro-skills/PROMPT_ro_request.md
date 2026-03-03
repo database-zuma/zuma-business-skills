@@ -30,7 +30,7 @@ Output yang diminta:
 Format output: Excel (.xlsx) dengan sheet:
 - RO Request (cover page + summary + signature block)
 - Daftar RO Protol (numbered list, size:qty format)
-- Daftar RO Box (numbered list, 1 box per artikel)
+- Daftar RO Box (numbered list, 1 box per artikel, includes Kode Kecil column for RO App compatibility)
 - Daftar Surplus (size-level detail untuk picking)
 - Reference (tier analysis + full article status, internal use)
 
