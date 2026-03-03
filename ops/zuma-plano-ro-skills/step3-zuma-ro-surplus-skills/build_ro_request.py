@@ -237,10 +237,10 @@ def read_planogram(conn, store_arg: str) -> dict:
         kode_kecil = row[1] if len(row) > 1 else ""
         article     = row[2]
         gender      = row[3]
-        series      = row[3]
-        tier_raw    = row[4]
-        size_values = row[5:5 + n_size_cols]
-        box_val     = row[5 + n_size_cols]
+        series      = row[4]
+        tier_raw    = row[5]
+        size_values = row[6:6 + n_size_cols]
+        box_val     = row[6 + n_size_cols]
 
         if not article_mix:
             continue
