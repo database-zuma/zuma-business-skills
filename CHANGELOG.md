@@ -1,20 +1,20 @@
 # Changelog
-
 All notable changes to this skill library will be documented here.
 
 ---
 
-## [1.2.0] — 11 Feb 2026
+## [1.3.0] — 5 Mar 2026
 
-### New: FF/FA/FS Metrics + Pre-Planogram Skill
+### Restructure: Finance skills moved to department folder
 
-**New folders & skills:**
-- **`ops/notion-metrics/`** — NEW folder for store performance metrics (future metrics go here too)
-  - `SKILL_ff_fa_fs.md` (1300+ lines) — Fill Factor, Fill Article, Fill Stock from VPS DB + planogram input. Complete Python script, SQL templates, store name mapping, business rules, Excel report with conditional formatting
-- **`ops/zuma-plano-and-ro/step0.5-pre-planogram/`** — NEW subfolder
-  - `SKILL_pre_planogram.md` (1050+ lines) — Pre-planogram data generation from sales + stock analysis. 7-step pipeline. Output feeds Step 1 (planogram layout) and FF/FA/FS metrics
+**Changes:**
+- Moved `skills/finance/` → `finance/` (matching planned department structure)
+- Removed empty `skills/` folder
+  - Updated finance/README.md with actual skills (was "Coming Soon")
+- Updated main README structure tree and skill count (22 → 24)
 
-**Design decisions:**
+---
+
 - ST (Sell-Through) intentionally excluded — requires Ringkasan Mutasi Gudang from Accurate Online (not in VPS DB). No fallback workaround. ST documented with ready-to-use code for when data becomes available
 - `notion-metrics` folder separate from `zuma-plano-and-ro` for non-planogram metrics in the future
 

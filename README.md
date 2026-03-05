@@ -3,7 +3,7 @@
   <br/>
   <img src="https://img.shields.io/badge/Claude_Code-Skills_Library-7C3AED?style=flat-square" alt="Claude Code"/>
   <img src="https://img.shields.io/badge/Status-Active-00E273?style=flat-square" alt="Active"/>
-  <img src="https://img.shields.io/badge/Skills-22_Installed-FF6B35?style=flat-square" alt="22 Skills"/>
+  <img src="https://img.shields.io/badge/Skills-24_Installed-FF6B35?style=flat-square" alt="24 Skills"/>
   <img src="https://img.shields.io/badge/Updated-Feb_2026-blue?style=flat-square" alt="Updated"/>
 </p>
 
@@ -171,16 +171,16 @@ zuma-business-skills/
 |   |-- dn-to-po/
 |   |   +-- SKILL.md                        DN to PO conversion workflow
 |   |-- zuma-token-usage-report/
-|   |   +-- SKILL.md                        Token usage & API metrics reporting
+|       +-- SKILL.md                        Token usage & API metrics reporting
 |
-|-- skills/                               SKILL BARU COLLECTION
-|   +-- finance/
-|       |-- coretax-faktur-generator/
-|       |   |-- SKILL.md                    Coretax Faktur Generator (tax doc)
-|       |   +-- coretax_faktur.py            Python script for Coretax XLSX
-|       +-- fp-rekon-stock/
-|           |-- SKILL.md                    Financial reconciliation & stock
-|           +-- fp_rekon.py                 Python script for reconciliation
+|-- finance/                              DEPARTEMEN FINANCE
+|   |-- coretax-faktur-generator/
+|   |   |-- SKILL.md                    Coretax Faktur Generator (tax doc)
+|   |   +-- coretax_faktur.py            Python script for Coretax XLSX
+|   +-- fp-rekon-stock/
+|       |-- SKILL.md                    Financial reconciliation & stock
+|       +-- fp_rekon.py                 Python script for reconciliation
+|-- _archive/
 |
 |-- _archive/                             DEPRECATED SKILLS (archived)
 |   +-- (legacy skill versions)
@@ -204,14 +204,14 @@ zuma-business-skills/
 |--------|--------|------------------|
 | `general/` | Pengetahuan lintas departemen — brand, struktur entitas | Semua orang |
 | `ops/` | Pengetahuan operasional — produk, toko, gudang, data analytics | Tim ops, data analyst, AI agent |
-| `finance/` | Pengetahuan keuangan — P&L, margin, COGS, pajak | Tim finance (planned) |
+| `finance/` | Pengetahuan keuangan — P&L, margin, COGS, pajak | Tim finance |
 | `hrga/` | Pengetahuan HR & GA — struktur organisasi, kebijakan | Tim HR (planned) |
 
 Folder departemen baru akan ditambahkan seiring ekspansi automasi AI Zuma.
 
 ---
 
-## Daftar Skill (22 Skills)
+## Daftar Skill (24 Skills)
 
 ### General (Lintas Departemen) — 6 Skills
 
@@ -264,13 +264,13 @@ Folder departemen baru akan ditambahkan seiring ekspansi automasi AI Zuma.
 | # | Skill | File | Apa yang Diketahui |
 |---|-------|------|-------------------|
 | 20 | **dn-to-po** | SKILL.md | DN to PO conversion workflow & document processing |
-| 21 | **fp-rekon-stock** (under skills/finance/) | SKILL.md + fp_rekon.py | Financial reconciliation & stock matching |
-| 22 | **coretax-faktur-generator** (under skills/finance/) | SKILL.md + coretax_faktur.py | Generate Coretax DJP-ready Faktur + DetailFaktur XLSX dari Register Penjualan bulanan, DPP Nilai Lain tax math, multi-entity support (DDD/MBB/UBB) |
+| 21 | **fp-rekon-stock** | SKILL.md + fp_rekon.py | Financial reconciliation & stock matching |
+| 22 | **coretax-faktur-generator** | SKILL.md + coretax_faktur.py | Generate Coretax DJP-ready Faktur + DetailFaktur XLSX dari Register Penjualan bulanan, DPP Nilai Lain tax math, multi-entity support (DDD/MBB/UBB) |
+|
+### Finance — 2 Skills
 
----
-
-### Reference & Template Files
-
+| # | Skill | File | Apa yang Diketahui |
+|---|-------|------|-------------------|
 **Planogram Prompts:**
 - `PROMPT_new_planogram.md` — Template untuk generate planogram baru (single store)
 - `PROMPT_ro_request.md` — Template untuk generate RO Request mingguan (single/multi-store)

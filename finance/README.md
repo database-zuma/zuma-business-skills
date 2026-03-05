@@ -1,16 +1,18 @@
 # Finance Department Skills
 
-> **Status:** Coming Soon
+Skills for Zuma Indonesia's finance operations.
 
-This folder will contain Claude Code skills for Zuma Indonesia's finance operations.
+## Available Skills
 
-## Planned Skills
+| Skill | What It Covers |
+|-------|----------------|
+| `coretax-faktur-generator` | Generate Coretax DJP-ready Faktur + DetailFaktur XLSX from monthly Sales Register, DPP Nilai Lain tax math, multi-entity support (DDD/MBB/UBB) |
+| `fp-rekon-stock` | Financial reconciliation & stock matching |
 
-| Skill | What It Will Cover |
-|-------|--------------------|
-| `zuma-financial-analysis` | P&L structure, margin analysis, BPP/COGS calculations, entity-level reporting |
-| `zuma-tax-compliance` | Tax structure across 4 entities, DPP calculations, invoice requirements |
+## Usage
+
+These skills are automatically loaded by Claude Code when working on finance-related tasks.
 
 ---
 
-*Check back for updates or see the [main README](../README.md) for the full roadmap.*
+*See the [main README](../README.md) for the full skill list and roadmap.*
