@@ -4,176 +4,237 @@ description: Template prompt untuk generate RO (Replenishment Order) Request & S
 user-invocable: true
 ---
 
-# PROMPT TEMPLATE: Generate RO Request & Surplus Pull List
+# RO Request Generator — SCRIPT EXECUTION SKILL
 
-Gunakan prompt di bawah ini untuk meminta AI generate RO Request mingguan untuk 1 atau lebih toko Zuma.
-
----
-
-## Prompt: Single Store
+## ⛔ CRITICAL: ALWAYS RUN THE SCRIPT — NEVER WRITE YOUR OWN CODE
 
 ```
-Generate RO Request mingguan untuk [NAMA TOKO].
-
-Data yang dibutuhkan:
-- Planogram source: DB table `portal.temp_portal_plannogram` (auto-query by store name)
-- Store name di planogram DB: [NAMA PERSIS DI DB, e.g. "Zuma Royal Plaza"]
-- Store name di stock DB: [PATTERN UNTUK ILIKE, e.g. "zuma royal plaza"]
-- Storage capacity: [JUMLAH BOX, 0 jika tidak ada storage]
-
-Output yang diminta:
-1. RO Protol list (artikel + ukuran yang perlu dikirim dari WH Protol)
-2. RO Box list (artikel yang perlu dikirim 1 box penuh dari WH Box)
-3. Surplus Pull list (artikel yang perlu ditarik dari toko, detail per ukuran)
-4. Summary + cover page format dokumen resmi (AS ke WH Supervisor)
-
-Format output: Excel (.xlsx) dengan sheet:
-- RO Request (cover page + summary + signature block)
-- Daftar RO Protol (numbered list, size:qty format)
-- Daftar RO Box (numbered list, 1 box per artikel, includes Kode Kecil column for RO App compatibility)
-- Daftar Surplus (size-level detail untuk picking)
-- Reference (tier analysis + full article status, internal use)
-
-Business rules (TRANSISI — restock dulu, surplus setelah restock masuk):
-- TAHAP 0: Identifikasi URGENT surplus (off-planogram) → total pairs jadi budget RO
-- RO Box (DEFAULT): 3+ size kosong dari assortment → kirim 1 box penuh (12 pairs, all sizes)
-- RO Protol: 1-2 size kosong (gap minor) → kirim pairs di size kosong saja
-- RO Box source: WH Pusat Box (DDD + LJBB)
-- RO Protol source: WH Pusat Protol (DDD only)
-- Total RO pairs ≈ total urgent surplus pairs (swap: barang keluar = barang masuk)
-- Jika urgent surplus = 0: RO proceeds tanpa budget cap (uncapped fallback)
-- Surplus: hanya cek T1, T2, T3 (skip T4/T5 clearance, T8 protection 3 bulan)
-- Surplus sort: avg monthly sales ASC (slowest seller ditarik duluan)
-- Restock dulu → surplus ditarik SETELAH restock masuk
-
-Skills yang perlu di-load: zuma-data-analyst-skill, zuma-sku-context, zuma-warehouse-and-stocks
-```
-
-### Contoh penggunaan (single store):
-
-```
-Generate RO Request mingguan untuk Zuma Royal Plaza.
-
-- Planogram source: DB `portal.temp_portal_plannogram` (auto, filter by store name)
-- Store name di DB: "zuma royal plaza"
-- Storage capacity: 0 boxes (tidak ada storage)
-
-Output format dokumen resmi, semua 5 sheet.
+╔══════════════════════════════════════════════════════════════════════╗
+║  YOU MUST EXECUTE THE PRE-BUILT PYTHON SCRIPT TO GENERATE OUTPUT.  ║
+║  DO NOT write your own openpyxl code.                              ║
+║  DO NOT manually construct Excel files.                            ║
+║  DO NOT interpret the format specs below as "build instructions".  ║
+║                                                                     ║
+║  The script handles EVERYTHING:                                     ║
+║  ✅ DB queries    ✅ Gap analysis    ✅ RO decisions                ║
+║  ✅ Surplus calc  ✅ Excel formatting ✅ 5 sheets                   ║
+║  ✅ Styling       ✅ Totals & validation                            ║
+╚══════════════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-## Prompt: Multi-Store (1 Region)
+## 🔧 STEP-BY-STEP EXECUTION (Follow This Exactly)
 
-```
-Generate RO Request mingguan untuk semua toko di region [NAMA REGION].
+### Step 1: Collect Required Inputs from User
 
-Daftar toko:
-1. [NAMA TOKO 1] - Storage: [X] boxes
-2. [NAMA TOKO 2] - Storage: [X] boxes
-3. [NAMA TOKO 3] - Storage: [X] boxes
-...
+| Input | How to Get | Example |
+|-------|-----------|---------|
+| **Store name** | Ask user OR parse from their request | "Royal Plaza" |
+| **Storage capacity** | Ask user (boxes). Default 0 if they don't know | 0 |
 
-Planogram source: DB `portal.temp_portal_plannogram` (auto, filter by store name)
-(Semua toko ada di DB yang sama, script filter by store_name ILIKE)
+### Step 2: Verify Script Exists
 
-Output:
-- 1 Excel file PER TOKO: RO_REQUEST_[StoreName].xlsx
-- Masing-masing file punya 5 sheet (cover, protol, box, surplus, reference)
-- Format dokumen resmi (cover page + signature block)
-
-ATAU:
-
-- 1 Excel file GABUNGAN: RO_REQUEST_[Region]_[Date].xlsx
-  - 1 sheet "RINGKASAN" semua toko (tabel: toko | protol count | box count | surplus count)
-  - Per toko: 4 sheet (protol, box, surplus, reference)
+```bash
+ls -la ~/.claude/skills/zuma-plano-and-ro/step3-ro-request/build_ro_request.py
 ```
 
-### Contoh penggunaan (multi-store):
+If file not found, STOP and report error. Do NOT attempt to recreate the script.
 
+### Step 3: Install Dependencies (if needed)
+
+```bash
+pip install psycopg2-binary openpyxl 2>/dev/null
 ```
-Generate RO Request mingguan untuk semua toko Jatim:
 
-1. Zuma Royal Plaza - Storage: 0 boxes
-2. Zuma Tunjungan Plaza - Storage: 15 boxes
-3. Zuma Galaxy Mall - Storage: 20 boxes
-4. Zuma Matos - Storage: 10 boxes
+### Step 4: Run the Script
 
-Planogram source: DB `portal.temp_portal_plannogram` (auto, filter by store name)
-
-Output: 1 file per toko, format dokumen resmi.
+**Single store:**
+```bash
+python3 ~/.claude/skills/zuma-plano-and-ro/step3-ro-request/build_ro_request.py \
+  --store "Royal Plaza" \
+  --storage 0
 ```
+
+**With custom storage:**
+```bash
+python3 ~/.claude/skills/zuma-plano-and-ro/step3-ro-request/build_ro_request.py \
+  --store "Galaxy Mall" \
+  --storage 75
+```
+
+**With custom output path:**
+```bash
+python3 ~/.claude/skills/zuma-plano-and-ro/step3-ro-request/build_ro_request.py \
+  --store "Matos" \
+  --storage 0 \
+  --output /Users/database-zuma/Desktop/custom_output.xlsx
+```
+
+**CLI Arguments:**
+
+| Arg | Required | Default | Description |
+|-----|----------|---------|-------------|
+| `--store` | YES | — | Store display name (used as ILIKE pattern) |
+| `--storage` | NO | 0 | Storage capacity in boxes |
+| `--threshold` | NO | 0.50 | % size kosong threshold for RO Box (≥50% → Box, <50% → Protol) |
+| `--output` | NO | `~/Desktop/DN PO ENTITAS/RO_Request_{Store}_{date}.xlsx` | Output file path |
+
+### Step 5: Verify Output
+
+After script completes, verify:
+
+```bash
+# Check file exists and has reasonable size (should be 15KB-50KB)
+ls -la ~/Desktop/DN\ PO\ ENTITAS/RO_Request_*.xlsx
+
+# Quick validation with Python
+python3 -c "
+import openpyxl
+wb = openpyxl.load_workbook('OUTPUT_PATH_HERE')
+sheets = wb.sheetnames
+print(f'Sheets: {sheets}')
+assert len(sheets) == 5, f'Expected 5 sheets, got {len(sheets)}'
+expected = ['RO Request', 'Daftar RO Protol', 'Daftar RO Box', 'Daftar Surplus', 'Reference']
+for s in expected:
+    assert s in sheets, f'Missing sheet: {s}'
+    ws = wb[s]
+    print(f'  {s}: {ws.max_row} rows x {ws.max_column} cols')
+print('All 5 sheets present')
+wb.close()
+"
+```
+
+**Validation checklist (apply to output):**
+
+| Sheet | Must Have |
+|-------|----------|
+| RO Request | 23+ rows; REQUEST SUMMARY table with 3 rows (PROTOL, BOX, SURPLUS); INSTRUCTIONS section; SIGNATURES section |
+| Daftar RO Protol | Header: No, Article (Kode Mix), Tier, Gender, Series, Sizes Needed, Total Pairs; TOTAL row at end |
+| Daftar RO Box | Header: No, Article (Kode Mix), Kode Kecil, Tier, Gender, Series, Box Qty, WH Available; TOTAL BOXES row at end |
+| Daftar Surplus | Header: No, Article (Kode Mix), Tier, **Size**, Pairs to Pull (5 columns ONLY — no Gender/Series!); TOTAL PAIRS TO PULL row at end |
+| Reference | TIER CAPACITY ANALYSIS section; FULL ARTICLE STATUS section with ~200 rows (not 10, not 685) |
+
+### Step 6: Upload & Deliver
+
+1. Upload XLSX to Google Drive (Zuma shared folder)
+2. Share the GDrive link with the user who requested the RO
+3. If GDrive upload fails → escalate to Wayan (+628983539659) via WhatsApp ONLY
+4. Task complete ONLY when user receives the GDrive link
 
 ---
 
-## Prompt: Custom (Protol Only / Box Only / Surplus Only)
+## 📋 Multi-Store Execution
 
-Jika minggu ini hanya butuh salah satu:
+For multiple stores, run the script once per store:
 
+```bash
+# Example: All Jatim stores
+for store in "Royal Plaza" "Tunjungan Plaza" "Galaxy Mall" "Matos" "Pakuwon Mall"; do
+  python3 ~/.claude/skills/zuma-plano-and-ro/step3-ro-request/build_ro_request.py \
+    --store "$store" --storage 0
+done
 ```
-Generate RO Protol Request saja untuk [NAMA TOKO].
-(Minggu ini tidak ada RO Box, hanya protol.)
 
-Store name di planogram DB: [NAMA TOKO]
-Store DB pattern: [PATTERN]
-Storage: [X]
-```
-
-```
-Generate Surplus Pull List saja untuk [NAMA TOKO].
-(Hanya tarik surplus, tidak ada restock minggu ini.)
-```
+Each run generates a separate XLSX file. Upload all files to GDrive.
 
 ---
 
-## Info yang Harus Disiapkan Sebelum Generate
+## 🏪 Store Names Reference (Jatim)
 
-| Data | Sumber | Wajib? |
-|------|--------|--------|
-| Planogram data | DB: `portal.temp_portal_plannogram` (auto-query) | WAJIB (harus ada data di DB) |
-| Store name (di planogram DB) | `SELECT DISTINCT store_name FROM portal.temp_portal_plannogram` | WAJIB |
-| Store name (DB pattern) | Lowercase, untuk ILIKE match di `core.stock_with_product` | WAJIB |
-| Storage capacity (boxes) | Tanya BM / AS toko | WAJIB |
-| DB access | openclaw_ops (76.13.194.120) | WAJIB |
+| Toko | --store Argument | Storage |
+|------|-----------------|---------|
+| Royal Plaza | "Royal Plaza" | 0 |
+| Tunjungan Plaza | "Tunjungan Plaza" | 0 |
+| Galaxy Mall | "Galaxy Mall" | 0 |
+| Matos | "Matos" | 0 |
+| Pakuwon Mall | "Pakuwon Mall" | 0 |
+| Icon Mall Gresik | "Icon Mall Gresik" | 0 |
 
-### Store Names Reference (Jatim)
+---
 
-| Toko | Di Planogram | DB Pattern |
-|------|--------------|------------|
-| Royal Plaza | Zuma Royal Plaza | zuma royal plaza |
-| Tunjungan Plaza | Zuma Tunjungan Plaza | zuma tunjungan plaza |
-| Galaxy Mall | Zuma Galaxy Mall | zuma galaxy mall |
-| Matos | Zuma Matos | zuma matos |
-| Pakuwon Mall | Zuma Pakuwon Mall | zuma pakuwon mall |
+## 🔧 Business Rules (Reference Only — Script Handles These)
 
-> NOTE: Untuk cek toko mana saja yang sudah ada planogramnya di DB:
-> ```sql
-> SELECT DISTINCT store_name FROM portal.temp_portal_plannogram ORDER BY store_name;
-> ```
-> Untuk cek store names di stock DB:
-> ```sql
-> SELECT DISTINCT nama_gudang FROM core.stock_with_product
-> WHERE LOWER(nama_gudang) LIKE '%zuma%'
-> ORDER BY nama_gudang;
-> ```
+These rules are built into `build_ro_request.py`. You do NOT need to implement them manually.
+
+| Rule | Detail |
+|------|--------|
+| **RO Box** | ≥50% size kosong → Kirim 1 box (12 pairs, all sizes) from Gudang Box |
+| **RO Protol** | <50% size kosong → Kirim pairs per size yang kosong saja from Gudang Protol |
+| **RO Box Source** | WH Pusat Box (DDD + LJBB) |
+| **RO Protol Source** | WH Pusat Protol (DDD only) |
+| **Surplus** | Tier over-capacity → tarik artikel dengan TO terendah |
+| **Surplus Tier** | T1, T2, T3 only (skip T4/T5 clearance, T8 protection 3 bulan) |
+| **Surplus Sort** | avg_monthly_sales ASC (slowest seller ditarik duluan) |
+
+---
+
+## 🚨 Troubleshooting
+
+### Script fails to connect to DB
+```
+DB_HOST = "76.13.194.120"
+DB_PORT = 5432
+DB_NAME = "openclaw_ops"
+DB_USER = "openclaw_app"
+DB_PASS = "Zuma-0psCl4w-2026!"
+```
+Verify VPS is reachable: `pg_isready -h 76.13.194.120 -p 5432`
+
+### Script outputs empty RO lists
+- Check planogram table exists: `portal.planogram_existing_q1_2026`
+- Verify store name matches: `SELECT DISTINCT store_name FROM portal.planogram_existing_q1_2026 WHERE store_name ILIKE '%royal plaza%'`
+
+### Script crashes
+- Common issue: missing `psycopg2-binary` or `openpyxl` — run `pip install psycopg2-binary openpyxl`
+
+### Output format doesn't match expected
+The script produces the correct format automatically. If format is wrong, the **script has a bug** — do NOT fix format by writing your own code. Instead, fix the script itself at `build_ro_request.py`.
+
+---
+
+## ❌ WHAT NOT TO DO (Common Mistakes)
+
+1. ❌ **DO NOT write your own openpyxl code** to create Excel files
+2. ❌ **DO NOT manually query the database** and construct sheets
+3. ❌ **DO NOT use the format specs above as build instructions** — they are validation criteria only
+4. ❌ **DO NOT load xlsx-skill** — the script already handles all Excel formatting
+5. ❌ **DO NOT modify column headers, sheet names, or row structure** — the script handles this
+6. ❌ **DO NOT "interpret" or "adapt" the script** — just run it as-is with CLI args
+
+---
+
+## ✅ WHAT TO DO (Correct Workflow)
+
+1. ✅ Ask user for store name and storage capacity
+2. ✅ Run `build_ro_request.py` with the correct `--store` and `--storage` args
+3. ✅ Verify output has 5 sheets with correct structure
+4. ✅ Upload to Google Drive and share link
+5. ✅ Done!
 
 ---
 
 ## Catatan Penting
 
-1. **Planogram harus sudah ada di DB** — RO Request bergantung pada `portal.temp_portal_plannogram`. Jika belum ada data, upload planogram ke DB dulu (atau buat pakai `planogram-zuma` skill).
+1. **Planogram harus sudah ada** — Script reads from `portal.planogram_existing_q1_2026`. If planogram doesn't exist for the store, create one first using `planogram-zuma` skill.
 
-2. **Data stock real-time** — Script query langsung ke DB `core.stock_with_product`. Pastikan data snapshot terbaru sudah ada.
+2. **Data stock real-time** — Script queries `core.stock_with_product`. WH box availability uses `ro_whs_readystock` VIEW. Data snapshot runs at 03:00-05:30 daily via cron.
 
-3. **Prioritas** — RO Box adalah DEFAULT (3+ size kosong). RO Protol hanya untuk gap minor (1-2 size). Total RO dibatasi oleh jumlah urgent surplus (pairs IN ≈ pairs OUT).
-
-4. **Ideal Tier Capacity %** — Saat ini diturunkan dari planogram (bukan target resmi). Akan di-update setelah ada angka resmi dari tim Planner.
-
-5. **TO Metric** — Belum distandarkan antara "stock coverage" (stock/sales) vs "turnover rate" (sales/stock). Script output keduanya. Akan distandarkan setelah konfirmasi tim.
+3. **Script is the source of truth** — All business logic, format, styling, calculations are in the script. If something is wrong, fix the script — don't work around it.
 
 ---
 
-*Version: 2.0*
-*Last Updated: 25 February 2026*
-*Default Skill: step3-zuma-ro-surplus-skills (zuma-ro-surplus)*
-*Related Skills: planogram-zuma, zuma-data-analyst-skill, zuma-sku-context, zuma-warehouse-and-stocks*
+## Reference Files (in `step3-ro-request/` directory)
+
+| File | Contents |
+|------|----------|
+| `build_ro_request.py` | **THE SCRIPT** — run this, don't rewrite it |
+| `SKILL.md` | Business logic documentation (zuma-distribution-flow) |
+| `section-for-planogram.md` | Distribution flow section for planogram integration |
+
+---
+
+*Version: 4.0*
+*Last Updated: 6 March 2026*
+*Key Change: Converted from format-spec skill to script-executor skill for LLM-consistency*
+*Primary Skill: zuma-distribution-flow (step3-ro-request)*

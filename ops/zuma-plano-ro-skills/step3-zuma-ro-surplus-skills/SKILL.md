@@ -1,23 +1,21 @@
 ---
-name: zuma-ro-surplus-transisi
-description: Zuma RO & Surplus TRANSISI — versi transisi dari distribution flow (surplus pull, restock, RO Request). Logic sedang diedit/diupdate. Use when working with the transitional/updated RO surplus logic.
-user-invocable: false
+name: zuma-distribution-flow
+description: "Zuma RO Request & Surplus Pull — original logic (protol/box >=50% threshold, tier-based surplus). Source: portal.planogram_existing_q1_2026. Output: 5-sheet Excel (cover, protol, box, surplus, reference)."
+user-invocable: true
 ---
 
-# Flow Distribusi TRANSISI: Restock Dulu -> Baru Surplus
+> **Updated 2026-02-27**: Data source changed from Excel (`RO Input {Region}.xlsx`) to DB table `portal.planogram_existing_q1_2026`.
+> Logic unchanged: >=50% sizes empty → Box, <50% → Protol. Tier-based surplus (T1/T2/T3 only).
+
+# Flow Distribusi: Surplus & Restock + RO Request Generation
 
 ## Overview
 
-Sistem distribusi ZUMA (versi TRANSISI) terdiri dari 3 tahap **berurutan**:
-1. **TAHAP 0: IDENTIFIKASI URGENT SURPLUS** — scan artikel di toko yang **tidak ada di planogram baru** (off-planogram). Ini adalah "barang lama" yang HARUS keluar. Total pairs urgent surplus menjadi **budget RO**.
-2. **TAHAP 1: RESTOCK (RO)** — tambal kekurangan stok di toko. **RO Box adalah DEFAULT**. RO Protol hanya untuk gap minor (1-2 size kosong). **Total RO pairs dibatasi ≈ total urgent surplus pairs** (swap: barang keluar = barang masuk).
-3. **TAHAP 2: SURPLUS** — tarik kelebihan stok SETELAH restock masuk. Dua kategori: **URGENT** (off-planogram, harus ditarik) dan **REGULAR** (on-planogram over-capacity, visibility/planning only).
+Sistem distribusi ZUMA terdiri dari 2 flow utama:
+1. **Restock Flow** — mengisi kekurangan stok di toko
+2. **Surplus Flow** — menarik kelebihan stok dari toko berdasarkan kapasitas tier
 
-**Konsep inti**: RO bukan untuk menutup 100% maxstock gap. RO hanya "menukar" barang buruk (off-plano) dengan barang bagus (on-plano yang kosong). **Pairs IN ≈ Pairs OUT (urgent only)**.
-
-**Jika urgent surplus = 0** (semua stok sesuai planogram): RO proceeds normally tanpa budget cap (uncapped fallback).
-
-Kontrol eksekusi tetap oleh **Allocation Planner**.
+Kedua flow ini di-trigger otomatis oleh sistem, dengan kontrol eksekusi oleh **Allocation Planner**.
 
 ---
 
@@ -29,17 +27,15 @@ Kontrol eksekusi tetap oleh **Allocation Planner**.
 | **Gudang Box** | Stok dalam kemasan box penuh (12 pairs, all sizes) | Per box |
 | **Gudang Protol** | Stok eceran per size/pairs | Per pairs/size |
 
-### Tipe RO (Replenishment Order) — TRANSISI
+### Tipe RO (Replenishment Order)
 | Tipe | Trigger | Source | Kirim |
 |------|---------|--------|-------|
-| **RO Box** DEFAULT | **3+ size kosong** dari assortment artikel | Gudang Box | 1 box (12 pairs, all sizes) |
-| **RO Protol** | **1-2 size kosong** dari assortment (gap minor) | Gudang Protol | Pairs di size yang kosong saja |
-
-> **PERUBAHAN DARI LOGIC LAMA**: Dulu threshold >=50% -> Box, <50% -> Protol (Protol preferred). Sekarang **Box adalah DEFAULT** — Protol hanya untuk gap sangat kecil (1-2 size). Surplus yang dihasilkan Box diterima dan ditarik di tahap surplus.
+| **RO Box** | Size kosong ≥50% dari assortment artikel | Gudang Box | 1 box (12 pairs, all sizes) |
+| **RO Protol** | Size kosong <50% dari assortment artikel | Gudang Protol | Pairs di size yang kosong saja |
 
 ### Key Metrics
 - **Assortment** = jumlah size yang seharusnya tersedia untuk 1 artikel di toko tersebut
-- **Empty Size Count** = jumlah size yang stoknya 0 (count-based, bukan persentase)
+- **% Size Kosong** = (jumlah size yang stoknya 0) / (total assortment) × 100%
 - **Tier Capacity %** = persentase ideal stok per tier dari total kapasitas toko
 - **Actual Tier %** = persentase stok aktual per tier dari total stok toko
 - **TO (Turnover)** = kecepatan jual artikel — semakin rendah, semakin lambat terjual
@@ -47,134 +43,75 @@ Kontrol eksekusi tetap oleh **Allocation Planner**.
 ### Tier Surplus Rules
 | Tier | Surplus Check | Alasan |
 |------|--------------|--------|
-| **T1** | Ya | Best seller — perlu dijaga proporsinya |
-| **T2** | Ya | Secondary fast moving — perlu dijaga proporsinya |
-| **T3** | Ya | Moderate — perlu dijaga proporsinya |
-| **T4** | Tidak | Promo / clearance — tujuannya menghabiskan stok |
-| **T5** | Tidak | Slow moving — sama seperti T4 |
-| **T8** | Tidak (3 bulan) | New launch — protection period untuk test market |
+| **T1** | ✅ Ya | Best seller — perlu dijaga proporsinya |
+| **T2** | ✅ Ya | Secondary fast moving — perlu dijaga proporsinya |
+| **T3** | ✅ Ya | Moderate — perlu dijaga proporsinya |
+| **T4** | ❌ Tidak | Promo / clearance — tujuannya menghabiskan stok |
+| **T5** | ❌ Tidak | Slow moving — sama seperti T4 |
+| **T8** | ❌ Tidak (3 bulan) | New launch — protection period untuk test market |
 
 ---
 
-## TAHAP 1 (Detail): RESTOCK (Tambal Dulu — Box Priority)
+## FLOW 1: RESTOCK
 
 ### Trigger
 Sistem mendeteksi gap antara stok aktual vs kebutuhan (planogram display + storage allocation).
 
-### Decision Tree — TRANSISI (Box Default)
+### Decision Tree
 
 ```
 SISTEM DETEKSI GAP
-        |
-        v
-Hitung jumlah size kosong (count, bukan %)
-        |
-        +-- 3+ size kosong -----------> RO BOX (DEFAULT)
-        |                                |
-        |                                v
-        |                          Cek Gudang Box
-        |                                |
-        |                           +-- Ada --> Tampil di daftar RO Box
-        |                           |           Planner approve --> Kirim box ke toko
-        |                           |           Surplus dari Box = ACCEPTED
-        |                           |           (akan ditarik di TAHAP 2: SURPLUS)
-        |                           |
-        |                           +-- Tidak ada --> EXCLUDE dari daftar
-        |                                             (tidak ditampilkan sama sekali)
-        |
-        +-- 1-2 size kosong ----------> RO PROTOL (Gap Minor)
-                                         |
-                                    Cek Gudang Protol
-                                         |
-                                    +-- Ada --> Kirim protol
-                                    |
-                                    +-- Tidak ada --> Fallback RO Box
-                                                       (sama: surplus dari Box = accepted)
+        │
+        ▼
+Hitung % size kosong vs assortment
+        │
+        ├── ≥50% size kosong ──────► RO BOX
+        │                              │
+        │                              ▼
+        │                        Cek Gudang Box
+        │                              │
+        │                         ├── Ada ──► Planner approve ──► Kirim box ke toko
+        │                         │
+        │                         └── Tidak ada ──► Flag (tunggu PO supplier)
+        │
+        └── <50% size kosong ──────► RO PROTOL (Tiered)
+                                       │
+                                  STEP 1: Cek Gudang Protol
+                                       │
+                                  ├── Ada ──► Kirim protol ✅
+                                  │
+                                  └── Tidak ada
+                                       │
+                                  STEP 2: Cek surplus toko lain
+                                       │
+                                  ├── Ada ──► Tarik ke gudang → kirim protol ✅
+                                  │
+                                  └── Tidak ada
+                                       │
+                                  STEP 3: Fallback RO Box
+                                       ⚠ Wajib pre-plan surplus size yg sudah ada
 ```
 
-### Restock Rules — TRANSISI
+### Restock Rules
 
-1. **RO Box adalah DEFAULT** — 3+ size kosong langsung kirim box. Tidak perlu pre-plan surplus karena surplus akan ditangani di TAHAP 2.
-2. **RO Protol hanya untuk gap minor** — 1-2 size kosong saja. Ini ~30% dari total restock.
-3. **Surplus dari Box = accepted** — Box mengirim ALL sizes (12 pairs). Size yang sudah ada stok akan menjadi surplus. Ini TIDAK diblok — surplus tersebut akan dihitung dan ditarik di TAHAP 2.
-4. **Fallback Protol -> Box** — Jika protol tidak tersedia di gudang, langsung fallback ke Box tanpa harus pre-plan surplus.
-5. **WH Stock Filter** — Jika artikel di-recommend RO Box tapi stok Box di WH Pusat = 0, artikel tersebut **TIDAK DITAMPILKAN** di daftar RO Box (di-exclude sepenuhnya, bukan ditandai "NO"). Artikel hanya muncul jika WH Pusat punya stok box.
-6. Allocation planner = gatekeeper — sistem recommend, planner approve/reject/modify
+1. Prioritas selalu RO Protol jika memenuhi syarat — lebih efisien, tidak bikin surplus baru
+2. RO Box adalah last resort untuk kasus protol, kecuali memang ≥50% size kosong
+3. Setiap RO Box fallback wajib disertai surplus pre-plan
+4. Allocation planner = gatekeeper — sistem recommend, planner approve/reject/modify
 
 ---
 
-## TAHAP 0: IDENTIFIKASI URGENT SURPLUS (Off-Planogram)
+## FLOW 2: SURPLUS (Tier-Based)
 
-### Konsep
+### Konsep Utama
 
-Sebelum restock, sistem scan **semua artikel yang ada stok di toko** dan bandingkan dengan **planogram baru**. Artikel yang **tidak ada di planogram baru** tapi **punya stok di toko** = **URGENT surplus**.
-
-Ini adalah barang lama / discontinued dari planogram sebelumnya yang HARUS dikeluarkan dari toko agar space bisa diisi barang baru.
-
-### Fungsi
-
-```python
-identify_urgent_surplus(planogram, db_data)
-# Returns: (urgent_list, total_urgent_pairs)
-# urgent_list = list of {"article", "kode_mix", "gender", "series", "tier", "sizes": {size: qty}, "total_stock", "avg_monthly_sales"}
-```
-
-### Dampak ke RO Budget
-
-`total_urgent_pairs` menjadi **budget cap untuk RO**:
-- Jika urgent = 50 pairs -> RO maksimal 50 pairs (protol + box combined)
-- Jika urgent = 0 -> RO **uncapped** (fallback ke full maxstock gap)
-
----
-
-## TAHAP 1: RESTOCK (Tambal Dulu — Box Priority, Budget-Capped)
-
-*(Sama seperti sebelumnya, tapi dengan tambahan budget cap dari TAHAP 0)*
-
-### RO Budget Capping
-
-Setelah generate full RO list (tanpa cap), sistem menjalankan `cap_ro_to_budget()`:
-
-```python
-cap_ro_to_budget(ro_protol_list, ro_box_list, budget_pairs)
-# Prioritization sort:
-# 1. Artikel dengan >=50% size kosong -> FIRST (paling butuh restock)
-# 2. Artikel best seller (avg_monthly_sales tertinggi) -> SECOND
-# Goal: "size full di artikel best seller"
-#
-# Greedy knapsack: iterate sorted list, skip items exceeding remaining budget
-# (continue, not break — smaller items can still fit)
-```
-
----
-
-## TAHAP 2: SURPLUS (Setelah Restock Masuk — Dua Kategori)
-
-### Konsep Utama — TRANSISI
-
-Surplus sekarang terbagi **dua kategori**:
-
-| Kategori | Definisi | Aksi | Warna di Excel |
-|----------|----------|------|----------------|
-| **URGENT** (off-planogram) | Artikel yang tidak ada di planogram baru tapi punya stok di toko | **HARUS ditarik minggu ini** | Orange (`FILL_URGENT`) |
-| **REGULAR** (over-capacity) | Artikel on-planogram yang stoknya melebihi kapasitas tier (post-restock) | **Visibility/planning only** — tidak wajib ditarik minggu ini | Purple (`HEADER_FILL_PURPLE`) |
-
-URGENT surplus sudah di-identify di TAHAP 0. REGULAR surplus dihitung SETELAH restock masuk.
-
-Untuk REGULAR surplus:
-- Stok yang dipakai = **stok POST-restock** (snapshot + RO Box + RO Protol yang dikirim)
-- Surplus numbers akan **lebih tinggi** karena RO Box menambah stok di ALL sizes
-- Surplus dari Box = **intended behavior** — Box sengaja dikirim dulu untuk memastikan display lengkap, lalu kelebihannya ditarik
-
-**PENTING**: Artikel off-planogram **tidak menambah** jumlah artikel tier saat menghitung kapasitas tier. Hanya artikel on-planogram yang dihitung sebagai `actual_tier_articles`.
-
-Surplus REGULAR ditentukan berdasarkan **gap antara kapasitas ideal per tier vs stok aktual POST-restock per tier**. Hanya tier yang over-capacity yang ditarik, dan yang ditarik adalah artikel dengan turnover (TO) terendah di tier tersebut.
+Surplus BUKAN asal tarik barang dari toko. Surplus ditentukan berdasarkan **gap antara kapasitas ideal per tier vs stok aktual per tier**. Hanya tier yang over-capacity yang ditarik, dan yang ditarik adalah artikel dengan turnover (TO) terendah di tier tersebut.
 
 ### Tier yang Dicek vs Dikecualikan
 
 **Dicek (T1, T2, T3):**
 - Tier ini punya target kapasitas ideal (%) dari total kapasitas toko
-- Jika actual POST-restock % > ideal % -> tier over-capacity -> tarik selisihnya
+- Jika actual % > ideal % → tier over-capacity → tarik selisihnya
 - Yang ditarik: artikel dengan TO paling rendah / dead stock di tier tersebut
 
 **Dikecualikan:**
@@ -186,119 +123,150 @@ Surplus REGULAR ditentukan berdasarkan **gap antara kapasitas ideal per tier vs 
 
 ```
 LAUNCH (Bulan ke-0)
-    |
-    v
+    │
+    ▼
 Protection Period (3 bulan)
 - Tidak boleh ditarik sebagai surplus
 - Data sales dikumpulkan untuk evaluasi
 - Exception: manual override oleh Allocation Planner
   jika toko benar-benar over-capacity parah
-    |
-    v
+    │
+    ▼
 BULAN KE-4: Reclassification
-    |
-    +-- Sales bagus --> Masuk T1/T2/T3 --> Ikut rules surplus tier barunya
-    |
-    +-- Sales jelek --> Masuk T4/T5 --> Exclude dari surplus check
+    │
+    ├── Sales bagus ──► Masuk T1/T2/T3 ──► Ikut rules surplus tier barunya
+    │
+    └── Sales jelek ──► Masuk T4/T5 ──► Exclude dari surplus check
                                           (masuk program clearance)
 ```
 
-### Surplus Decision Tree — TRANSISI
+### Surplus Decision Tree
 
 ```
-TAHAP 1 SELESAI: Restock (RO Box + RO Protol) sudah dikirim
-        |
-        v
-SIMULASI STOK POST-RESTOCK
-= Stok snapshot + RO Box (12 pairs all sizes) + RO Protol (pairs per size)
-        |
-        v
-HITUNG KAPASITAS PER TIER PER TOKO (dari stok POST-RESTOCK)
-        |
-        v
-Bandingkan per tier: Actual POST-RESTOCK % vs Ideal Capacity %
-        |
-        +-- T1: Ideal 30%, Actual 40% --> Over +10% --> SURPLUS CANDIDATE
-        +-- T2: Ideal 25%, Actual 28% --> Over +3%  --> SURPLUS CANDIDATE
-        +-- T3: Ideal 20%, Actual 22% --> Over +2%  --> SURPLUS CANDIDATE
-        +-- T4: --> SKIP (promo/clearance)
-        +-- T5: --> SKIP (slow moving)
-        +-- T8: --> SKIP (protection 3 bln)
-        |
-        v
-Untuk tier yang OVER-CAPACITY (post-restock):
-  Hitung selisih = Actual POST-RESTOCK % - Ideal %
-  Convert ke jumlah artikel
-        |
-        v
-  Ranking artikel di tier tsb by TO ascending
-  (TO terendah = dead stock = prioritas tarik pertama)
-        |
-        v
-  Tarik artikel dgn TO terendah sampai selisih terpenuhi
-        |
-        v
-  Allocation Planner review & approve list tarik
-        |
-        v
-  Tarik dari toko --> Masuk GUDANG PROTOL
-        |
-        v
-  Sistem cek: ada toko lain yang butuh?
-  +-- Ada --> Kirim protol ke toko yang butuh
-  +-- Tidak ada --> Stay di gudang protol
+SISTEM HITUNG KAPASITAS PER TIER PER TOKO
+        │
+        ▼
+Bandingkan per tier: Actual % vs Ideal Capacity %
+        │
+        ├── T1: Ideal 30%, Actual 35% ──► Over +5% ──► SURPLUS CANDIDATE
+        ├── T2: Ideal 25%, Actual 22% ──► Under     ──► SKIP (butuh restock)
+        ├── T3: Ideal 20%, Actual 23% ──► Over +3% ──► SURPLUS CANDIDATE
+        ├── T4: ─────────────────────────────────────► SKIP (promo/clearance)
+        ├── T5: ─────────────────────────────────────► SKIP (slow moving)
+        └── T8: ─────────────────────────────────────► SKIP (protection 3 bln)
+        │
+        ▼
+Untuk tier yang OVER-CAPACITY:
+        │
+        ▼
+Hitung selisih = Actual % - Ideal %
+Convert ke jumlah artikel/box
+        │
+        ▼
+Ranking artikel di tier tsb by TO ascending
+(TO terendah = dead stock = prioritas tarik pertama)
+        │
+        ▼
+Tarik artikel dgn TO terendah sampai selisih terpenuhi
+        │
+        ▼
+Allocation Planner review & approve list tarik
+        │
+        ▼
+Tarik dari toko ──► Masuk GUDANG PROTOL
+        │
+        ▼
+Sistem cek: ada toko lain yang butuh?
+        │
+        ├── Ada ──► Kirim protol ke toko yang butuh ✅
+        │
+        └── Tidak ada ──► Stay di gudang protol
 ```
 
-### Surplus Calculation Example — TRANSISI
+### Surplus Calculation Example
 
 ```
 Contoh: Toko Matos — Total Kapasitas 100 artikel
-SETELAH restock (10 artikel dapat RO Box, 3 artikel dapat RO Protol)
 
-Tier    Ideal %    Ideal Qty    Post-Restock Qty    Actual %    Status
-T1      30%        30           40                  37%         Over +10 artikel
-T2      25%        25           28                  26%         Over +3 artikel
-T3      20%        20           22                  20%         Over +2 artikel
-T4      15%        15           12                  11%         (skip - promo)
-T5      5%         5            4                   4%          (skip - slow moving)
-T8      5%         5            3                   3%          (skip - protection)
+Tier    Ideal %    Ideal Qty    Actual Qty    Actual %    Status
+T1      30%        30           35            35%         Over +5 artikel
+T2      25%        25           22            22%         Under -3 artikel
+T3      20%        20           23            23%         Over +3 artikel
+T4      15%        15           12            12%         (skip - promo)
+T5      5%         5            4             4%          (skip - slow moving)
+T8      5%         5            4             4%          (skip - protection)
 
 Action:
-- T1: Tarik 10 artikel dgn TO terendah -> ke gudang protol
-- T2: Tarik 3 artikel dgn TO terendah -> ke gudang protol
-- T3: Tarik 2 artikel dgn TO terendah -> ke gudang protol
-
-NOTE: Surplus numbers lebih tinggi dari logic lama karena Box sudah masuk.
-Ini INTENTIONAL — Box dikirim dulu untuk display lengkap, lalu kelebihan ditarik.
+- T1: Tarik 5 artikel dgn TO terendah → ke gudang protol
+- T3: Tarik 3 artikel dgn TO terendah → ke gudang protol
+- T2: Butuh restock 3 artikel → masuk restock flow
 ```
 
-### Surplus Rules — TRANSISI
+### Surplus Rules
 
-1. **URGENT surplus = off-planogram articles** — artikel yang tidak ada di planogram baru tapi punya stok di toko -> HARUS ditarik
-2. **REGULAR surplus dihitung SETELAH restock masuk** — stok = snapshot + RO Box + RO Protol yang dikirim
-3. **Off-planogram articles tidak inflate tier count** — tidak ditambahkan ke `actual_tier_articles` saat hitung kapasitas tier
-4. Hanya T1, T2, T3 yang dicek untuk REGULAR surplus — T4/T5 excluded (clearance), T8 excluded (protection 3 bulan)
-5. REGULAR surplus = actual POST-RESTOCK % - ideal % — hanya tier over-capacity
-6. Prioritas tarik (REGULAR): TO terendah dulu — dead stock dan slow mover keluar duluan
-7. **Surplus dari RO Box = expected** — ini bukan masalah, ini fitur. Box masuk -> display lengkap -> surplus ditarik
-8. Semua surplus dari toko masuk gudang protol — ditarik per size, bukan per box utuh
-9. Surplus tidak boleh store-to-store langsung — harus lewat gudang
-10. Surplus di gudang protol otomatis masuk pool untuk RO Protol toko lain
-11. T8 setelah 3 bulan -> reclassify berdasarkan actual sales -> ikut rules tier barunya
-12. Manual override T8 hanya jika extremely over-capacity — case-by-case, bukan otomatis
+1. Hanya T1, T2, T3 yang dicek — T4/T5 excluded (clearance), T8 excluded (protection 3 bulan)
+2. Surplus = actual % - ideal % — hanya tier yang over-capacity yang ditarik
+3. Prioritas tarik: TO terendah dulu — dead stock dan slow mover dalam tier itu keluar duluan
+4. Semua surplus dari toko masuk gudang protol — ditarik per size, bukan per box utuh
+5. Surplus tidak boleh store-to-store langsung — harus lewat gudang
+6. Surplus di gudang protol otomatis masuk pool untuk RO Protol toko lain
+7. T8 setelah 3 bulan → reclassify berdasarkan actual sales → ikut rules tier barunya
+8. Manual override T8 hanya jika extremely over-capacity — case-by-case, bukan otomatis
 
 ---
 
-## SIKLUS LENGKAP — TRANSISI
+## SIKLUS LENGKAP (Interconnected)
 
-> Full ASCII flow diagram: see [`ro-surplus-output-format.md`](ro-surplus-output-format.md#siklus-lengkap--transisi-urgent---ro-budget-capped---surplus)
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    ALLOCATION PLANNER                        │
+│              (Control & Approve semua flow)                  │
+└──────────────┬──────────────────────────────┬───────────────┘
+               │                              │
+               ▼                              ▼
+     ┌──── RESTOCK ────┐           ┌──── SURPLUS ────┐
+     │                 │           │   (Tier-Based)   │
+     │  Toko butuh     │           │  T1/T2/T3 over-  │
+     │  stok           │           │  capacity → tarik │
+     │                 │           │  TO rendah dulu   │
+     └───────┬─────────┘           └────────┬─────────┘
+             │                              │
+             ▼                              ▼
+     ┌───────────────┐             Tarik ke Gudang Protol
+     │ % size kosong │                      │
+     │ vs assortment │                      ▼
+     └───┬───────┬───┘             ┌─────────────────┐
+         │       │                 │  GUDANG PROTOL   │◄── Surplus masuk sini
+    ≥50% │       │ <50%            │  (pool per size) │
+         │       │                 └────────┬────────┘
+         ▼       ▼                          │
+    RO BOX    RO PROTOL ◄──────────────────┘
+         │       │
+         ▼       ▼
+   ┌──────────┐  ┌──────────────────────────┐
+   │ GUDANG   │  │ Tiered check:            │
+   │ BOX      │  │ 1. Gudang Protol         │
+   └────┬─────┘  │ 2. Surplus toko lain     │
+        │        │ 3. Fallback RO Box       │
+        ▼        └───────────┬──────────────┘
+   Kirim box            Kirim protol/box
+   ke toko              ke toko
+        │                    │
+        ▼                    ▼
+   ┌─────────────────────────────────────┐
+   │              TOKO                    │
+   │   Display (planogram) + Storage      │
+   │                                      │
+   │   RO Box fallback surplus ──────────►│──► Kembali ke Surplus Flow
+   └─────────────────────────────────────┘
+```
 
 ---
 
 ## Edge Cases
 
-### 1. RO Box -> surplus baru (EXPECTED BEHAVIOR di Transisi)
-Surplus dari Box = normal dan accepted. Tidak perlu pre-plan — surplus akan dihitung otomatis di TAHAP 2 dan ditarik setelahnya. Planner cukup review list surplus final.
+### 1. RO Box fallback → surplus baru
+Allocation Planner WAJIB pre-plan: size mana surplus setelah box masuk, kirim ke toko mana. Jika tidak ada demand, stay di storage (jika muat) atau tarik ke gudang.
 
 ### 2. T8 Protection Period
 3 bulan protection: tidak boleh ditarik. Exception: manual override jika extremely over-capacity (case-by-case, documented). Setelah 3 bulan: reclassify ke tier baru.
@@ -307,19 +275,19 @@ Surplus dari Box = normal dan accepted. Tidak perlu pre-plan — surplus akan di
 Full RO Box untuk semua artikel di planogram. Evaluasi surplus setelah 1 bulan. Tier capacity benchmark pakai toko serupa (size/area sama).
 
 ### 4. Artikel discontinued
-Semua stok -> surplus -> tarik ke gudang protol. Redistribusi ke toko yang masih jual, atau markdown.
+Semua stok → surplus → tarik ke gudang protol. Redistribusi ke toko yang masih jual, atau markdown.
 
 ### 5. Gudang protol penuh
-Prioritas redistribusi. Jika tidak ada demand -> eskalasi ke Planner (markdown/promo/retur supplier).
+Prioritas redistribusi. Jika tidak ada demand → eskalasi ke Planner (markdown/promo/retur supplier).
 
 ### 6. Gudang box kosong
 Flag ke procurement untuk PO. Sementara cek gudang protol untuk rakit assortment protol.
 
 ### 7. Semua tier under-capacity
-Restock prioritas berdasarkan sales contribution: T1 -> T2 -> T3. T4/T5 hanya restock jika masih dalam program promo aktif.
+Restock prioritas berdasarkan sales contribution: T1 → T2 → T3. T4/T5 hanya restock jika masih dalam program promo aktif.
 
 ### 8. T8 di toko over-capacity parah
-Manual override oleh Planner. Documented: alasan, expected impact. T8 yang ditarik -> gudang protol -> redistribute ke toko lain yang masih dalam protection period.
+Manual override oleh Planner. Documented: alasan, expected impact. T8 yang ditarik → gudang protol → redistribute ke toko lain yang masih dalam protection period.
 
 ---
 
@@ -335,107 +303,171 @@ RO Request adalah dokumen mingguan yang dihasilkan oleh sistem (atau AI agent) d
 ### Pipeline
 
 ```
-Pre-Planogram -> Planogram (Step 1) -> Visual Planogram (Step 2) -> RO Request (Step 3)
+Planogram Existing (DB) → RO Request (Step 3)
 ```
 
-RO Request **membutuhkan planogram** sebagai input. Tanpa planogram, tidak ada target per artikel per ukuran, sehingga RO Request tidak bisa dihitung.
+RO Request **membutuhkan planogram** sebagai input. Saat ini menggunakan `portal.planogram_existing_q1_2026` — snapshot on-hand stock toko yang menjadi target display sementara.
 
 ### Data Sources
 
 | Data | Source | Query |
 |------|--------|-------|
 | Store stock | `core.stock_with_product` | `WHERE LOWER(nama_gudang) LIKE '%{store_pattern}%'` |
-| WH Pusat Box | `core.stock_with_product` | `WHERE LOWER(nama_gudang) = 'warehouse pusat'` (DDD + LJBB) |
+| WH Pusat Box | `branch_super_app_clawdbot.ro_whs_readystock` | `WHERE ddd_available > 0` — aggregated from `master_mutasi_whs` Stock Akhir. Use this to **filter** which articles have boxes available in WH Pusat. |
 | WH Pusat Protol | `core.stock_with_product` | `WHERE LOWER(nama_gudang) = 'warehouse pusat protol'` (DDD only) |
-| Sales (3 month) | `core.sales_with_product` | `WHERE tanggal >= NOW() - INTERVAL '3 months'` + exclude intercompany |
-| Planogram targets | DB table `portal.planogram_existing_q1_2026` | `WHERE store_name ILIKE '%{store_pattern}%'` — 51 stores, 606 articles, 42 size columns (25 individual + 17 paired), BOX column |
-| WH Available (RO Box) | `branch_super_app_clawdbot.ro_whs_readystock` (VIEW) | `SELECT article_code, total_available` — total box qty available across all warehouses |
+| Sales (3 month) | `core.sales_with_product` | `WHERE transaction_date >= NOW() - INTERVAL '3 months'` + exclude intercompany |
+| **Planogram targets** | `portal.planogram_existing_q1_2026` | `WHERE LOWER(store_name) ILIKE '%{store}%' AND grand_total_pairs::int > 0` |
 
-### RO Type Decision Logic — TRANSISI (Count-Based, Box Default)
+> **UPDATED (Mar 2026)**: WH Box availability now reads from `ro_whs_readystock` VIEW which auto-calculates from `master_mutasi_whs` (Stock Awal + Transaksi IN - Transaksi OUT - RO Ongoing). The old `ro_stockwhs` table has been deleted. `ro_whs_readystock` columns: `article_code`, `article_name`, `tier`, `tipe`, `gender`, `series`, `ddd_available`, `ljbb_available`, `mbb_available`, `ubb_available`, `total_available`, `last_calculated`.
+
+**Key planogram columns:**
+- `article_mix` — kode mix (UPPERCASE)
+- `size_*` columns — target qty per size (42 size columns: 25 individual + 17 paired)
+- `grand_total_pairs` — sum of all sizes = total display target
+- `box` — box count (patokan utama)
+- `updated_at` — kapan data terakhir di-update
+
+### RO Type Decision Logic
 
 ```python
 assortment_sizes = number of sizes in planogram for this article
 empty_sizes = sizes where store stock = 0
+pct_empty = empty_sizes / assortment_sizes
 
-# TRANSISI: Box is DEFAULT. Protol only for minor gaps (1-2 sizes).
-if empty_sizes >= 3:
-    ro_type = "RO_BOX"    # DEFAULT — send full box (12 pairs, all sizes) from Gudang Box
-elif empty_sizes >= 1:
-    ro_type = "RO_PROTOL"  # Minor gap — send individual pairs for 1-2 empty sizes
+if pct_empty >= 0.50:
+    ro_type = "RO_BOX"    # Send full box (12 pairs, all sizes) from Gudang Box
 else:
-    ro_type = "NO_RESTOCK"  # All sizes have stock
+    ro_type = "RO_PROTOL"  # Send individual pairs only for empty sizes from Gudang Protol
 ```
 
-### Surplus Detection Logic — TRANSISI (Three-Phase)
+### Surplus Detection Logic
 
 ```python
-# PHASE 0: Identify URGENT surplus (off-planogram)
-planogram_articles = set(planogram keys)
-all_store_articles = set(articles with stock in store)
-off_planogram = all_store_articles - planogram_articles
+# Only check articles in tier T1, T2, T3
+# Skip T4 (clearance), T5 (slow moving), T8 (new launch protection 3 months)
 
-urgent_surplus = []
-for article in off_planogram:
-    urgent_surplus.append({article, sizes, total_stock, ...})
-total_urgent_pairs = sum(a["total_stock"] for a in urgent_surplus)
-# total_urgent_pairs = BUDGET for RO
-
-# PHASE 1: Generate RO (budget-capped)
-ro_protol_full, ro_box_full = generate_ro_decisions(gap_results)  # full, uncapped
-
-if total_urgent_pairs > 0:
-    ro_protol, ro_box, actual_ro_pairs = cap_ro_to_budget(
-        ro_protol_full, ro_box_full, budget=total_urgent_pairs
-    )
-    # Prioritization: (1) >=50% sizes empty -> first, (2) best sellers -> second
-    # Greedy knapsack: skip big items, continue to smaller ones
-else:
-    ro_protol, ro_box = ro_protol_full, ro_box_full  # uncapped fallback
-
-# PHASE 2: Simulate restock + calculate REGULAR surplus
-post_restock_stock = copy(current_store_stock)
-
-for each article getting RO_BOX:
-    for each size in box (all assortment sizes):
-        post_restock_stock[article][size] += 1  # box adds 1 pair per size
-
-for each article getting RO_PROTOL:
-    for each empty_size:
-        post_restock_stock[article][empty_size] += protol_qty
-
-# Calculate REGULAR surplus from post_restock_stock
-# IMPORTANT: off-planogram articles do NOT count in actual_tier_articles
 for each article on planogram where tier in [1, 2, 3]:
-    if article has sizes with post_restock_stock > target:
-        excess_pairs = post_restock_stock - target (per size)
+    if article NOT in store stock (completely absent):
+        → NOT surplus (needs restock)
+    if article has sizes with stock > target:
+        excess_pairs = stock - target (per size)
         if excess_pairs > 0:
-            -> REGULAR SURPLUS CANDIDATE
+            → SURPLUS CANDIDATE
 
-# Sort regular surplus by avg_monthly_sales ASC (slowest sellers pulled first)
-
-# OUTPUT: Both URGENT (off-plano) + REGULAR (over-capacity) in Excel
-# URGENT = must pull this week. REGULAR = visibility/planning only.
+# Sort surplus candidates by avg_monthly_sales ASC (slowest sellers pulled first)
+# This is UNAMBIGUOUS regardless of TO definition used
 ```
 
 ### WH Source Rules
 
 | Type | Warehouse | Entities | Notes |
 |------|-----------|----------|-------|
-| RO Box | Warehouse Pusat (Box) | DDD + LJBB | LJBB exclusive for Box only |
+| RO Box | Warehouse Pusat (Box) | `ro_whs_readystock.ddd_available > 0` | DDD + LJBB | LJBB exclusive for Box only. Filter articles using `ro_whs_readystock` before including in RO Box list. |
 | RO Protol | Warehouse Pusat Protol | DDD only | No LJBB for protol |
 | Surplus destination | Warehouse Pusat Protol | — | All surplus goes to protol gudang |
 
-**IMPORTANT**: RO Box only from Warehouse Pusat — NOT from WHJ or WHB.
+**IMPORTANT**: Box availability now auto-calculated via `ro_whs_readystock` VIEW (reads from `master_mutasi_whs`). No more manual `ro_stockwhs` table updates needed.
+RO Box only from Warehouse Pusat — NOT from WHJ or WHB.
 
 ### Output Format: Excel (.xlsx) — 5 Sheets
 
-Output: 5-sheet Excel (Cover Page, Daftar RO Protol, Daftar RO Box, Daftar Surplus [URGENT+REGULAR], Reference).
+The output is an official document format with cover page and signature block.
 
-> Full sheet specifications, column layouts, and styling: see [`ro-surplus-output-format.md`](ro-surplus-output-format.md#output-format-excel-xlsx--5-sheets)
+#### Sheet 1: "RO Request" (Cover Page)
+
+```
+Row 2:  WEEKLY RO REQUEST                          (bold, 16pt, green fill)
+Row 3:  {Store Name}                               (bold, 14pt)
+Row 5:  Week of:          {date}
+Row 6:  Stock Snapshot:   {date}
+Row 7:  Storage Capacity: {N} boxes
+Row 9:  From:  Area Supervisor     ___________________________
+Row 10: To:    Warehouse Supervisor ___________________________
+
+Row 12: REQUEST SUMMARY                            (bold, green fill)
+Row 13: Type | Articles | Total | Source/Destination | See Sheet  (header row, bold)
+Row 14: RO PROTOL | {N} | {N} pairs | FROM: WH Pusat Protol | Daftar RO Protol
+Row 15: RO BOX   | {N} | {N} boxes | FROM: WH Pusat Box    | Daftar RO Box
+Row 16: SURPLUS  | {N} | {N} pairs | TO: WH Pusat Protol   | Daftar Surplus
+
+Row 19: INSTRUCTIONS
+Row 20-24: (numbered instructions — restock+surplus same day, priority protol first)
+
+Row 27: SIGNATURES
+Row 28: [Prepared by] [Approved by] [Received by]
+Row 29-31: Name/Date/Signature lines
+```
+
+#### Sheet 2: "Daftar RO Protol" (One Row Per Article)
+
+```
+Header rows 1-4: title, store, date, source info
+Row 6 (header): No | Article | Kode Mix | Tier | Sizes Needed (size:qty) | Total Pairs
+Row 7+: numbered data rows
+
+Example row:
+  1 | LADIES FLO 1, BLACK | L1FL0LV101 | 1 | 36:1, 37:2, 38:4, 39:3, 40:2 | 12
+
+Last row: TOTAL PAIRS = {sum}
+```
+
+**Key format**: Sizes Needed uses `size:qty` format, comma-separated. This shows the WH picker exactly which sizes and how many pairs to pick.
+
+**Sorting**: By Tier ASC, then by Article name ASC within each tier.
+
+#### Sheet 3: "Daftar RO Box" (One Row Per Article, 1 Box)
+
+```
+Header rows 1-4: title, store, date, source info + "Total: {N} boxes"
+Row 6 (header): No | Article | Kode Mix | Tier | Box Qty | WH Available
+Row 7+: numbered data rows
+
+Example row:
+  1 | LADIES CLASSIC 1, JET BLACK | SJ2ACAV201 | 1 | 1 | NO
+
+Last row: TOTAL BOXES = {sum}
+```
+
+**Key format**: Box Qty is always 1 (1 box = 12 pairs, all sizes). WH Available shows YES/NO based on warehouse stock check.
+
+**Sorting**: By Tier ASC, then by Article name ASC within each tier.
+
+#### Sheet 4: "Daftar Surplus" (Size-Level Detail)
+
+```
+Header rows 1-4: title, store, date, destination info + "Total: {N} articles, {N} pairs"
+Row 6 (header): No | Article | Kode Mix | Size | Pairs to Pull
+Row 7+: numbered data rows (one row per article+size combination)
+
+Example rows:
+  1 | MEN STRIPE 1, BLACK BLUE RED | M1SP0PV201 | 40 | 3
+  2 | MEN STRIPE 1, BLACK BLUE RED | M1SP0PV201 | 42 | 3
+
+Last row: TOTAL PAIRS = {sum}
+```
+
+**Key format**: Size-level detail because WH pickers need exact size to pull from display. Same article appears multiple times if multiple sizes are surplus.
+
+**Sorting**: By avg_monthly_sales ASC (slowest sellers first — these get pulled first).
+
+#### Sheet 5: "Reference" (Internal Use Only)
+
+```
+Row 1: REFERENCE DATA (Internal Use)
+
+Section 1 — Tier Capacity Analysis:
+  Tier | Ideal (Planogram) | Ideal % | Actual (Stock) | Actual % | Diff | Status
+
+Section 2 — Full Article Status:
+  Article | Kode Mix | Gender | Series | Tier | Target | Actual | Gap | % Kosong | RO Type | Avg Monthly Sales | Stock Coverage
+
+Section 3 — Off-Planogram Articles (if any):
+  Articles found in store stock but NOT in planogram — flagged for review.
+```
 
 ### Script Reference
 
-**File**: `build_ro_request.py` — Universal CLI script (any store)
+**File**: `build_ro_request.py` (in `step3-ro-request/` folder)
 
 **Dependencies** (must be installed):
 ```bash
@@ -444,17 +476,13 @@ pip install psycopg2-binary openpyxl
 
 **Key Config Variables** (top of script):
 ```python
-PLANOGRAM_TABLE = "portal.planogram_existing_q1_2026"  # Planogram source (DB)
-PLANOGRAM_SIZE_COLS = [...]                             # 42 size columns (25 individual + 17 paired)
-SURPLUS_CHECK_TIERS = [1, 2, 3]                         # Only T1/T2/T3 checked for surplus
-# CLI args: --store, --storage, --threshold, --output
+STORE_NAME = "Zuma Royal Plaza"          # Display name
+STORE_DB_PATTERN = "zuma royal plaza"     # For ILIKE match in DB
+STORAGE_CAPACITY = 0                      # Number of storage boxes (0 = no storage)
+RO_BOX_THRESHOLD = 0.50                   # >=50% sizes empty → RO Box
+SURPLUS_CHECK_TIERS = [1, 2, 3]           # Only T1/T2/T3 checked for surplus
+PLANOGRAM_TABLE = "portal.planogram_existing_q1_2026"  # DB planogram source
 ```
-
-**Key Functions** (TRANSISI additions):
-- `identify_urgent_surplus(planogram, db_data)` — scans all store articles for off-planogram items. Returns `(urgent_list, total_urgent_pairs)`. Budget for RO = total_urgent_pairs.
-- `cap_ro_to_budget(ro_protol_list, ro_box_list, budget_pairs)` — prioritizes: (1) >=50% sizes empty first, (2) best sellers (highest avg_monthly_sales). Greedy knapsack — skips items exceeding budget, continues to smaller items. Returns `(capped_protol, capped_box, actual_pairs)`.
-- `simulate_restock(ro_protol_list, ro_box_list, db_data, planogram)` — simulates post-restock stock state by adding Box (1 pair per size) and Protol fills to current stock
-- `calculate_surplus(..., post_restock_stock=None)` — now accepts optional post-restock stock dict; when provided, uses it instead of current stock for tier distribution calculations. Off-planogram articles do NOT inflate `actual_tier_articles`.
 
 **DB Connection** (in script):
 ```python
@@ -465,31 +493,68 @@ DB_USER = "openclaw_app"
 DB_PASS = "Zuma-0psCl4w-2026!"
 ```
 
-**To generate for a different store**: `python build_ro_request.py --store "Icon Mall Gresik" --storage 0`
+**To generate for a different store**: Run the script with `--store "Store Name"` argument. The planogram table has 51 stores nationwide. Do NOT copy the script — just change the CLI args.
 
-> Known limitations, example output, and pending clarifications: see [`ro-surplus-output-format.md`](ro-surplus-output-format.md#known-limitations--pending-clarifications)
+### Known Limitations & Pending Clarifications
+
+1. **TO Metric** — Two definitions coexist in Zuma:
+   - (a) Stock Coverage = stock / monthly_sales (months of stock remaining). High = slow.
+   - (b) Turnover Rate = monthly_sales / stock (sales velocity). Low = slow.
+   Script outputs both. Surplus sorts by `avg_monthly_sales ASC` which is unambiguous.
+   → **PENDING**: Ask Allocation Planner team which label to standardize on.
+
+2. **Ideal Tier Capacity %** — No official per-store tier targets exist yet. Script derives ideal from planogram article count per tier.
+   → **PENDING**: Ask Planner for real per-store tier capacity targets.
+
+3. **RO Protol Total Pairs accuracy** — Some `Total Pairs` show 0 because WH Protol stock for those sizes is 0. The "Sizes Needed" column still shows what's needed, but total reflects what can actually be fulfilled.
+
+4. **Storage = 0 stores** — Every RO Box creates immediate surplus for sizes already in stock. The Allocation Planner must pre-plan redistribution before approving.
+
+### Example Output (Royal Plaza, 10 Feb 2026)
+
+| Metric | Count |
+|--------|-------|
+| RO Protol articles | 47 |
+| RO Protol total pairs | 208 |
+| RO Box articles | 42 |
+| RO Box total boxes | 42 |
+| Surplus articles | 24 |
+| Surplus total pairs | 179 |
+| Off-Planogram articles | 41 |
+
+### Styling Reference (openpyxl)
+
+The Excel output uses consistent branding:
+
+| Element | Style |
+|---------|-------|
+| Title row | Font 16pt bold, fill `#00E273` (Zuma Green), white text |
+| Store name | Font 14pt bold |
+| Section headers | Font 12pt bold, fill `#00E273` |
+| Table headers | Font 10pt bold, fill `#2E7D32` (dark green), white text |
+| Data rows | Font 10pt, alternating white/`#E8F5E9` (light green) |
+| Borders | Thin borders on all data cells |
+| Column widths | Auto-fit with min/max constraints |
+| Summary values | Bold, right-aligned |
+| Total row | Bold, top border |
 
 ### How to Use This Skill (For AI Agents)
 
 1. **Load dependencies**: `zuma-data-analyst-skill` (DB connection), `zuma-sku-context` (tier system, Kode Mix), `zuma-warehouse-and-stocks` (WH names, RO flow)
-2. **Check planogram exists**: RO Request requires planogram. If none exists, generate one first using `planogram-zuma` skill
-3. **Run script**: `python build_ro_request.py --store "Royal Plaza" --storage 0` — works for any store in the planogram table
-4. **TRANSISI flow is sequential**: Script runs TAHAP 0 (`identify_urgent_surplus`) -> TAHAP 1 (restock with `cap_ro_to_budget` if urgent > 0) -> `simulate_restock()` -> TAHAP 2 (surplus: urgent + regular). Do NOT calculate surplus from pre-restock stock.
-5. **Output validation**: Check that all 5 sheets are populated, totals match, WH availability is checked. Cover page should show 3 surplus rows (URGENT, REGULAR, TOTAL). Sheet 4 should have orange URGENT section + purple REGULAR section.
-6. **Deliver output**: After XLSX generation, the task is NOT complete until the file is uploaded to Google Drive and the share link is sent to the requesting user.
-7. **Delivery workflow (MANDATORY)**:
+2. **Planogram source**: `portal.planogram_existing_q1_2026` (51 stores, 606 articles, BOX column = patokan)
+3. **ALWAYS run `build_ro_request.py`**: Execute the script directly with `--store` and `--storage` CLI args. Do NOT write your own code or "replicate its logic" — just run the script.
+4. **Output validation**: Check that all 5 sheets are populated, totals match, WH availability is checked
+5. **Deliver output**: After XLSX generation, the task is NOT complete until the file is uploaded to Google Drive and the share link is sent to the requesting user.
+6. **Delivery workflow (MANDATORY)**:
    - Upload XLSX to Google Drive (Zuma shared folder)
    - Share the GDrive link with the user who requested the RO
    - If GDrive upload fails → escalate to Wayan (+628983539659) via WhatsApp ONLY. Do NOT contact anyone else.
    - Task is complete ONLY when the user receives the GDrive link (or Wayan is notified of the failure)
 
----
+### Available Stores (51 — from planogram_existing_q1_2026)
 
-## Reference Files
+```sql
+SELECT DISTINCT store_name FROM portal.planogram_existing_q1_2026 ORDER BY store_name;
+```
 
-| File | Contents |
-|------|----------|
-| [`ro-surplus-output-format.md`](ro-surplus-output-format.md) | Full cycle ASCII diagram, Excel 5-sheet output specification (cover page, column layouts per sheet), openpyxl styling/branding reference, worked example output (Royal Plaza), known limitations & pending clarifications |
-| [`section-for-planogram.md`](section-for-planogram.md) | Distribution flow TRANSISI section formatted for planogram context — gudang types, RO decision tree, surplus tiers, T8 lifecycle, edge cases (standalone reference for planogram skill integration) |
-| `build_ro_request.py` | Universal CLI Python script for generating RO Request & Surplus Pull for any store — `--store`, `--storage`, `--threshold`, `--output` args |
-| [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) | Bug history & fixes untuk `build_ro_request.py` — root cause, gejala, fix, dan pelajaran. Cek di sini dulu kalau output aneh. |
+Includes: Bali (28 stores), Jatim (11), Jakarta (4), Batam (2), Lombok (1), Manado (1), Pekanbaru (1).
