@@ -115,13 +115,33 @@ wb.close()
 | Daftar Surplus | Header: No, Article (Kode Mix), Tier, **Size**, Pairs to Pull (5 columns ONLY — no Gender/Series!); TOTAL PAIRS TO PULL row at end |
 | Reference | TIER CAPACITY ANALYSIS section; FULL ARTICLE STATUS section with ~200 rows (not 10, not 685) |
 
-### Step 6: Upload & Deliver
+### Step 6: Upload to Google Drive (MANDATORY)
 
-1. Upload XLSX to Google Drive (Zuma shared folder)
-2. Share the GDrive link with the user who requested the RO
-3. If GDrive upload fails → escalate to Wayan (+628983539659) via WhatsApp ONLY
-4. Task complete ONLY when user receives the GDrive link
+⛔ **Task is NOT complete until user receives GDrive link.** Do NOT skip this step.
 
+```bash
+# Upload and auto-share (anyone with link = editor)
+# Uses GWS CLI (pre-authenticated) or Google API Python client as fallback
+python3 ~/.claude/skills/zuma-plano-and-ro/step3-ro-request/upload_to_gdrive.py \
+  --file "OUTPUT_PATH_HERE" \
+  --folder "Zuma RO Requests"
+```
+
+The script will:
+1. Use `gws` CLI (primary, pre-authenticated) or Python Google API (fallback)
+2. Find or create folder "Zuma RO Requests" on Google Drive
+3. Upload XLSX to that folder
+4. Set sharing: **anyone with link = editor**
+5. Print the shareable link as `GDRIVE_LINK=<url>` on the last line
+
+**After upload:**
+- Copy the `GDRIVE_LINK=` line from output
+- Share the link with the user who requested the RO
+- Task complete ONLY when user receives the GDrive link
+
+**If upload fails:**
+- Check error message (usually token expired → re-run, it will re-auth)
+- If persistent failure → escalate to Wayan (+628983539659) via WhatsApp ONLY
 ---
 
 ## 📋 Multi-Store Execution
@@ -133,7 +153,10 @@ For multiple stores, run the script once per store:
 for store in "Royal Plaza" "Tunjungan Plaza" "Galaxy Mall" "Matos" "Pakuwon Mall"; do
   python3 ~/.claude/skills/zuma-plano-and-ro/step3-ro-request/build_ro_request.py \
     --store "$store" --storage 0
-done
+  # Upload each output
+  python3 ~/.claude/skills/zuma-plano-and-ro/step3-ro-request/upload_to_gdrive.py \
+    --file ~/Desktop/DN\ PO\ ENTITAS/RO_Request_${store// /_}_*.xlsx \
+    --folder "Zuma RO Requests"
 ```
 
 Each run generates a separate XLSX file. Upload all files to GDrive.
@@ -229,12 +252,13 @@ The script produces the correct format automatically. If format is wrong, the **
 | File | Contents |
 |------|----------|
 | `build_ro_request.py` | **THE SCRIPT** — run this, don't rewrite it |
+| `upload_to_gdrive.py` | **GDrive uploader** — uploads XLSX + sets anyone-with-link=editor |
 | `SKILL.md` | Business logic documentation (zuma-distribution-flow) |
 | `section-for-planogram.md` | Distribution flow section for planogram integration |
 
 ---
 
-*Version: 4.0*
+*Version: 4.1*
 *Last Updated: 6 March 2026*
-*Key Change: Converted from format-spec skill to script-executor skill for LLM-consistency*
+*Key Change: Added mandatory GDrive upload with anyone-with-link=editor sharing*
 *Primary Skill: zuma-distribution-flow (step3-ro-request)*
