@@ -1,14 +1,36 @@
 #!/usr/bin/env bash
 # Send RO files via Iris (OpenClaw WA gateway)
-# Usage: send_ro_via_iris.sh <file1.xlsx> [file2.xlsx] [file3.xlsx] ...
-# Or:    send_ro_via_iris.sh --all  (sends all files from today's generation)
+# Reads request context from inbox/ro_request.json to know who to send to.
+#
+# Usage: send_ro_via_iris.sh <file1.xlsx> [file2.xlsx] ...
+# Or:    send_ro_via_iris.sh --all
 
 set -euo pipefail
 
-WAYAN_PHONE="+628983539659"  # AS (Wayan)
-# ALLOC_PHONE="TBD"          # Allocations Planner
+ALLOC_PLANNER_PHONE="+628983539659"  # Allocations Planner (Wayan for now)
+RO_INBOX="$HOME/.paperclip/instances/default/workspaces/b1b9ff7c-0b4b-44cd-a012-21e77d02edc2/inbox"
+RO_OUTBOX="$HOME/.paperclip/instances/default/workspaces/b1b9ff7c-0b4b-44cd-a012-21e77d02edc2/outbox"
 TODAY=$(date +%Y-%m-%d)
 UPLOAD_SCRIPT="$HOME/.claude/skills/zuma-plano-ro-skills/step3-zuma-ro-surplus-skills/upload_gsheet.py"
+
+# Read request context (who triggered, send to whom)
+REQUESTER_PHONE=""
+REQUESTER_NAME=""
+REQUEST_FILE="$RO_INBOX/ro_request.json"
+if [ -f "$REQUEST_FILE" ]; then
+    REQUESTER_PHONE=$(python3 -c "import json; d=json.load(open('$REQUEST_FILE')); print(d.get('requester_phone',''))" 2>/dev/null || true)
+    REQUESTER_NAME=$(python3 -c "import json; d=json.load(open('$REQUEST_FILE')); print(d.get('requester_name',''))" 2>/dev/null || true)
+    echo "Request context: ${REQUESTER_NAME} (${REQUESTER_PHONE})"
+fi
+
+send_to_wa() {
+    local PHONE="$1"
+    local MSG="$2"
+    if [ -n "$PHONE" ]; then
+        openclaw message send --channel whatsapp --account default \
+            --target "$PHONE" --message "$MSG" 2>&1 || echo "  WARN: WA send failed to $PHONE"
+    fi
+}
 
 send_file() {
     local XLSX_PATH="$1"
@@ -17,7 +39,6 @@ send_file() {
 
     echo "--- Sending: $FILENAME ---"
 
-    # Upload to dedicated GDrive folder: ROBOX/YYYY-MM-DD
     GDRIVE_FOLDER="ROBOX/${TODAY}"
     echo "  Uploading to GDrive (${GDRIVE_FOLDER})..."
     UPLOAD_OUTPUT=$(python3 "$UPLOAD_SCRIPT" --file "$XLSX_PATH" --folder "$GDRIVE_FOLDER" 2>&1) || {
@@ -33,20 +54,23 @@ send_file() {
     fi
     echo "  Link: $GDRIVE_LINK"
 
-    # Extract store name from filename: ROBOX-20260331-GM-00001.xlsx → GM
     STORE=$(echo "$FILENAME" | sed 's/ROBOX-[0-9]*-\(.*\)-[0-9]*.xlsx/\1/')
 
-    # Send to Wayan
     MSG="*ROBOX ${TODAY} — ${STORE}*
 
 File RO: ${GDRIVE_LINK}
 
 Silakan review & adjust. Reply *lanjut picking list* kalau sudah."
 
-    echo "  Sending to Wayan..."
-    openclaw message send --channel whatsapp \
-        --target "$WAYAN_PHONE" \
-        --message "$MSG" 2>&1 || echo "  WARN: WA send failed — check listener"
+    # 1. Send to requester (AS who triggered)
+    if [ -n "$REQUESTER_PHONE" ] && [ "$REQUESTER_PHONE" != "$ALLOC_PLANNER_PHONE" ]; then
+        echo "  Sending to requester: ${REQUESTER_NAME} (${REQUESTER_PHONE})..."
+        send_to_wa "$REQUESTER_PHONE" "$MSG"
+    fi
+
+    # 2. Always send to Allocations Planner
+    echo "  Sending to AP: ${ALLOC_PLANNER_PHONE}..."
+    send_to_wa "$ALLOC_PLANNER_PHONE" "$MSG"
 
     echo "  Done: $FILENAME → $GDRIVE_LINK"
     echo ""
@@ -55,7 +79,6 @@ Silakan review & adjust. Reply *lanjut picking list* kalau sudah."
 # Main
 if [ "${1:-}" = "--all" ]; then
     DATE_COMPACT=$(date +%Y%m%d)
-    RO_OUTBOX="$HOME/.paperclip/instances/default/workspaces/b1b9ff7c-0b4b-44cd-a012-21e77d02edc2/outbox"
     FILES=$(find "$RO_OUTBOX" -name "ROBOX-${DATE_COMPACT}-*.xlsx" 2>/dev/null | sort)
     if [ -z "$FILES" ]; then
         echo "No ROBOX files found for today ($DATE_COMPACT)."
@@ -71,4 +94,9 @@ else
     for f in "$@"; do
         send_file "$f"
     done
+fi
+
+# Cleanup request context after send
+if [ -f "$REQUEST_FILE" ]; then
+    mv "$REQUEST_FILE" "$REQUEST_FILE.done.$(date +%s)" 2>/dev/null
 fi
