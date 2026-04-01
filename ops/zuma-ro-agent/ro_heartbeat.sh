@@ -145,11 +145,40 @@ run_flow_picking() {
 
     echo "  Approved stores: $STORES"
 
-    # Generate picking list — pass gsheet_id to read Actual RO from ROBOX GSheet
+    # Auto-detect ROBOX GSheet ID if not provided or invalid
+    local RESOLVED_GSHEET="$GSHEET_ID"
+    if [ -z "$RESOLVED_GSHEET" ] || echo "$RESOLVED_GSHEET" | grep -q "^1[a-zA-Z0-9_-]\{10,\}$" 2>/dev/null; then
+        # Try to find latest native GSheet for this store in GDrive
+        local FIRST_STORE
+        FIRST_STORE=$(echo "$STORES" | cut -d',' -f1)
+        echo "  Auto-detecting ROBOX GSheet for $FIRST_STORE..."
+        RESOLVED_GSHEET=$(python3 -c "
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+import json
+with open('$HOME/.config/gspread/authorized_user.json') as f:
+    td = json.load(f)
+creds = Credentials(token=td.get('token'), refresh_token=td.get('refresh_token'),
+    token_uri='https://oauth2.googleapis.com/token', client_id=td.get('client_id'), client_secret=td.get('client_secret'))
+if creds.expired: creds.refresh(Request())
+drive = build('drive', 'v3', credentials=creds)
+r = drive.files().list(
+    q=\"name contains 'ROBOX-' and name contains '$FIRST_STORE' and mimeType='application/vnd.google-apps.spreadsheet'\",
+    fields='files(id)', orderBy='createdTime desc', pageSize=1).execute()
+files = r.get('files',[])
+print(files[0]['id'] if files else '')
+" 2>/dev/null)
+        if [ -n "$RESOLVED_GSHEET" ]; then
+            echo "  Found: $RESOLVED_GSHEET"
+        else
+            echo "  No native GSheet found — falling back to DB"
+        fi
+    fi
+
     local GSHEET_ARG=""
-    if [ -n "$GSHEET_ID" ]; then
-        GSHEET_ARG="--gsheet-id $GSHEET_ID"
-        echo "  Reading Actual RO from GSheet: $GSHEET_ID"
+    if [ -n "$RESOLVED_GSHEET" ]; then
+        GSHEET_ARG="--gsheet-id $RESOLVED_GSHEET"
     fi
     python3 "$SCRIPTS/generate_picking_list.py" --stores "$STORES" --date "$DATE" $GSHEET_ARG
 
@@ -184,11 +213,33 @@ run_flow_sopb() {
 
     echo "  Store: $STORE | Entity: $ENTITY | SOPB: $SOPB_NUMBER | Tanggal: $TANGGAL"
 
-    # Generate SOPB — pass gsheet_id to read Actual RO from ROBOX GSheet
+    # Auto-detect ROBOX GSheet ID if not provided
+    local RESOLVED_GSHEET="$GSHEET_ID"
+    if [ -z "$RESOLVED_GSHEET" ]; then
+        echo "  Auto-detecting ROBOX GSheet for $STORE..."
+        RESOLVED_GSHEET=$(python3 -c "
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+import json
+with open('$HOME/.config/gspread/authorized_user.json') as f:
+    td = json.load(f)
+creds = Credentials(token=td.get('token'), refresh_token=td.get('refresh_token'),
+    token_uri='https://oauth2.googleapis.com/token', client_id=td.get('client_id'), client_secret=td.get('client_secret'))
+if creds.expired: creds.refresh(Request())
+drive = build('drive', 'v3', credentials=creds)
+r = drive.files().list(
+    q=\"name contains 'ROBOX-' and name contains '$STORE' and mimeType='application/vnd.google-apps.spreadsheet'\",
+    fields='files(id)', orderBy='createdTime desc', pageSize=1).execute()
+files = r.get('files',[])
+print(files[0]['id'] if files else '')
+" 2>/dev/null)
+        [ -n "$RESOLVED_GSHEET" ] && echo "  Found: $RESOLVED_GSHEET" || echo "  Not found — falling back to DB"
+    fi
+
     local SOPB_GSHEET_ARG=""
-    if [ -n "$GSHEET_ID" ]; then
-        SOPB_GSHEET_ARG="--gsheet-id $GSHEET_ID"
-        echo "  Reading Actual RO from GSheet: $GSHEET_ID"
+    if [ -n "$RESOLVED_GSHEET" ]; then
+        SOPB_GSHEET_ARG="--gsheet-id $RESOLVED_GSHEET"
     fi
     python3 "$SCRIPTS/generate_sopb.py" \
         --store "$STORE" \
