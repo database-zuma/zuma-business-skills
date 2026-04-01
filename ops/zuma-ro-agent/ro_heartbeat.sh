@@ -184,13 +184,18 @@ run_flow_sopb() {
 
     echo "  Store: $STORE | Entity: $ENTITY | SOPB: $SOPB_NUMBER | Tanggal: $TANGGAL"
 
-    # Generate SOPB
+    # Generate SOPB — pass gsheet_id to read Actual RO from ROBOX GSheet
+    local SOPB_GSHEET_ARG=""
+    if [ -n "$GSHEET_ID" ]; then
+        SOPB_GSHEET_ARG="--gsheet-id $GSHEET_ID"
+        echo "  Reading Actual RO from GSheet: $GSHEET_ID"
+    fi
     python3 "$SCRIPTS/generate_sopb.py" \
         --store "$STORE" \
         --entity "$ENTITY" \
         --sopb-number "$SOPB_NUMBER" \
         --tanggal-diminta "$TANGGAL" \
-        --date "$DATE"
+        --date "$DATE" $SOPB_GSHEET_ARG
 
     # Find generated file(s)
     local SOPB_FILES

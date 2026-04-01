@@ -87,13 +87,9 @@ OUTPUT_DIR = os.path.expanduser(
 
 
 def fetch_ro_skus(conn, analysis_date, store_name, entity):
-    """Fetch RO articles with kode_besar for SOPB.
-    Returns kode_besar (size-level code), article name, qty in pairs.
-    For RO_BOX: 1 box = 12 pairs, so qty = recomms_ro * 12.
-    """
+    """Fetch RO articles with kode_besar for SOPB (DB fallback)."""
     entity_upper = entity.upper()
     with conn.cursor() as cur:
-        # Get RO_BOX articles from daily analysis
         cur.execute("""
             SELECT r.kode_kecil, r.article_name, r.recomms_ro,
                    s.kode_besar, s.article as variant_name, s.quantity
@@ -111,6 +107,33 @@ def fetch_ro_skus(conn, analysis_date, store_name, entity):
             ORDER BY r.kode_kecil;
         """, (entity_upper, analysis_date, store_name))
         return cur.fetchall()
+
+
+def fetch_ro_skus_from_gsheet(conn, gsheet_id, entity):
+    """Read Actual RO from ROBOX GSheet, then join with DB for kode_besar."""
+    sys.path.insert(0, os.path.dirname(__file__))
+    from read_gsheet import read_robox_actual_ro
+    data = read_robox_actual_ro(gsheet_id)
+    entity_upper = entity.upper()
+
+    results = []
+    with conn.cursor() as cur:
+        for kode_kecil, info in data.items():
+            cur.execute("""
+                SELECT kode_besar, article
+                FROM core.stock_with_product
+                WHERE UPPER(kode) = UPPER(%s)
+                  AND nama_gudang = 'Warehouse Pusat'
+                  AND source_entity = %s
+                GROUP BY kode_besar, article
+                LIMIT 1;
+            """, (kode_kecil, entity_upper))
+            row = cur.fetchone()
+            kode_besar = row[0] if row else kode_kecil
+            variant = row[1] if row else info["artikel"]
+            # kode_kecil, article_name, qty_boxes, kode_besar, variant_name, wh_qty
+            results.append((kode_kecil, info["artikel"], info["qty"], kode_besar, variant, 0))
+    return results
 
 
 def format_date_ddmmyyyy(date_str):
@@ -193,6 +216,7 @@ def main():
     parser.add_argument("--sopb-number", required=True, help="SOPB number(s), comma-sep matching entities")
     parser.add_argument("--tanggal-diminta", required=True, help="Tanggal diminta (YYYY-MM-DD)")
     parser.add_argument("--date", default=str(date.today()), help="Analysis date (YYYY-MM-DD)")
+    parser.add_argument("--gsheet-id", default=None, help="ROBOX GSheet ID to read Actual RO from")
     args = parser.parse_args()
 
     store_code = args.store.upper()
@@ -218,7 +242,11 @@ def main():
                 print(f"Invalid entity: {entity}. Must be DDD/LJBB/MBB/UBB")
                 continue
 
-            skus = fetch_ro_skus(conn, args.date, store_full, entity)
+            if args.gsheet_id:
+                print(f"  Reading Actual RO from GSheet: {args.gsheet_id[:20]}...")
+                skus = fetch_ro_skus_from_gsheet(conn, args.gsheet_id, entity)
+            else:
+                skus = fetch_ro_skus(conn, args.date, store_full, entity)
             if not skus:
                 print(f"  {store_code}/{entity}: no RO data, skipping")
                 continue
