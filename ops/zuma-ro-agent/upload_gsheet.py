@@ -78,6 +78,13 @@ def upload_as_gsheet(drive, filepath, folder_id):
     media = MediaFileUpload(filepath, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     gsheet = drive.files().create(body=meta, media_body=media, fields="id,webViewLink").execute()
 
+    # Set "anyone with link = editor"
+    drive.permissions().create(
+        fileId=gsheet["id"],
+        body={"type": "anyone", "role": "writer"},
+        fields="id",
+    ).execute()
+
     return gsheet["id"], gsheet["webViewLink"]
 
 
