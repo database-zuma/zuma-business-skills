@@ -22,6 +22,9 @@
 
 set -euo pipefail
 
+# Ensure homebrew binaries (openclaw, python3, etc.) are in PATH
+export PATH="$HOME/homebrew/bin:$HOME/homebrew/sbin:/usr/local/bin:$PATH"
+
 AGENT_HOME="$HOME/.paperclip/instances/default/workspaces/b1b9ff7c-0b4b-44cd-a012-21e77d02edc2"
 INBOX="$AGENT_HOME/inbox"
 OUTBOX="$AGENT_HOME/outbox"
