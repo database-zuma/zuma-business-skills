@@ -69,7 +69,7 @@ OUTPUT_DIR = os.path.expanduser(
 
 
 def fetch_ro_articles(conn, analysis_date, store_name):
-    """Fetch RO_BOX articles for a store from ro_daily_analysis."""
+    """Fetch RO_BOX articles for a store from ro_daily_analysis (fallback)."""
     with conn.cursor() as cur:
         cur.execute("""
             SELECT kode_kecil, article_name, tier, recomms_ro
@@ -78,6 +78,14 @@ def fetch_ro_articles(conn, analysis_date, store_name):
             ORDER BY tier, kode_kecil;
         """, (analysis_date, store_name))
         return cur.fetchall()
+
+
+def fetch_ro_from_gsheet(gsheet_id):
+    """Read Actual RO column from ROBOX GSheet. Returns [(kode, artikel, '', qty), ...]."""
+    sys.path.insert(0, os.path.dirname(__file__))
+    from read_gsheet import read_robox_actual_ro
+    data = read_robox_actual_ro(gsheet_id)
+    return [(kode, info["artikel"], "", info["qty"]) for kode, info in data.items()]
 
 
 def build_picking_list(stores_data, analysis_date, output_path):
@@ -212,6 +220,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate Picking List for approved stores")
     parser.add_argument("--stores", required=True, help="Comma-separated store codes: GM,PTC,ROYAL")
     parser.add_argument("--date", default=str(date.today()), help="Analysis date (YYYY-MM-DD)")
+    parser.add_argument("--gsheet-id", default=None, help="GSheet ID/URL of ROBOX to read Actual RO from (chain from Flow 1)")
     args = parser.parse_args()
 
     store_codes = [s.strip().upper() for s in args.stores.split(",")]
@@ -229,9 +238,17 @@ def main():
             if not full:
                 print(f"Unknown store: {code}. Valid: {', '.join(sorted(SHORT_TO_FULL.keys()))}")
                 continue
-            articles = fetch_ro_articles(conn, analysis_date, full)
+
+            if args.gsheet_id:
+                # Read from ROBOX GSheet (Actual RO column) — chain from Flow 1
+                print(f"  {code}: reading from GSheet {args.gsheet_id[:20]}...")
+                articles = fetch_ro_from_gsheet(args.gsheet_id)
+            else:
+                # Fallback: read from DB
+                articles = fetch_ro_articles(conn, analysis_date, full)
+
             if not articles:
-                print(f"  {code}: no RO_BOX articles for {analysis_date}, skipping")
+                print(f"  {code}: no articles, skipping")
                 continue
             stores_data[code] = (full, articles)
             print(f"  {code}: {len(articles)} articles")

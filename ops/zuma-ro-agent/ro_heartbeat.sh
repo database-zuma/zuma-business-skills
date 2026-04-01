@@ -51,6 +51,8 @@ SOPB_NUMBER=""
 TANGGAL=""
 REQUESTER_PHONE=""
 REQUESTER_NAME=""
+GSHEET_ID=""          # ROBOX GSheet ID (for Flow 2 to read Actual RO)
+PICKING_GSHEET_ID=""  # Picking List GSheet ID (for Flow 3 to read adjusted qty)
 
 if [ -f "$REQUEST_FILE" ]; then
     read_json() { python3 -c "import json; print(json.load(open('$REQUEST_FILE')).get('$1',''))" 2>/dev/null || true; }
@@ -62,8 +64,10 @@ if [ -f "$REQUEST_FILE" ]; then
     TANGGAL=$(read_json tanggal_diminta)
     REQUESTER_PHONE=$(read_json requester_phone)
     REQUESTER_NAME=$(read_json requester_name)
+    GSHEET_ID=$(read_json gsheet_id)
+    PICKING_GSHEET_ID=$(read_json picking_gsheet_id)
     [ -z "$FLOW" ] && FLOW="ro"
-    echo "Inbox: flow=$FLOW store=$STORE stores=$STORES requester=$REQUESTER_NAME"
+    echo "Inbox: flow=$FLOW store=$STORE stores=$STORES gsheet=$GSHEET_ID requester=$REQUESTER_NAME"
 else
     echo "No inbox file — running Flow 1 (all stores)"
 fi
@@ -103,9 +107,13 @@ run_flow_ro() {
         python3 "$SCRIPTS/generate_daily_ro.py" --date "$DATE"
     fi
 
-    # Upload + send
+    # Upload + send (only files for requested store, not all)
     local FILES
-    FILES=$(find "$OUTBOX" -name "ROBOX-${DATE_COMPACT}-*.xlsx" 2>/dev/null | sort)
+    if [ -n "$STORE" ] && [ "$STORE" != "ALL" ]; then
+        FILES=$(find "$OUTBOX" -name "ROBOX-${DATE_COMPACT}-${STORE}-*.xlsx" 2>/dev/null | sort)
+    else
+        FILES=$(find "$OUTBOX" -name "ROBOX-${DATE_COMPACT}-*.xlsx" 2>/dev/null | sort)
+    fi
     [ -z "$FILES" ] && { echo "No RO files generated."; return; }
 
     local COUNT=0
@@ -137,8 +145,13 @@ run_flow_picking() {
 
     echo "  Approved stores: $STORES"
 
-    # Generate picking list
-    python3 "$SCRIPTS/generate_picking_list.py" --stores "$STORES" --date "$DATE"
+    # Generate picking list — pass gsheet_id to read Actual RO from ROBOX GSheet
+    local GSHEET_ARG=""
+    if [ -n "$GSHEET_ID" ]; then
+        GSHEET_ARG="--gsheet-id $GSHEET_ID"
+        echo "  Reading Actual RO from GSheet: $GSHEET_ID"
+    fi
+    python3 "$SCRIPTS/generate_picking_list.py" --stores "$STORES" --date "$DATE" $GSHEET_ARG
 
     # Find the generated file
     local PL_FILE

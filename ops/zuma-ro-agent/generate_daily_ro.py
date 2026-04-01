@@ -137,8 +137,8 @@ def fetch_store_data(conn, analysis_date, store_name):
     with conn.cursor() as cur:
         cur.execute("""
             SELECT kode_kecil, article_name, tier,
-                   stock_whs, stock_ljbb, stock_total, planogram_box,
-                   recomms_ro, pct_size_kosong
+                   stock_whs, stock_ljbb, stock_total,
+                   stock_onhand, planogram_box, recomms_ro
             FROM public.ro_daily_analysis
             WHERE analysis_date = %s AND store_name = %s AND ro_type = 'RO_BOX'
             ORDER BY tier, kode_kecil;
@@ -154,7 +154,7 @@ def build_store_xlsx(store_name, store_short, rows, analysis_date, seq, output_p
 
     # Title
     headers = ["Kode Kecil", "Artikel", "Tier", "Stock WHS", "Stock LJBB",
-               "Stock Total", "Planogram", "Recomms RO", "% Size Kosong"]
+               "Stock Total", "On-Hand", "Planogram", "Recomms RO", "Actual RO"]
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
     title_cell = ws.cell(row=1, column=1, value=f"RO Analysis — {store_name} — {analysis_date}")
     title_cell.font = Font(name="Calibri", size=12, bold=True)
@@ -178,8 +178,11 @@ def build_store_xlsx(store_name, store_short, rows, analysis_date, seq, output_p
     ri = 5
     for row in rows:
         # kode_kecil(0), article_name(1), tier(2), stock_whs(3), stock_ljbb(4),
-        # stock_total(5), planogram_box(6), recomms_ro(7), pct_size_kosong(8)
-        vals = [row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], float(row[8])]
+        # stock_total(5), stock_onhand(6), planogram_box(7), recomms_ro(8)
+        # kode_kecil(0), article_name(1), tier(2), stock_whs(3), stock_ljbb(4),
+        # stock_total(5), stock_onhand(6), planogram_box(7), recomms_ro(8)
+        vals = [row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[8]]
+        #                                                                              ↑ Actual RO = copy of Recomms RO
         for ci, v in enumerate(vals, 1):
             cell = ws.cell(row=ri, column=ci, value=v)
             cell.border = THIN_BORDER
@@ -187,16 +190,20 @@ def build_store_xlsx(store_name, store_short, rows, analysis_date, seq, output_p
             cell.fill = RO_BOX_FILL
             if ci in (4, 5, 6) and v == 0:
                 cell.fill = NO_STOCK_FILL
+            if ci == 10:  # Actual RO column — editable by user
+                cell.fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
         ri += 1
 
     # Summary row
     ri += 1
     ws.cell(row=ri, column=1, value="TOTAL").font = Font(bold=True)
-    ws.cell(row=ri, column=8, value=len(rows)).font = Font(bold=True)
-    ws.cell(row=ri, column=8).alignment = Alignment(horizontal="center")
+    ws.cell(row=ri, column=9, value=sum(r[8] for r in rows)).font = Font(bold=True)
+    ws.cell(row=ri, column=9).alignment = Alignment(horizontal="center")
+    ws.cell(row=ri, column=10, value=sum(r[8] for r in rows)).font = Font(bold=True)
+    ws.cell(row=ri, column=10).alignment = Alignment(horizontal="center")
 
     # Column widths
-    widths = [12, 38, 6, 12, 12, 12, 12, 12, 14]
+    widths = [12, 38, 6, 12, 12, 12, 12, 12, 12, 12]
     for ci, w in enumerate(widths, 1):
         ws.column_dimensions[get_column_letter(ci)].width = w
 
