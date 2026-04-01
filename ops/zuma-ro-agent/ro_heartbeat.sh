@@ -217,6 +217,11 @@ Setelah dapat DNPB number, input di Branch Super App."
     echo "=== FLOW 3 DONE ==="
 }
 
+# ─── Auto-clear stale agent state ────────────────────────
+# This ensures agent never skips because of previous run summary
+PGPASSWORD=paperclip psql -h 127.0.0.1 -p 54329 -U paperclip -d paperclip -c \
+  "UPDATE agents SET adapter_config = adapter_config - 'last_run_summary' - 'last_run_result' WHERE name = 'RO-Agent';" 2>/dev/null || true
+
 # ═══════════════════════════════════════════════════════════
 #  MAIN — dispatch based on flow
 # ═══════════════════════════════════════════════════════════
