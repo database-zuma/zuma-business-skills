@@ -162,6 +162,39 @@ def build_picking_list(stores_data, analysis_date, output_path):
         ws.cell(row=total_row, column=1, value="TOTAL").font = LABEL_FONT
         ws.cell(row=total_row, column=5, value=sum(a[3] for a in articles)).font = LABEL_FONT
         ws.cell(row=total_row, column=5).alignment = Alignment(horizontal="center")
+        ws.cell(row=total_row, column=5).border = THIN_BORDER
+        ws.cell(row=total_row, column=6, value=0).alignment = Alignment(horizontal="center")
+        ws.cell(row=total_row, column=6).border = THIN_BORDER
+
+        # Signature block
+        sig_row = total_row + 2
+        sig_font = Font(name="Calibri", size=10)
+        sig_bold = Font(name="Calibri", size=10, bold=True)
+
+        ws.cell(row=sig_row, column=1, value="Picker").font = sig_bold
+        ws.cell(row=sig_row, column=1).alignment = Alignment(horizontal="center")
+        ws.cell(row=sig_row, column=3, value="Approved").font = sig_bold
+        ws.cell(row=sig_row, column=3).alignment = Alignment(horizontal="center")
+        ws.cell(row=sig_row, column=5, value="Adm. Warehouse").font = sig_bold
+        ws.merge_cells(start_row=sig_row, start_column=5, end_row=sig_row, end_column=6)
+        ws.cell(row=sig_row, column=5).alignment = Alignment(horizontal="center")
+
+        # Dotted signature lines
+        sig_line_row = sig_row + 2
+        dots = "................................."
+        ws.cell(row=sig_line_row, column=1, value=dots).font = sig_font
+        ws.cell(row=sig_line_row, column=1).alignment = Alignment(horizontal="center")
+        ws.cell(row=sig_line_row, column=3, value=dots).font = sig_font
+        ws.cell(row=sig_line_row, column=3).alignment = Alignment(horizontal="center")
+        ws.cell(row=sig_line_row, column=5, value=dots).font = sig_font
+        ws.merge_cells(start_row=sig_line_row, start_column=5, end_row=sig_line_row, end_column=6)
+        ws.cell(row=sig_line_row, column=5).alignment = Alignment(horizontal="center")
+
+        # Note: *Diisi jika assortmen tidak sesuai
+        note_row = sig_line_row + 2
+        note_font = Font(name="Calibri", size=9, italic=True)
+        ws.merge_cells(start_row=note_row, start_column=1, end_row=note_row, end_column=4)
+        ws.cell(row=note_row, column=1, value="*Diisi jika assortmen tidak sesuai").font = note_font
 
         # Column widths
         ws.column_dimensions["A"].width = 6
