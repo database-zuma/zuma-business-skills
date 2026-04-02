@@ -72,17 +72,38 @@ else
     echo "No inbox file — running Flow 1 (all stores)"
 fi
 
-# ─── Helper: send WA to requester + AP ──────────────────────
+# ─── Helper: send WA with retry ─────────────────────────────
+send_wa_single() {
+    local PHONE="$1"
+    local MSG="$2"
+    local RESULT
+    RESULT=$(openclaw message send --channel whatsapp --account default --target "$PHONE" -m "$MSG" --json 2>&1)
+    if echo "$RESULT" | grep -q "messageId"; then
+        return 0
+    fi
+    # Failed — restart gateway and retry once
+    echo "  WA failed, restarting gateway..."
+    openclaw gateway restart 2>/dev/null || true
+    sleep 8
+    RESULT=$(openclaw message send --channel whatsapp --account default --target "$PHONE" -m "$MSG" --json 2>&1)
+    if echo "$RESULT" | grep -q "messageId"; then
+        echo "  WA retry succeeded"
+        return 0
+    fi
+    echo "  WA retry failed: $RESULT"
+    return 1
+}
+
 send_wa() {
     local MSG="$1"
     # Send to requester (if different from AP)
     if [ -n "$REQUESTER_PHONE" ] && [ "$REQUESTER_PHONE" != "$AP_PHONE" ]; then
         echo "  WA → $REQUESTER_NAME ($REQUESTER_PHONE)"
-        openclaw message send --channel whatsapp --account default --target "$REQUESTER_PHONE" -m "$MSG" 2>&1 || true
+        send_wa_single "$REQUESTER_PHONE" "$MSG" || true
     fi
     # Always send to AP
     echo "  WA → AP ($AP_PHONE)"
-    openclaw message send --channel whatsapp --account default --target "$AP_PHONE" -m "$MSG" 2>&1 || true
+    send_wa_single "$AP_PHONE" "$MSG" || true
 }
 
 # ─── Helper: upload file as GSheet, return link ─────────────
