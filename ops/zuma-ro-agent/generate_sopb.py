@@ -127,11 +127,34 @@ def fetch_ro_skus(conn, analysis_date, store_name, entity):
     return results
 
 
-def fetch_ro_skus_from_gsheet(conn, gsheet_id, entity):
-    """Read Actual RO from ROBOX GSheet, expand to size-level."""
+def fetch_ro_skus_from_gsheet(conn, gsheet_id, entity, store_code=None):
+    """Read qty from GSheet (Picking List or ROBOX), expand to size-level.
+    Auto-detects format: tries Picking List first, falls back to ROBOX.
+    """
     sys.path.insert(0, os.path.dirname(__file__))
-    from read_gsheet import read_robox_actual_ro
-    data = read_robox_actual_ro(gsheet_id)
+    from read_gsheet import read_picking_list_actual, read_robox_actual_ro
+
+    data = {}
+    # Try Picking List format first (if store_code provided)
+    if store_code:
+        try:
+            data = read_picking_list_actual(gsheet_id, store_code)
+            if data:
+                print(f"  Read {len(data)} articles from Picking List GSheet")
+        except Exception:
+            pass
+
+    # Fallback to ROBOX format
+    if not data:
+        try:
+            data = read_robox_actual_ro(gsheet_id)
+            if data:
+                print(f"  Read {len(data)} articles from ROBOX GSheet")
+        except Exception:
+            pass
+
+    if not data:
+        return []
 
     results = []
     for kode_kecil, info in data.items():
@@ -251,8 +274,8 @@ def main():
                 continue
 
             if args.gsheet_id:
-                print(f"  Reading Actual RO from GSheet: {args.gsheet_id[:20]}...")
-                skus = fetch_ro_skus_from_gsheet(conn, args.gsheet_id, entity)
+                print(f"  Reading from GSheet: {args.gsheet_id[:20]}...")
+                skus = fetch_ro_skus_from_gsheet(conn, args.gsheet_id, entity, store_code=store_code)
             else:
                 skus = fetch_ro_skus(conn, args.date, store_full, entity)
             if not skus:

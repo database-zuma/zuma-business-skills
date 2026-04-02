@@ -213,11 +213,31 @@ run_flow_sopb() {
 
     echo "  Store: $STORE | Entity: $ENTITY | SOPB: $SOPB_NUMBER | Tanggal: $TANGGAL"
 
-    # Auto-detect ROBOX GSheet ID if not provided
-    local RESOLVED_GSHEET="$GSHEET_ID"
+    # Auto-detect Picking List GSheet ID (chain from Flow 2, not Flow 1)
+    local RESOLVED_GSHEET="$PICKING_GSHEET_ID"
     if [ -z "$RESOLVED_GSHEET" ]; then
-        echo "  Auto-detecting ROBOX GSheet for $STORE..."
+        echo "  Auto-detecting Picking List GSheet for $STORE..."
         RESOLVED_GSHEET=$(python3 -c "
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+import json
+with open('$HOME/.config/gspread/authorized_user.json') as f:
+    td = json.load(f)
+creds = Credentials(token=td.get('token'), refresh_token=td.get('refresh_token'),
+    token_uri='https://oauth2.googleapis.com/token', client_id=td.get('client_id'), client_secret=td.get('client_secret'))
+if creds.expired: creds.refresh(Request())
+drive = build('drive', 'v3', credentials=creds)
+r = drive.files().list(
+    q=\"name contains 'PickingList-' and name contains '$STORE' and mimeType='application/vnd.google-apps.spreadsheet'\",
+    fields='files(id)', orderBy='createdTime desc', pageSize=1).execute()
+files = r.get('files',[])
+print(files[0]['id'] if files else '')
+" 2>/dev/null)
+        if [ -z "$RESOLVED_GSHEET" ]; then
+            # Fallback: try ROBOX GSheet
+            echo "  No Picking List found — trying ROBOX..."
+            RESOLVED_GSHEET=$(python3 -c "
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
@@ -234,6 +254,7 @@ r = drive.files().list(
 files = r.get('files',[])
 print(files[0]['id'] if files else '')
 " 2>/dev/null)
+        fi
         [ -n "$RESOLVED_GSHEET" ] && echo "  Found: $RESOLVED_GSHEET" || echo "  Not found — falling back to DB"
     fi
 
