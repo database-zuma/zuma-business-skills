@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Generate Picking List xlsx from approved RO data.
-Input: approved GSheet or ro_daily_analysis table for specific stores.
+Input: approved GSheet or pcp_ro_weekly_analysis table for specific stores.
 
 Usage:
     python3 generate_picking_list.py --stores GM,PTC,ROYAL [--date 2026-03-31]
@@ -69,11 +69,11 @@ OUTPUT_DIR = os.path.expanduser(
 
 
 def fetch_ro_articles(conn, analysis_date, store_name):
-    """Fetch RO_BOX articles for a store from ro_daily_analysis (fallback)."""
+    """Fetch RO_BOX articles for a store from pcp_ro_weekly_analysis (fallback)."""
     with conn.cursor() as cur:
         cur.execute("""
             SELECT kode_kecil, article_name, tier, recomms_ro
-            FROM public.ro_daily_analysis
+            FROM public.pcp_ro_weekly_analysis
             WHERE analysis_date = %s AND store_name = %s AND ro_type = 'RO_BOX'
             ORDER BY tier, kode_kecil;
         """, (analysis_date, store_name))

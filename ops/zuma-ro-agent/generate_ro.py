@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Generate daily RO analysis xlsx — one file per store.
+Generate weekly RO analysis xlsx — one file per store.
 Naming: ROBOX-YYYYMMDD-{STORE}-{SEQ:05d}.xlsx
-Sequence tracked in public.ro_file_tracker table.
+Sequence tracked in public.pcp_ro_file_tracker table.
 
 Usage:
-    python3 generate_daily_ro.py [--date YYYY-MM-DD] [--store STORE_SHORT]
+    python3 generate_ro.py [--date YYYY-MM-DD] [--store STORE_SHORT]
 
     # Generate for all stores needing RO:
-    python3 generate_daily_ro.py
+    python3 generate_ro.py
 
     # Generate for specific store:
-    python3 generate_daily_ro.py --store GM
+    python3 generate_ro.py --store GM
 """
 import argparse
 import json
@@ -68,10 +68,10 @@ OUTPUT_DIR = os.path.expanduser("~/.paperclip/instances/default/workspaces/b1b9f
 
 
 def ensure_tracker_table(conn):
-    """Create ro_file_tracker if not exists."""
+    """Create pcp_ro_file_tracker if not exists."""
     with conn.cursor() as cur:
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS public.ro_file_tracker (
+            CREATE TABLE IF NOT EXISTS public.pcp_ro_file_tracker (
                 id SERIAL PRIMARY KEY,
                 seq INTEGER NOT NULL,
                 store_short TEXT NOT NULL,
@@ -83,7 +83,7 @@ def ensure_tracker_table(conn):
                 sent_at TIMESTAMPTZ,
                 created_at TIMESTAMPTZ DEFAULT NOW()
             );
-            CREATE INDEX IF NOT EXISTS idx_ro_tracker_seq ON public.ro_file_tracker(seq);
+            CREATE INDEX IF NOT EXISTS idx_ro_tracker_seq ON public.pcp_ro_file_tracker(seq);
         """)
         conn.commit()
 
@@ -91,7 +91,7 @@ def ensure_tracker_table(conn):
 def get_next_seq(conn):
     """Get next global sequence number."""
     with conn.cursor() as cur:
-        cur.execute("SELECT COALESCE(MAX(seq), 0) + 1 FROM public.ro_file_tracker;")
+        cur.execute("SELECT COALESCE(MAX(seq), 0) + 1 FROM public.pcp_ro_file_tracker;")
         return cur.fetchone()[0]
 
 
@@ -99,7 +99,7 @@ def record_file(conn, seq, store_short, store_name, analysis_date, filename, fil
     """Record generated file in tracker."""
     with conn.cursor() as cur:
         cur.execute("""
-            INSERT INTO public.ro_file_tracker (seq, store_short, store_name, analysis_date, filename, filepath)
+            INSERT INTO public.pcp_ro_file_tracker (seq, store_short, store_name, analysis_date, filename, filepath)
             VALUES (%s, %s, %s, %s, %s, %s)
             RETURNING id;
         """, (seq, store_short, store_name, analysis_date, filename, filepath))
@@ -110,7 +110,7 @@ def record_file(conn, seq, store_short, store_name, analysis_date, filename, fil
 def refresh_analysis(conn):
     """Run the daily analysis function."""
     with conn.cursor() as cur:
-        cur.execute("SELECT * FROM public.refresh_ro_daily_analysis();")
+        cur.execute("SELECT * FROM public.refresh_pcp_ro_weekly_analysis();")
         row = cur.fetchone()
         conn.commit()
         return {"stores_analyzed": row[0], "articles_needing_ro": row[1]}
@@ -123,7 +123,7 @@ def fetch_stores_needing_ro(conn, analysis_date):
             SELECT store_name,
                    SUM(CASE WHEN ro_type = 'RO_BOX' THEN 1 ELSE 0 END) AS ro_box,
                    SUM(recomms_ro) AS total_boxes
-            FROM public.ro_daily_analysis
+            FROM public.pcp_ro_weekly_analysis
             WHERE analysis_date = %s AND ro_type = 'RO_BOX'
             GROUP BY store_name
             HAVING SUM(CASE WHEN ro_type = 'RO_BOX' THEN 1 ELSE 0 END) > 0
@@ -139,7 +139,7 @@ def fetch_store_data(conn, analysis_date, store_name):
             SELECT kode_kecil, article_name, tier,
                    stock_whs, stock_ljbb, stock_total,
                    stock_onhand, planogram_box, recomms_ro
-            FROM public.ro_daily_analysis
+            FROM public.pcp_ro_weekly_analysis
             WHERE analysis_date = %s AND store_name = %s AND ro_type = 'RO_BOX'
             ORDER BY tier, kode_kecil;
         """, (analysis_date, store_name))
@@ -212,7 +212,7 @@ def build_store_xlsx(store_name, store_short, rows, analysis_date, seq, output_p
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate daily RO xlsx per store")
+    parser = argparse.ArgumentParser(description="Generate weekly RO xlsx per store")
     parser.add_argument("--date", type=str, default=str(date.today()))
     parser.add_argument("--store", type=str, default=None, help="Single store short code (e.g. GM, PTC)")
     parser.add_argument("--no-refresh", action="store_true", help="Skip refreshing analysis")

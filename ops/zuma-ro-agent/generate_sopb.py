@@ -93,7 +93,7 @@ def fetch_ro_skus(conn, analysis_date, store_name, entity):
         cur.execute("""
             SELECT r.kode_kecil, r.article_name, r.recomms_ro,
                    s.kode_besar, s.article as variant_name, s.quantity
-            FROM public.ro_daily_analysis r
+            FROM public.pcp_ro_weekly_analysis r
             LEFT JOIN LATERAL (
                 SELECT kode_besar, article, SUM(quantity) as quantity
                 FROM core.stock_with_product

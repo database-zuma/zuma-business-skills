@@ -101,10 +101,10 @@ run_flow_ro() {
     # Clean old files for this run
     if [ -n "$STORE" ] && [ "$STORE" != "ALL" ]; then
         rm -f "$OUTBOX"/ROBOX-${DATE_COMPACT}-${STORE}-*.xlsx 2>/dev/null || true
-        python3 "$SCRIPTS/generate_daily_ro.py" --store "$STORE" --date "$DATE"
+        python3 "$SCRIPTS/generate_ro.py" --store "$STORE" --date "$DATE"
     else
         rm -f "$OUTBOX"/ROBOX-${DATE_COMPACT}-*.xlsx 2>/dev/null || true
-        python3 "$SCRIPTS/generate_daily_ro.py" --date "$DATE"
+        python3 "$SCRIPTS/generate_ro.py" --date "$DATE"
     fi
 
     # Upload + send (only files for requested store, not all)
