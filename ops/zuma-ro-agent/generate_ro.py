@@ -117,31 +117,35 @@ def refresh_analysis(conn):
 
 
 def fetch_stores_needing_ro(conn, analysis_date):
-    """Get list of stores that have at least one RO_BOX recommendation."""
+    """Get list of stores that have articles with WHS stock or RO recommendations."""
     with conn.cursor() as cur:
         cur.execute("""
             SELECT store_name,
                    SUM(CASE WHEN ro_type = 'RO_BOX' THEN 1 ELSE 0 END) AS ro_box,
                    SUM(recomms_ro) AS total_boxes
             FROM public.pcp_ro_weekly_analysis
-            WHERE analysis_date = %s AND ro_type = 'RO_BOX'
+            WHERE analysis_date = %s
+              AND (stock_total > 0 OR recomms_ro > 0)
             GROUP BY store_name
-            HAVING SUM(CASE WHEN ro_type = 'RO_BOX' THEN 1 ELSE 0 END) > 0
+            HAVING COUNT(*) > 0
             ORDER BY store_name;
         """, (analysis_date,))
         return cur.fetchall()
 
 
 def fetch_store_data(conn, analysis_date, store_name):
-    """Fetch RO data for a single store."""
+    """Fetch all articles: with WHS stock OR with RO recommendation.
+    Hide: stock_total = 0 AND recomms_ro = 0 (no WHS stock, not on planogram).
+    """
     with conn.cursor() as cur:
         cur.execute("""
             SELECT kode_kecil, article_name, tier,
                    stock_whs, stock_ljbb, stock_total,
                    stock_onhand, planogram_box, recomms_ro
             FROM public.pcp_ro_weekly_analysis
-            WHERE analysis_date = %s AND store_name = %s AND ro_type = 'RO_BOX'
-            ORDER BY tier, kode_kecil;
+            WHERE analysis_date = %s AND store_name = %s
+              AND (stock_total > 0 OR recomms_ro > 0)
+            ORDER BY recomms_ro DESC, tier, kode_kecil;
         """, (analysis_date, store_name))
         return cur.fetchall()
 
@@ -174,20 +178,21 @@ def build_store_xlsx(store_name, store_short, rows, analysis_date, seq, output_p
         cell.alignment = Alignment(horizontal="center")
         cell.border = THIN_BORDER
 
-    # Data — all rows are RO_BOX only
+    # Data — all articles with WHS stock or RO recommendation, sorted recomms_ro DESC
     ri = 5
     for row in rows:
         # kode_kecil(0), article_name(1), tier(2), stock_whs(3), stock_ljbb(4),
         # stock_total(5), stock_onhand(6), planogram_box(7), recomms_ro(8)
-        # kode_kecil(0), article_name(1), tier(2), stock_whs(3), stock_ljbb(4),
-        # stock_total(5), stock_onhand(6), planogram_box(7), recomms_ro(8)
         vals = [row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[8]]
         #                                                                              ↑ Actual RO = copy of Recomms RO
+        is_ro_box = row[8] > 0
         for ci, v in enumerate(vals, 1):
             cell = ws.cell(row=ri, column=ci, value=v)
             cell.border = THIN_BORDER
             cell.alignment = Alignment(horizontal="center" if ci >= 3 else "left")
-            cell.fill = RO_BOX_FILL
+            # Yellow highlight for RO recommended rows, white for others
+            if is_ro_box:
+                cell.fill = RO_BOX_FILL
             if ci in (4, 5, 6) and v == 0:
                 cell.fill = NO_STOCK_FILL
             if ci == 10:  # Actual RO column — editable by user
