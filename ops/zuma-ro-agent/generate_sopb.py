@@ -86,53 +86,61 @@ OUTPUT_DIR = os.path.expanduser(
 )
 
 
-def fetch_ro_skus(conn, analysis_date, store_name, entity):
-    """Fetch RO articles with kode_besar for SOPB (DB fallback)."""
-    entity_upper = entity.upper()
+def expand_kode_kecil_to_sizes(conn, kode_kecil, boxes):
+    """Expand kode_kecil (box) to kode_besar per size using portal.kodemix.
+    Returns list of (kode_besar, nama_variant, qty_pairs) tuples.
+    qty_pairs = count_by_assortment × boxes
+    """
     with conn.cursor() as cur:
         cur.execute("""
-            SELECT r.kode_kecil, r.article_name, r.recomms_ro,
-                   s.kode_besar, s.article as variant_name, s.quantity
-            FROM public.pcp_ro_weekly_analysis r
-            LEFT JOIN LATERAL (
-                SELECT kode_besar, article, SUM(quantity) as quantity
-                FROM core.stock_with_product
-                WHERE UPPER(kode) = UPPER(r.kode_kecil)
-                  AND nama_gudang = 'Warehouse Pusat'
-                  AND source_entity = %s
-                GROUP BY kode_besar, article
-                LIMIT 1
-            ) s ON true
-            WHERE r.analysis_date = %s AND r.store_name = %s AND r.ro_type = 'RO_BOX'
-            ORDER BY r.kode_kecil;
-        """, (entity_upper, analysis_date, store_name))
-        return cur.fetchall()
+            SELECT DISTINCT kode_besar, nama_variant, COALESCE(count_by_assortment::int, 0) AS assortment
+            FROM portal.kodemix
+            WHERE UPPER(kode) = UPPER(%s)
+              AND count_by_assortment IS NOT NULL AND count_by_assortment != ''
+            ORDER BY kode_besar;
+        """, (kode_kecil,))
+        rows = cur.fetchall()
+
+    if not rows:
+        # Fallback: return single row with boxes * 12
+        return [(kode_kecil, kode_kecil, boxes * 12)]
+
+    return [(r[0], r[1], r[2] * boxes) for r in rows if r[2] * boxes > 0]
+
+
+def fetch_ro_skus(conn, analysis_date, store_name, entity):
+    """Fetch RO articles and expand to size-level using portal.kodemix (DB fallback)."""
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT kode_kecil, article_name, recomms_ro
+            FROM public.pcp_ro_weekly_analysis
+            WHERE analysis_date = %s AND store_name = %s AND ro_type = 'RO_BOX'
+            ORDER BY kode_kecil;
+        """, (analysis_date, store_name))
+        articles = cur.fetchall()
+
+    results = []
+    for kode_kecil, article_name, boxes in articles:
+        expanded = expand_kode_kecil_to_sizes(conn, kode_kecil, boxes)
+        for kode_besar, nama_variant, qty_pairs in expanded:
+            results.append((kode_kecil, article_name, boxes, kode_besar, nama_variant, qty_pairs))
+    return results
 
 
 def fetch_ro_skus_from_gsheet(conn, gsheet_id, entity):
-    """Read Actual RO from ROBOX GSheet, then join with DB for kode_besar."""
+    """Read Actual RO from ROBOX GSheet, expand to size-level."""
     sys.path.insert(0, os.path.dirname(__file__))
     from read_gsheet import read_robox_actual_ro
     data = read_robox_actual_ro(gsheet_id)
-    entity_upper = entity.upper()
 
     results = []
-    with conn.cursor() as cur:
-        for kode_kecil, info in data.items():
-            cur.execute("""
-                SELECT kode_besar, article
-                FROM core.stock_with_product
-                WHERE UPPER(kode) = UPPER(%s)
-                  AND nama_gudang = 'Warehouse Pusat'
-                  AND source_entity = %s
-                GROUP BY kode_besar, article
-                LIMIT 1;
-            """, (kode_kecil, entity_upper))
-            row = cur.fetchone()
-            kode_besar = row[0] if row else kode_kecil
-            variant = row[1] if row else info["artikel"]
-            # kode_kecil, article_name, qty_boxes, kode_besar, variant_name, wh_qty
-            results.append((kode_kecil, info["artikel"], info["qty"], kode_besar, variant, 0))
+    for kode_kecil, info in data.items():
+        boxes = info["qty"]
+        if boxes <= 0:
+            continue
+        expanded = expand_kode_kecil_to_sizes(conn, kode_kecil, boxes)
+        for kode_besar, nama_variant, qty_pairs in expanded:
+            results.append((kode_kecil, info["artikel"], boxes, kode_besar, nama_variant, qty_pairs))
     return results
 
 
@@ -161,8 +169,8 @@ def build_sopb_xlsx(store_short, store_full, entity, sopb_number, tanggal_dimint
         cell.font = Font(bold=True, size=10)
         cell.fill = HEADER_BG
 
-    # Calculate total pairs
-    total_pairs = sum(sku[2] * 12 for sku in skus)  # recomms_ro * 12
+    # Calculate total pairs — skus already expanded to size-level, column 5 = qty_pairs
+    total_pairs = sum(sku[5] for sku in skus)
     keterangan = f"Protol kirim ke {store_full} {total_pairs} pairs"
     formatted_date = format_date_ddmmyyyy(tanggal_diminta)
 
@@ -180,14 +188,14 @@ def build_sopb_xlsx(store_short, store_full, entity, sopb_number, tanggal_dimint
         cell.font = Font(bold=True, size=10)
         cell.fill = HEADER_ROW_BG
 
-    # Row 4+: ITEM rows
+    # Row 4+: ITEM rows — already expanded to size-level
     for ri, sku in enumerate(skus, 4):
-        # sku: kode_kecil(0), article_name(1), recomms_ro(2), kode_besar(3), variant_name(4), wh_qty(5)
+        # sku: kode_kecil(0), article_name(1), boxes(2), kode_besar(3), nama_variant(4), qty_pairs(5)
         item_data = [''] * len(ITEM_LEVEL)
         item_data[0] = 'ITEM'
-        item_data[1] = sku[3] or sku[0]  # kode_besar or kode_kecil
-        item_data[2] = sku[4] or sku[1]  # variant_name or article_name
-        item_data[3] = sku[2] * 12       # qty in pairs (1 box = 12 pairs)
+        item_data[1] = sku[3]             # kode_besar (size-level code)
+        item_data[2] = sku[4]             # nama_variant (with size + color)
+        item_data[3] = sku[5]             # qty_pairs (count_by_assortment × boxes)
         item_data[4] = ''                 # Satuan
         item_data[5] = formatted_date
         item_data[6] = ''                 # Catatan
