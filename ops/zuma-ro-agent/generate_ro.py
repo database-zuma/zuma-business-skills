@@ -110,7 +110,7 @@ def record_file(conn, seq, store_short, store_name, analysis_date, filename, fil
 def refresh_analysis(conn):
     """Run the daily analysis function."""
     with conn.cursor() as cur:
-        cur.execute("SELECT * FROM public.refresh_pcp_ro_weekly_analysis();")
+        cur.execute("SELECT * FROM public.refresh_pcp_ro_weekly();")
         row = cur.fetchone()
         conn.commit()
         return {"stores_analyzed": row[0], "articles_needing_ro": row[1]}
