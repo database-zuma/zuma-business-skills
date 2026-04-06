@@ -95,122 +95,117 @@ def ensure_cache(xlsx_path, gsheet_id):
     ], check=True)
     print(f"Downloaded: {xlsx_path}")
 
-def load_store_planogram_data(store_name, area):
-    """Load pre-planogram data (article list + rekomendasi) from Store Layout GSheet."""
-    ensure_cache(STORE_LAYOUT_XLSX, STORE_LAYOUT_GSHEET)
-    wb = openpyxl.load_workbook(STORE_LAYOUT_XLSX, data_only=True)
+def load_store_planogram_data(store_name, store_db, area):
+    """Load planogram data from DB (primary) with GSheet box overrides."""
+    conn = psycopg2.connect(
+        host=os.environ.get("PGHOST", "76.13.194.120"),
+        port=os.environ.get("PGPORT", "5432"),
+        dbname=os.environ.get("PGDATABASE", "openclaw_ops"),
+        user=os.environ.get("PGUSER", "openclaw_app"),
+        password=os.environ.get("PGPASSWORD", ""),
+    )
+    cur = conn.cursor()
 
-    # Try to find the store sheet
-    target_sheet = None
-    for sn in wb.sheetnames:
-        if store_name.lower() in sn.lower():
-            target_sheet = sn
-            break
+    # 1. Get articles from existing planogram (portal.planogram or planogram_existing_q1_2026)
+    #    Try portal.planogram first (better types), fallback to planogram_existing_q1_2026
+    cur.execute("""
+        SELECT article_mix, gender, series, tier,
+               COALESCE(rekomendasi_box, 1) as reko_box,
+               COALESCE(rekomendasi_pairs, 0) as reko_pairs,
+               COALESCE(avg_sales_3mo_pairs, 0) as avg_sales,
+               COALESCE(sales_mix, 0) as sales_mix
+        FROM portal.planogram
+        WHERE UPPER(TRIM(store_name)) = UPPER(TRIM(%s))
+          AND article_mix IS NOT NULL
+        ORDER BY avg_sales_3mo_pairs DESC NULLS LAST
+    """, (store_db,))
+    rows = cur.fetchall()
 
-    if not target_sheet:
-        # Fallback: read from "All" sheet
-        target_sheet = "All"
+    source = "portal.planogram"
+    if not rows:
+        # Fallback to planogram_existing_q1_2026
+        cur.execute("""
+            SELECT kode_kecil, gender, series, tier,
+                   COALESCE(NULLIF(box,'')::int, 1) as reko_box,
+                   COALESCE(NULLIF(grand_total_pairs,'')::numeric, 0) as reko_pairs,
+                   0 as avg_sales,
+                   0 as sales_mix
+            FROM portal.planogram_existing_q1_2026
+            WHERE UPPER(TRIM(store_name)) = UPPER(TRIM(%s))
+              AND kode_kecil IS NOT NULL
+              AND COALESCE(NULLIF(box,'')::int, 0) > 0
+            ORDER BY kode_kecil
+        """, (store_db,))
+        rows = cur.fetchall()
+        source = "portal.planogram_existing_q1_2026"
 
-    ws = wb[target_sheet]
-    print(f"Reading from sheet: '{target_sheet}'")
+    if not rows:
+        print(f"WARNING: No planogram data found for store '{store_db}' in DB")
+        cur.close()
+        conn.close()
+        return []
 
-    # Find header row (usually row 1 or 2)
-    headers = {}
-    header_row = None
-    for r in range(1, 5):
-        for c in range(1, ws.max_column + 1):
-            val = ws.cell(row=r, column=c).value
-            if val and "article" in str(val).lower():
-                header_row = r
-                break
-        if header_row:
-            break
+    # 2. Enrich with avg sales 3mo from core.sales_with_product
+    cur.execute("""
+        SELECT kode_mix,
+               ROUND(SUM(quantity)::numeric / 3, 2) as avg_monthly_pairs,
+               ROUND(SUM(quantity)::numeric / NULLIF(
+                   (SELECT SUM(quantity) FROM core.sales_with_product
+                    WHERE UPPER(TRIM(matched_store_name)) = UPPER(TRIM(%s))
+                    AND transaction_date >= (CURRENT_DATE - INTERVAL '3 months')
+                    AND quantity > 0
+                    AND (is_intercompany IS NULL OR is_intercompany = FALSE)
+                   ), 0), 6) as sales_mix
+        FROM core.sales_with_product
+        WHERE UPPER(TRIM(matched_store_name)) = UPPER(TRIM(%s))
+          AND transaction_date >= (CURRENT_DATE - INTERVAL '3 months')
+          AND quantity > 0
+          AND kode_mix IS NOT NULL
+          AND (is_intercompany IS NULL OR is_intercompany = FALSE)
+        GROUP BY kode_mix
+    """, (store_db, store_db))
+    sales_map = {}
+    for kode, avg_pairs, smix in cur.fetchall():
+        sales_map[kode.strip().upper() if kode else ""] = {
+            "avg_sales": float(avg_pairs) if avg_pairs else 0,
+            "sales_mix": float(smix) if smix else 0,
+        }
 
-    if not header_row:
-        header_row = 2  # Default
+    cur.close()
+    conn.close()
 
-    for c in range(1, ws.max_column + 1):
-        val = ws.cell(row=header_row, column=c).value
-        if val:
-            headers[str(val).strip().lower()] = c
-
-    # Parse rows
+    # 3. Build article list
     articles = []
-    for r in range(header_row + 1, ws.max_row + 1):
-        row_store = ws.cell(row=r, column=headers.get("store name", 1)).value
-        if target_sheet == "All" and row_store:
-            if store_name.lower() not in str(row_store).lower():
-                continue
+    for row in rows:
+        article_mix, gender, series, tier, reko_box, reko_pairs, db_avg, db_mix = row
+        article_mix = str(article_mix).strip() if article_mix else ""
+        gender = str(gender).strip() if gender else ""
+        series = str(series).strip() if series else ""
+        tier = str(tier).strip() if tier else "3"
 
-        article = ws.cell(row=r, column=headers.get("article", 4)).value
-        if not article:
-            continue
+        # Enrich with sales data
+        sales_info = sales_map.get(article_mix.upper(), {})
+        avg_sales = sales_info.get("avg_sales", float(db_avg) if db_avg else 0)
+        sales_mix = sales_info.get("sales_mix", float(db_mix) if db_mix else 0)
 
-        gender = str(ws.cell(row=r, column=headers.get("gender", 2)).value or "").strip()
-        series = str(ws.cell(row=r, column=headers.get("series", 3)).value or "").strip()
-        tier = str(ws.cell(row=r, column=headers.get("tier", 5)).value or "3").strip()
-        article_mix = str(ws.cell(row=r, column=headers.get("article mix", 6)).value or "").strip()
-
-        # Rekomendasi box
-        reko_box_col = headers.get("rekomendasi (box)", headers.get("input as (box)", None))
-        reko_box = 0
-        if reko_box_col:
-            v = ws.cell(row=r, column=reko_box_col).value
-            try: reko_box = int(float(v)) if v else 0
-            except: reko_box = 0
-
-        if reko_box <= 0:
-            reko_box = 1  # Minimum 1 box if article is in planogram
-
-        # Rekomendasi pairs
-        reko_pairs_col = headers.get("rekomendasi (pairs)", None)
-        reko_pairs = 0
-        if reko_pairs_col:
-            v = ws.cell(row=r, column=reko_pairs_col).value
-            try: reko_pairs = float(v) if v else 0
-            except: reko_pairs = 0
-
-        # Avg sales 3mo
-        avg_col = headers.get("avg sales 3 months (pairs)", None)
-        avg_sales = 0
-        if avg_col:
-            v = ws.cell(row=r, column=avg_col).value
-            try: avg_sales = float(v) if v else 0
-            except: avg_sales = 0
-
-        # Sales mix
-        mix_col = headers.get("%sales mix", headers.get("sales mix", None))
-        sales_mix = 0
-        if mix_col:
-            v = ws.cell(row=r, column=mix_col).value
-            try: sales_mix = float(v) if v else 0
-            except: sales_mix = 0
-
-        # Size columns
-        sizes = {}
-        for key, col in headers.items():
-            if key.startswith("size_") or (key.replace("/", "_").replace(" ", "_").isdigit()):
-                v = ws.cell(row=r, column=col).value
-                if v:
-                    try: sizes[key] = str(v)
-                    except: pass
+        reko_box_int = max(1, int(reko_box)) if reko_box else 1
+        reko_pairs_f = float(reko_pairs) if reko_pairs else reko_box_int * PAIRS_PER_BOX
 
         articles.append({
             "gender": gender,
             "series": series,
-            "article": str(article).strip(),
+            "article": article_mix,
             "tier": tier,
-            "article_mix": article_mix or str(article).strip(),
-            "reko_box": reko_box,
-            "reko_pairs": reko_pairs,
+            "article_mix": article_mix,
+            "reko_box": reko_box_int,
+            "reko_pairs": reko_pairs_f,
             "avg_sales": avg_sales,
             "sales_mix": sales_mix,
-            "sizes": sizes,
+            "sizes": {},
             "tipe": get_display_type(series),
         })
 
-    wb.close()
-    print(f"Loaded {len(articles)} articles for {store_name}")
+    print(f"Loaded {len(articles)} articles for {store_db} from {source} (enriched with 3mo sales)")
     return articles
 
 def load_backwall_config(store_code, area):
@@ -774,10 +769,10 @@ def main():
 
     print(f"=== Planogram Agent: {args.store_name} ({args.store_code}) ===")
 
-    # 1. Load pre-planogram data
-    articles = load_store_planogram_data(args.store_name, args.area)
+    # 1. Load pre-planogram data from DB
+    articles = load_store_planogram_data(args.store_name, args.store_db, args.area)
     if not articles:
-        print(f"ERROR: No articles found for {args.store_name}")
+        print(f"ERROR: No articles found for {args.store_db}")
         sys.exit(1)
 
     # 2. Load backwall config
