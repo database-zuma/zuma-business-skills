@@ -618,6 +618,99 @@ def generate_visual_excel(assigned, excluded, store_name, config, output_path):
             ws2.cell(row=r, column=6).font = Font(size=9, italic=True)
             r += 1
 
+    # ── Sheet 3: Data Detail (raw planogram_paperclip data) ──
+    ws3 = wb.create_sheet("Data Detail")
+    ws3.cell(row=1, column=1, value=f"DATA DETAIL — {store_name.upper()}").font = Font(bold=True, size=14)
+    ws3.cell(row=2, column=1, value="Back-calculation: semua artikel + alasan placement/exclusion. Data ini juga tersimpan di portal.planogram_paperclip.").font = Font(size=9, italic=True, color="666666")
+
+    detail_headers = [
+        "No", "Kode Artikel", "Gender", "Series", "Tipe", "Tier",
+        "Avg Sales 3mo (pairs)", "Sales Mix %", "Reko Pairs", "Reko Box",
+        "Status", "Zone / BW", "Alasan Exclude"
+    ]
+    for ci, h in enumerate(detail_headers):
+        cell = ws3.cell(row=4, column=ci+1, value=h)
+        cell.font = HEADER_FONT
+        cell.fill = HEADER_FILL
+        cell.alignment = CELL_ALIGN
+        cell.border = THIN
+
+    # Column widths
+    detail_widths = [5, 22, 10, 16, 10, 6, 18, 12, 12, 10, 10, 18, 30]
+    for ci, w in enumerate(detail_widths):
+        ws3.column_dimensions[get_column_letter(ci+1)].width = w
+
+    r3 = 5
+    no3 = 1
+
+    # Assigned articles
+    for art, bw_id, zone in sorted(assigned, key=lambda x: (-x[0]["avg_sales"], x[0]["article"])):
+        ws3.cell(row=r3, column=1, value=no3).alignment = CELL_ALIGN
+        ws3.cell(row=r3, column=1).border = THIN
+        ws3.cell(row=r3, column=2, value=art["article_mix"]).border = THIN
+        ws3.cell(row=r3, column=2).font = Font(size=9)
+        ws3.cell(row=r3, column=3, value=art["gender"]).border = THIN
+        cell = ws3.cell(row=r3, column=4, value=art["series"])
+        cell.border = THIN
+        hx = get_color(art["series"])
+        cell.fill = PatternFill(start_color=hx, end_color=hx, fill_type="solid")
+        ws3.cell(row=r3, column=5, value=art["tipe"]).border = THIN
+        ws3.cell(row=r3, column=6, value=art["tier"]).alignment = CELL_ALIGN
+        ws3.cell(row=r3, column=6).border = THIN
+        ws3.cell(row=r3, column=7, value=round(art["avg_sales"], 2) if art["avg_sales"] else "").alignment = CELL_ALIGN
+        ws3.cell(row=r3, column=7).border = THIN
+        ws3.cell(row=r3, column=8, value=f"{art['sales_mix']*100:.2f}%" if art["sales_mix"] else "").alignment = CELL_ALIGN
+        ws3.cell(row=r3, column=8).border = THIN
+        ws3.cell(row=r3, column=9, value=round(art["reko_pairs"], 1) if art["reko_pairs"] else "").alignment = CELL_ALIGN
+        ws3.cell(row=r3, column=9).border = THIN
+        ws3.cell(row=r3, column=10, value=art["reko_box"]).alignment = CELL_ALIGN
+        ws3.cell(row=r3, column=10).border = THIN
+        cell_status = ws3.cell(row=r3, column=11, value="PLACED")
+        cell_status.font = Font(size=9, bold=True, color="006100")
+        cell_status.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+        cell_status.alignment = CELL_ALIGN
+        cell_status.border = THIN
+        ws3.cell(row=r3, column=12, value=f"{bw_id}: {zone}").border = THIN
+        ws3.cell(row=r3, column=13, value="").border = THIN
+        no3 += 1
+        r3 += 1
+
+    # Excluded articles
+    for art, reason in sorted(excluded, key=lambda x: (-x[0]["avg_sales"], x[0]["article"])):
+        ws3.cell(row=r3, column=1, value=no3).alignment = CELL_ALIGN
+        ws3.cell(row=r3, column=1).border = THIN
+        ws3.cell(row=r3, column=2, value=art["article_mix"]).border = THIN
+        ws3.cell(row=r3, column=2).font = Font(size=9)
+        ws3.cell(row=r3, column=3, value=art["gender"]).border = THIN
+        cell = ws3.cell(row=r3, column=4, value=art["series"])
+        cell.border = THIN
+        hx = get_color(art["series"])
+        cell.fill = PatternFill(start_color=hx, end_color=hx, fill_type="solid")
+        ws3.cell(row=r3, column=5, value=art["tipe"]).border = THIN
+        ws3.cell(row=r3, column=6, value=art["tier"]).alignment = CELL_ALIGN
+        ws3.cell(row=r3, column=6).border = THIN
+        ws3.cell(row=r3, column=7, value=round(art["avg_sales"], 2) if art["avg_sales"] else "").alignment = CELL_ALIGN
+        ws3.cell(row=r3, column=7).border = THIN
+        ws3.cell(row=r3, column=8, value=f"{art['sales_mix']*100:.2f}%" if art["sales_mix"] else "").alignment = CELL_ALIGN
+        ws3.cell(row=r3, column=8).border = THIN
+        ws3.cell(row=r3, column=9, value=round(art["reko_pairs"], 1) if art["reko_pairs"] else "").alignment = CELL_ALIGN
+        ws3.cell(row=r3, column=9).border = THIN
+        ws3.cell(row=r3, column=10, value=art["reko_box"]).alignment = CELL_ALIGN
+        ws3.cell(row=r3, column=10).border = THIN
+        cell_status = ws3.cell(row=r3, column=11, value="EXCLUDED")
+        cell_status.font = Font(size=9, bold=True, color="9C0006")
+        cell_status.fill = PatternFill(start_color="F4CCCC", end_color="F4CCCC", fill_type="solid")
+        cell_status.alignment = CELL_ALIGN
+        cell_status.border = THIN
+        ws3.cell(row=r3, column=12, value="").border = THIN
+        ws3.cell(row=r3, column=13, value=reason).border = THIN
+        ws3.cell(row=r3, column=13).font = Font(size=9, italic=True)
+        no3 += 1
+        r3 += 1
+
+    # Autofilter
+    ws3.auto_filter.ref = f"A4:M{r3-1}"
+
     wb.save(output_path)
     print(f"Visual Excel saved: {output_path}")
     return grand_sku, grand_box, grand_pairs
