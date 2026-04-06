@@ -30,8 +30,8 @@ The pre-planogram is a **wide-format table** with one row per article per store.
 
 It does NOT contain:
 - Physical display assignment (which backwall, which hook) -- that is STEP 1
-- RO request logic (what to order from warehouse) -- that is STEP 3
 - Visual layout rendering -- that is STEP 2
+- RO request logic -- handled by separate ro-delegate skill
 
 ### Output Shape
 
@@ -255,15 +255,11 @@ Visual Planogram (STEP 2 - visualized-planogram-zuma skill)
     |
     | Input: planogram layout
     | Output: visual Excel/PDF rendering of physical store layout
-    |
-    v
-RO Request (STEP 3 - zuma-ro-surplus-transisi skill)
-    |
-    | Input: planogram targets + current stock
-    | Output: weekly replenishment order document (RO Protol + RO Box + Surplus)
 ```
 
-The pre-planogram is the **data foundation**. Without it, STEP 1 cannot determine which articles belong in each store, and STEP 3 cannot calculate stock gaps.
+The pre-planogram is the **data foundation**. Without it, STEP 1 cannot determine which articles belong in each store.
+
+> **Note:** RO Request (replenishment order) is handled by a separate dedicated skill (ro-delegate), not part of this planogram pipeline.
 
 ---
 
