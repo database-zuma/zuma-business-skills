@@ -140,15 +140,29 @@ def match_store_to_target(toko, targets):
     toko_lower = toko.lower().strip()
     # Exact
     if toko_lower in targets: return targets[toko_lower]
-    # Partial
+    # Substring
     for key, val in targets.items():
         if key in toko_lower or toko_lower in key:
             return val
-    # Strip "zuma " prefix
-    stripped = toko_lower.replace("zuma ", "").strip()
+    # Strip "zuma " and compare
+    stripped = toko_lower.replace("zuma ", "").replace("pameran ", "").strip()
     for key, val in targets.items():
-        key_stripped = key.replace("zuma ", "").strip()
-        if key_stripped == stripped or key_stripped in stripped or stripped in key_stripped:
+        ks = key.replace("zuma ", "").strip()
+        if ks == stripped or ks in stripped or stripped in ks:
+            return val
+    # Word overlap: if most words match, consider it a match
+    toko_words = set(stripped.split()) - {"mall", "the", "di", "and"}
+    for key, val in targets.items():
+        ks = key.replace("zuma ", "").strip()
+        key_words = set(ks.split()) - {"mall", "the", "di", "and"}
+        overlap = toko_words & key_words
+        if len(overlap) >= max(1, len(key_words) - 1):  # allow 1 word mismatch
+            return val
+    # Xchange/exchange normalization
+    normalized = stripped.replace("xchange", "exchange").replace("x change", "exchange")
+    for key, val in targets.items():
+        ks = key.replace("zuma ", "").strip()
+        if ks == normalized or ks in normalized or normalized in ks:
             return val
     return None
 
