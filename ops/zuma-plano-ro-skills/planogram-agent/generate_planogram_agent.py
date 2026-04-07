@@ -146,30 +146,41 @@ def load_store_planogram_data(store_name, store_db, area):
         return []
 
     # 2. Enrich with avg sales 3mo from core.sales_with_product
+    #    Key: both kode_mix (full) AND kode (kode_kecil) via portal.kodemix bridge
     cur.execute("""
-        SELECT kode_mix,
-               ROUND(SUM(quantity)::numeric / 3, 2) as avg_monthly_pairs,
-               ROUND(SUM(quantity)::numeric / NULLIF(
-                   (SELECT SUM(quantity) FROM core.sales_with_product
-                    WHERE UPPER(TRIM(matched_store_name)) = UPPER(TRIM(%s))
-                    AND transaction_date >= (CURRENT_DATE - INTERVAL '3 months')
-                    AND quantity > 0
-                    AND (is_intercompany IS NULL OR is_intercompany = FALSE)
-                   ), 0), 6) as sales_mix
-        FROM core.sales_with_product
-        WHERE UPPER(TRIM(matched_store_name)) = UPPER(TRIM(%s))
-          AND transaction_date >= (CURRENT_DATE - INTERVAL '3 months')
-          AND quantity > 0
-          AND kode_mix IS NOT NULL
-          AND (is_intercompany IS NULL OR is_intercompany = FALSE)
-        GROUP BY kode_mix
+        WITH sales AS (
+            SELECT kode_mix,
+                   ROUND(SUM(quantity)::numeric / 3, 2) as avg_monthly_pairs,
+                   ROUND(SUM(quantity)::numeric / NULLIF(
+                       (SELECT SUM(quantity) FROM core.sales_with_product
+                        WHERE UPPER(TRIM(matched_store_name)) = UPPER(TRIM(%s))
+                        AND transaction_date >= (CURRENT_DATE - INTERVAL '3 months')
+                        AND quantity > 0
+                        AND (is_intercompany IS NULL OR is_intercompany = FALSE)
+                       ), 0), 6) as sales_mix
+            FROM core.sales_with_product
+            WHERE UPPER(TRIM(matched_store_name)) = UPPER(TRIM(%s))
+              AND transaction_date >= (CURRENT_DATE - INTERVAL '3 months')
+              AND quantity > 0
+              AND kode_mix IS NOT NULL
+              AND (is_intercompany IS NULL OR is_intercompany = FALSE)
+            GROUP BY kode_mix
+        ),
+        kode_bridge AS (
+            SELECT DISTINCT ON (kode) kode, kode_mix
+            FROM portal.kodemix
+            WHERE kode IS NOT NULL AND kode_mix IS NOT NULL
+            ORDER BY kode, no_urut
+        )
+        SELECT s.kode_mix, kb.kode, s.avg_monthly_pairs, s.sales_mix
+        FROM sales s
+        LEFT JOIN kode_bridge kb ON kb.kode_mix = s.kode_mix
     """, (store_db, store_db))
     sales_map = {}
-    for kode, avg_pairs, smix in cur.fetchall():
-        sales_map[kode.strip().upper() if kode else ""] = {
-            "avg_sales": float(avg_pairs) if avg_pairs else 0,
-            "sales_mix": float(smix) if smix else 0,
-        }
+    for kode_mix, kode_kecil, avg_pairs, smix in cur.fetchall():
+        val = {"avg_sales": float(avg_pairs) if avg_pairs else 0, "sales_mix": float(smix) if smix else 0}
+        if kode_mix: sales_map[kode_mix.strip().upper()] = val
+        if kode_kecil: sales_map[kode_kecil.strip().upper()] = val
 
     cur.close()
     conn.close()
