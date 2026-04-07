@@ -93,17 +93,17 @@ get_store_full() {
 
 get_store_db() {
   case "$1" in
-    GM)      echo "GM" ;;
-    PTC)     echo "PTC" ;;
-    TP)      echo "TP" ;;
-    ROYAL)   echo "ROYAL" ;;
-    SDA)     echo "LIPPO SIDOARJO" ;;
-    CITO)    echo "CITO" ;;
-    BATU)    echo "LIPPO BATU" ;;
-    MOG)     echo "MOG" ;;
-    MATOS)   echo "MATOS" ;;
-    ICON)    echo "ICON MALL GRESIK" ;;
-    SUNRISE) echo "SUNRISE" ;;
+    GM)      echo "zuma galaxy mall" ;;
+    PTC)     echo "zuma ptc" ;;
+    TP)      echo "zuma tunjungan plaza" ;;
+    ROYAL)   echo "zuma royal plaza" ;;
+    SDA)     echo "zuma lippo sidoarjo" ;;
+    CITO)    echo "zuma city of tomorrow mall" ;;
+    BATU)    echo "zuma lippo batu" ;;
+    MOG)     echo "zuma mall olympic garden" ;;
+    MATOS)   echo "zuma matos" ;;
+    ICON)    echo "zuma icon gresik" ;;
+    SUNRISE) echo "zuma sunrise mall" ;;
     *)       echo "$1" ;;
   esac
 }
