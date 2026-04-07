@@ -468,13 +468,14 @@ def write_grid(ws, start_row, start_col, title, grid, ncols, nhooks):
     COL_FILL = PatternFill(start_color="D6E4F0", end_color="D6E4F0", fill_type="solid")
     HOOK_FILL = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     r = start_row
+    # Title row — NO merge (GSheet conversion drops data after merged cells)
+    for cc in range(start_col, start_col + ncols + 1):
+        cell = ws.cell(row=r, column=cc)
+        cell.fill = ZONE_FILL
+        cell.border = THIN
     cell = ws.cell(row=r, column=start_col, value=title)
     cell.font = Font(bold=True, size=10, color="FFFFFF")
-    cell.fill = ZONE_FILL
-    cell.alignment = Alignment(horizontal="center", vertical="center")
-    ws.merge_cells(start_row=r, start_column=start_col, end_row=r, end_column=start_col + ncols)
-    for cc in range(start_col, start_col + ncols + 1):
-        ws.cell(row=r, column=cc).border = THIN
+    cell.alignment = Alignment(horizontal="left", vertical="center")
     r += 1
     ws.cell(row=r, column=start_col, value="").border = THIN
     for ci in range(ncols):
@@ -593,14 +594,11 @@ def generate_excel(assigned, excluded, warnings, store_name, config, output_path
             ws2.cell(row=r, column=7, value=pairs).alignment = CELL_ALIGN; ws2.cell(row=r, column=7).border = THIN
             zone_box += art["reko_box"]; zone_pairs += pairs; no += 1; r += 1
 
-        if len(arts) > 1:
-            ws2.merge_cells(start_row=zone_start, start_column=2, end_row=r-1, end_column=2)
-            ws2.cell(row=zone_start, column=2).alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        # No merge — GSheet conversion drops data after merged cells
 
         sub_fill = PatternFill(start_color="E8E8E8", end_color="E8E8E8", fill_type="solid")
         for cc in range(1, 8): ws2.cell(row=r, column=cc).border = THIN; ws2.cell(row=r, column=cc).fill = sub_fill
         ws2.cell(row=r, column=2, value=f"Subtotal {zone_name}").font = Font(bold=True, size=9)
-        ws2.merge_cells(start_row=r, start_column=2, end_row=r, end_column=5)
         ws2.cell(row=r, column=6, value=zone_box).font = Font(bold=True, size=9); ws2.cell(row=r, column=6).alignment = CELL_ALIGN
         ws2.cell(row=r, column=7, value=zone_pairs).font = Font(bold=True, size=9); ws2.cell(row=r, column=7).alignment = CELL_ALIGN
         r += 1; grand_sku += len(arts); grand_box += zone_box; grand_pairs += zone_pairs
@@ -611,7 +609,6 @@ def generate_excel(assigned, excluded, warnings, store_name, config, output_path
     GT_FONT = Font(bold=True, size=10, color="FFFFFF")
     for cc in range(1, 8): ws2.cell(row=r, column=cc).border = THIN; ws2.cell(row=r, column=cc).fill = GT_FILL
     ws2.cell(row=r, column=1, value="GRAND TOTAL").font = GT_FONT
-    ws2.merge_cells(start_row=r, start_column=1, end_row=r, end_column=4)
     ws2.cell(row=r, column=5, value=f"{grand_sku} SKU").font = GT_FONT; ws2.cell(row=r, column=5).fill = GT_FILL; ws2.cell(row=r, column=5).alignment = CELL_ALIGN
     ws2.cell(row=r, column=6, value=grand_box).font = GT_FONT; ws2.cell(row=r, column=6).alignment = CELL_ALIGN
     ws2.cell(row=r, column=7, value=grand_pairs).font = GT_FONT; ws2.cell(row=r, column=7).alignment = CELL_ALIGN
