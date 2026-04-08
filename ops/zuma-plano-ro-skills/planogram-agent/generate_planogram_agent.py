@@ -95,8 +95,8 @@ def ensure_cache(xlsx_path, gsheet_id):
     ], check=True)
     print(f"Downloaded: {xlsx_path}")
 
-def load_store_planogram_data(store_name, store_db, area):
-    """Load planogram data from DB (primary) with GSheet box overrides."""
+def load_store_planogram_data(store_name, store_db, area, total_display_pairs=0):
+    """Calculate fresh planogram from sales history — recalculated every run."""
     conn = psycopg2.connect(
         host=os.environ.get("PGHOST", "76.13.194.120"),
         port=os.environ.get("PGPORT", "5432"),
@@ -106,119 +106,97 @@ def load_store_planogram_data(store_name, store_db, area):
     )
     cur = conn.cursor()
 
-    # 1. Get articles from existing planogram (portal.planogram or planogram_existing_q1_2026)
-    #    Try portal.planogram first (better types), fallback to planogram_existing_q1_2026
+    # Single query: pull all articles sold at this store (12mo history + 3mo avg)
+    # Bridge kode_mix → kode_kecil via portal.kodemix
     cur.execute("""
-        SELECT article_mix, gender, series, tier,
-               COALESCE(rekomendasi_box, 1) as reko_box,
-               COALESCE(rekomendasi_pairs, 0) as reko_pairs,
-               COALESCE(avg_sales_3mo_pairs, 0) as avg_sales,
-               COALESCE(sales_mix, 0) as sales_mix
-        FROM portal.planogram
-        WHERE UPPER(TRIM(store_name)) = UPPER(TRIM(%s))
-          AND article_mix IS NOT NULL
-        ORDER BY avg_sales_3mo_pairs DESC NULLS LAST
-    """, (store_db,))
-    rows = cur.fetchall()
-
-    source = "portal.planogram"
-    if not rows:
-        # Fallback to planogram_existing_q1_2026
-        cur.execute("""
-            SELECT kode_kecil, gender, series, tier,
-                   COALESCE(NULLIF(box,'')::int, 1) as reko_box,
-                   COALESCE(NULLIF(grand_total_pairs,'')::numeric, 0) as reko_pairs,
-                   0 as avg_sales,
-                   0 as sales_mix
-            FROM portal.planogram_existing_q1_2026
-            WHERE UPPER(TRIM(store_name)) = UPPER(TRIM(%s))
-              AND kode_kecil IS NOT NULL AND TRIM(kode_kecil) != ''
-              AND COALESCE(NULLIF(box,'')::int, 0) > 0
-            ORDER BY kode_kecil
-        """, (store_db,))
-        rows = cur.fetchall()
-        source = "portal.planogram_existing_q1_2026"
-
-    if not rows:
-        print(f"WARNING: No planogram data found for store '{store_db}' in DB")
-        cur.close()
-        conn.close()
-        return []
-
-    # 2. Enrich with avg sales 3mo from core.sales_with_product
-    #    Key: both kode_mix (full) AND kode (kode_kecil) via portal.kodemix bridge
-    cur.execute("""
-        WITH sales AS (
+        WITH sales_12mo AS (
             SELECT kode_mix,
-                   ROUND(SUM(quantity)::numeric / 3, 2) as avg_monthly_pairs,
-                   ROUND(SUM(quantity)::numeric / NULLIF(
-                       (SELECT SUM(quantity) FROM core.sales_with_product
-                        WHERE UPPER(TRIM(matched_store_name)) = UPPER(TRIM(%s))
-                        AND transaction_date >= (CURRENT_DATE - INTERVAL '3 months')
-                        AND quantity > 0
-                        AND (is_intercompany IS NULL OR is_intercompany = FALSE)
-                       ), 0), 6) as sales_mix
+                   MAX(article) as article, MAX(gender) as gender,
+                   MAX(series) as series,
+                   COALESCE(MAX(NULLIF(TRIM(tier),'')),'3') as tier,
+                   SUM(quantity) as total_qty,
+                   ROUND(SUM(quantity)::numeric / 12, 2) as avg_monthly
+            FROM core.sales_with_product
+            WHERE UPPER(TRIM(matched_store_name)) = UPPER(TRIM(%s))
+              AND transaction_date >= (CURRENT_DATE - INTERVAL '12 months')
+              AND quantity > 0 AND kode_mix IS NOT NULL
+              AND (is_intercompany IS NULL OR is_intercompany = FALSE)
+            GROUP BY kode_mix
+            HAVING SUM(quantity) > 0
+        ),
+        sales_3mo AS (
+            SELECT kode_mix, ROUND(SUM(quantity)::numeric / 3, 2) as avg_3mo
             FROM core.sales_with_product
             WHERE UPPER(TRIM(matched_store_name)) = UPPER(TRIM(%s))
               AND transaction_date >= (CURRENT_DATE - INTERVAL '3 months')
-              AND quantity > 0
-              AND kode_mix IS NOT NULL
+              AND quantity > 0 AND kode_mix IS NOT NULL
               AND (is_intercompany IS NULL OR is_intercompany = FALSE)
             GROUP BY kode_mix
         ),
+        total_3mo AS (
+            SELECT SUM(quantity)::numeric as total FROM core.sales_with_product
+            WHERE UPPER(TRIM(matched_store_name)) = UPPER(TRIM(%s))
+              AND transaction_date >= (CURRENT_DATE - INTERVAL '3 months')
+              AND quantity > 0 AND kode_mix IS NOT NULL
+              AND (is_intercompany IS NULL OR is_intercompany = FALSE)
+        ),
         kode_bridge AS (
-            SELECT DISTINCT ON (kode) kode, kode_mix
-            FROM portal.kodemix
-            WHERE kode IS NOT NULL AND kode_mix IS NOT NULL
-            ORDER BY kode, no_urut
+            SELECT DISTINCT ON (kode_mix) kode_mix, kode as kode_kecil
+            FROM portal.kodemix WHERE kode IS NOT NULL AND kode_mix IS NOT NULL
+            ORDER BY kode_mix, no_urut
         )
-        SELECT s.kode_mix, kb.kode, s.avg_monthly_pairs, s.sales_mix
-        FROM sales s
+        SELECT s.kode_mix, kb.kode_kecil, s.article, s.gender, s.series, s.tier,
+               COALESCE(s3.avg_3mo, s.avg_monthly) as avg_sales,
+               ROUND(COALESCE(s3.avg_3mo, s.avg_monthly) / NULLIF((SELECT total FROM total_3mo), 0), 6) as sales_mix,
+               s.total_qty
+        FROM sales_12mo s
+        LEFT JOIN sales_3mo s3 ON s3.kode_mix = s.kode_mix
         LEFT JOIN kode_bridge kb ON kb.kode_mix = s.kode_mix
-    """, (store_db, store_db))
-    sales_map = {}
-    for kode_mix, kode_kecil, avg_pairs, smix in cur.fetchall():
-        val = {"avg_sales": float(avg_pairs) if avg_pairs else 0, "sales_mix": float(smix) if smix else 0}
-        if kode_mix: sales_map[kode_mix.strip().upper()] = val
-        if kode_kecil: sales_map[kode_kecil.strip().upper()] = val
+        ORDER BY COALESCE(s3.avg_3mo, s.avg_monthly) DESC
+    """, (store_db, store_db, store_db))
 
+    rows = cur.fetchall()
     cur.close()
     conn.close()
 
-    # 3. Build article list
+    if not rows:
+        print(f"WARNING: No sales data for store '{store_db}'")
+        return []
+
+    # Build article list with proportional reko_box
+    total_avg = sum(float(r[6]) for r in rows if r[6])
     articles = []
     for row in rows:
-        article_mix, gender, series, tier, reko_box, reko_pairs, db_avg, db_mix = row
-        article_mix = str(article_mix).strip() if article_mix else ""
-        if not article_mix or article_mix == "0" or article_mix == "None":
-            continue
-        gender = str(gender).strip() if gender else ""
-        series = str(series).strip() if series else ""
-        tier = str(tier).strip() if tier else "3"
+        kode_mix, kode_kecil, article, gender, series, tier, avg_sales, sales_mix, total_qty = row
+        kode_mix = str(kode_mix or "").strip()
+        if not kode_mix: continue
 
-        # Enrich with sales data
-        sales_info = sales_map.get(article_mix.upper(), {})
-        avg_sales = sales_info.get("avg_sales", float(db_avg) if db_avg else 0)
-        sales_mix = sales_info.get("sales_mix", float(db_mix) if db_mix else 0)
+        avg_f = float(avg_sales) if avg_sales else 0
+        mix_f = float(sales_mix) if sales_mix else 0
 
-        reko_box_int = max(1, int(reko_box)) if reko_box else 1
-        reko_pairs_f = float(reko_pairs) if reko_pairs else reko_box_int * PAIRS_PER_BOX
+        # Reko box proportional to display capacity
+        if total_display_pairs > 0 and total_avg > 0:
+            reko_pairs = mix_f * total_display_pairs
+            reko_box = max(1, round(reko_pairs / PAIRS_PER_BOX))
+        else:
+            reko_pairs = avg_f
+            reko_box = max(1, round(avg_f / PAIRS_PER_BOX))
 
         articles.append({
-            "gender": gender,
-            "series": series,
-            "article": article_mix,
-            "tier": tier,
-            "article_mix": article_mix,
-            "reko_box": reko_box_int,
-            "reko_pairs": reko_pairs_f,
-            "avg_sales": avg_sales,
-            "sales_mix": sales_mix,
+            "gender": str(gender or "").strip(),
+            "series": str(series or "").strip(),
+            "article": str(article or kode_mix).strip(),
+            "tier": str(tier or "3").strip(),
+            "article_mix": kode_kecil.strip() if kode_kecil else kode_mix,
+            "reko_box": reko_box,
+            "reko_pairs": reko_pairs,
+            "avg_sales": avg_f,
+            "sales_mix": mix_f,
             "sizes": {},
-            "tipe": get_display_type(series),
+            "tipe": get_display_type(str(series or "").strip()),
         })
 
-    print(f"Loaded {len(articles)} articles for {store_db} from {source} (enriched with 3mo sales)")
+    print(f"Calculated {len(articles)} articles from fresh sales data (12mo history, 3mo avg)")
     return articles
 
 def load_backwall_config(store_code, area):
@@ -778,14 +756,17 @@ def main():
 
     print(f"=== Planogram Agent: {args.store_name} ({args.store_code}) ===")
 
-    # 1. Load pre-planogram data from DB
-    articles = load_store_planogram_data(args.store_name, args.store_db, args.area)
-    if not articles:
-        print(f"ERROR: No articles found for {args.store_db}")
-        sys.exit(1)
-
-    # 2. Load backwall config
+    # 1. Load backwall config first (need total hooks for display capacity)
     config = load_backwall_config(args.store_code, args.area)
+    total_hooks = sum(bw["hooks"] for bw in config.get("backwalls", []))
+    total_hooks += sum(gd["hooks"] for gd in config.get("gondolas", []))
+    total_display_pairs = total_hooks * 5  # ~5 pairs per hook average
+
+    # 2. Calculate fresh planogram from sales history
+    articles = load_store_planogram_data(args.store_name, args.store_db, args.area, total_display_pairs)
+    if not articles:
+        print(f"ERROR: No sales data found for {args.store_db}")
+        sys.exit(1)
 
     # 3. Assign articles to display
     assigned, excluded = assign_articles_to_display(articles, config)
