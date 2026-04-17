@@ -1,67 +1,69 @@
 ---
 name: agent-ar-mandiri-1
-description: "Workflow rekonsiliasi Accounts Receivable (AR) Zuma Indonesia untuk rekening Bank Mandiri 560 (No. Rek 1420056089898) yang menerima settlement EDC Yokke. Gunakan skill ini setiap kali user meng-upload Account Statement Mandiri (.xls dengan nama `Acc_Statement_1420056089898_*`), Merchant Statement Yokke (nama file `Yokke_*.xlsx` atau `MSR_*`), atau menyebut `Buku Bank Mandiri 560` / `Master 560`. Juga trigger saat user minta output format `Extracting_finance_data`, minta parsing transaksi EDC per merchant, mapping MID ke Nama Toko/Cabang, atau ekstraksi Tagihan/Admin (MDR)/Nominal Setelah Admin dari Yokke. Trigger walau user hanya menyebut keyword seperti `acc statement`, `yokke bali`, `merchant statement`, `extracting finance`, `settlement EDC Mandiri`, `rekap AR Mandiri`, atau minta buatkan keterangan format `Terima Penjualan EDC Mandiri [Toko] [Tgl]`."
+description: "Workflow rekonsiliasi Accounts Receivable (AR) Zuma Indonesia dari Merchant Statement Yokke EDC untuk rekening Bank Mandiri 560 (No. Rek 1420056089898). Gunakan skill ini setiap kali user meng-upload file Yokke (`Yokke_*.xlsx`, `MSR_*`, atau file merchant statement EDC lainnya) dan minta diolah jadi format `Extracting_finance_data`. Trigger juga saat user menyebut keyword seperti `yokke`, `merchant statement EDC`, `extracting finance`, `rekap AR Mandiri`, `settlement EDC`, `MDR`, `Tagihan Admin Nominal`, `mapping MID`, atau minta buatkan keterangan format `Terima Penjualan EDC Mandiri [Toko] [Tgl]`. Skill ini auto-fetch mapping MID → Nama Toko/Cabang dari Google Sheets Master EDC Bank — user tidak perlu upload file Master 560 atau Buku Bank."
 ---
 
-# Agent AR Mandiri 1 — Rekonsiliasi EDC Yokke ke Rek Mandiri 560
+# Agent AR Mandiri 1 — Rekonsiliasi Yokke EDC ke Format Finance
 
 ## Konteks Bisnis
 
-Zuma Indonesia memiliki rekening Bank Mandiri **1420056089898** (KCP Kuta Raya, Bali) sebagai penampung settlement EDC Yokke untuk toko-toko di wilayah **Bali & Lombok**. Alur uang:
+Zuma Indonesia menerima settlement EDC Yokke di rekening Bank Mandiri **1420056089898** (KCP Kuta Raya) untuk toko-toko di wilayah **Bali & Lombok**. Setiap hari Yokke kirim Merchant Statement (MSR) berisi detail semua transaksi EDC card + QRIS pada tanggal tertentu, dengan AMOUNT (gross), MDR Amount (fee), dan NET AMOUNT (yang akan ditransfer).
 
-1. Customer bayar di toko via EDC card atau QRIS → masuk rekening Yokke `0000029511812`
-2. Yokke settle T+1 ke rekening merchant 1420056089898 (agregat per MID per hari, sudah potong MDR)
-3. Tim Finance rekonsiliasi: cocokkan Acc_Statement (agregat) dengan Merchant Statement Yokke (detail transaksi)
+Skill ini mengolah file Yokke mentah → spreadsheet siap-jurnal dengan Nama Toko & Cabang sudah di-mapping, plus Keterangan sesuai standar penulisan Buku Bank.
 
-Output skill ini adalah spreadsheet `Extracting_finance_data` yang menggabungkan kedua sumber, dengan detail Tagihan/MDR/Net dari Yokke dan lookup Nama Toko/Cabang dari Master 560.
+## Input
 
-## Input Files
-
-User hanya perlu upload 2 file:
+User upload **1 file saja**:
 
 | File | Format | Isi |
 |---|---|---|
-| `Acc_Statement_1420056089898_*.xls` | Binary XLS (Mandiri eStatement) | Semua mutasi rekening periode tertentu |
-| `Yokke_*.xlsx` atau `MSR_*` | XLSX dengan CSV-in-cell | Detail transaksi EDC per tanggal (AMOUNT, MDR, NET) |
+| `Yokke_*.xlsx` atau `MSR_*` | XLSX dengan CSV-in-cell | Detail transaksi EDC per tanggal |
 
-**Master 560 (MID mapping) — referensi permanen di Google Sheets:**
+**Master 560 (MID mapping) — auto-fetch dari Google Sheets, user tidak perlu upload:**
 
-- **Nama sheet**: "Master EDC Bank"
+- **Nama workbook**: "Master EDC Bank"
 - **URL**: <https://docs.google.com/spreadsheets/d/1zmnWj_tGVRrHMktH3D7Zj1HAIZ3QUlksVocjpw0AywI/edit?gid=1504130740>
 - **Document ID**: `1zmnWj_tGVRrHMktH3D7Zj1HAIZ3QUlksVocjpw0AywI`
-- **GID tab Master 560**: `1504130740`
+- **GID sheet Master 560**: `1504130740`
 - **Owner**: finance@zuma.id
 
-Skill ini auto-fetch Master 560 dari Google Sheets — user TIDAK perlu upload file Buku Bank lagi. Kalau user upload file `Buku_Bank_Mandiri_560_*.xlsx`, abaikan dan tetap pakai Google Sheets sebagai source of truth (supaya mapping selalu up-to-date).
+Kalau user tetap upload file Buku Bank lokal, abaikan — Google Sheets adalah source of truth.
 
-## Output Format
+## Output
 
-File `Extracting_finance_data_OUTPUT.xlsx` dengan 2 sheet:
+File `Extracting_finance_data_OUTPUT.xlsx` dengan **1 sheet**: `Yokke Detail`.
 
-### Sheet 1: `Yokke Detail Apr16` (atau nama sesuai tanggal input)
-Dedicated view untuk detail Yokke — satu baris per transaksi individual. Kolom:
-`Tanggal Transaksi | Keterangan | MID | Cabang | Tagihan | Admin | Nominal Setelah Admin | Nama Toko | Jumlah_Clean | Tgl Settle | TRXTIME | Issuer | Ref Number`
+Satu baris per transaksi Yokke (tidak diagregat). Kolom:
 
-### Sheet 2: `result` (gabungan Acc_Statement + Yokke)
-Semua mutasi Acc_Statement. Baris settlement QRIS yang match dengan Yokke di-*expand* menjadi baris-baris detail Yokke. Kolom:
-`Tanggal Transaksi | Keterangan | MID | Cabang | Tagihan | Admin | Nominal Setelah Admin | Nama Toko | Jumlah_Clean | Saldo | Saldo_Clean`
+| Col | Header | Source |
+|---|---|---|
+| A | Tanggal Transaksi | Yokke `TRXDATE` |
+| B | Keterangan | `Terima Penjualan EDC Mandiri {Nama Toko} {tgl ID}` |
+| C | MID | Yokke `MID` (11 digit, text format) |
+| D | Cabang | Master 560 `Cabang` (Bali/Lombok) |
+| E | Tagihan | Yokke `AMOUNT` |
+| F | Admin | Yokke `MDR Amount` |
+| G | Nominal Setelah Admin | Yokke `NET AMOUNT` |
+| H | Nama Toko | Master 560 `Nama Toko di EDC` |
+| I | Jumlah_Clean | = NET AMOUNT (numerik, semua CR/positif) |
+| J | Tgl Settle | TRXDATE + 1 hari (tanggal Yokke transfer ke rek Mandiri) |
+| K | TRXTIME | Yokke `TRXTIME` |
+| L | Issuer | Yokke `Issuer Name` (BCA, BRI, Mandiri, Danamon, BSI, Dana, dll) |
+| M | Ref Number | Yokke `Refference Number` |
 
-Footer: `Saldo Awal`, `Mutasi Debet`, `Mutasi Kredit`, `Saldo Akhir` (nilai diambil dari summary Acc_Statement).
+Tambahan: **baris TOTAL** di paling bawah dengan SUM kolom E, F, G, I.
 
 ## Workflow
 
 ### Step 1: Fetch Master 560 dari Google Sheets
 
-Master 560 ada di Google Sheets (tidak perlu upload). Ada 2 cara fetch, tergantung environment:
-
-**Cara A — via Google Drive MCP / connector** (preferred kalau tersedia):
+**Cara A — via Google Drive MCP / connector** (preferred di Claude):
 ```python
-# Pakai google_drive_search atau google_drive_fetch dengan document_id:
-#   1zmnWj_tGVRrHMktH3D7Zj1HAIZ3QUlksVocjpw0AywI
-# Kalau tool support spreadsheet read, target sheet dengan gid=1504130740
+# google_drive_fetch document_id=1zmnWj_tGVRrHMktH3D7Zj1HAIZ3QUlksVocjpw0AywI
+# target gid=1504130740 (Master 560)
 ```
 
-**Cara B — Export sebagai CSV via public URL** (fallback, butuh sheet publik atau OAuth):
+**Cara B — CSV export URL** (fallback, butuh sheet publik):
 ```python
 import pandas as pd
 DOC_ID = "1zmnWj_tGVRrHMktH3D7Zj1HAIZ3QUlksVocjpw0AywI"
@@ -70,209 +72,227 @@ url = f"https://docs.google.com/spreadsheets/d/{DOC_ID}/export?format=csv&gid={G
 master = pd.read_csv(url)
 ```
 
-**Cara C — API langsung** (OpenClaw / production):
-Pakai Google Sheets API v4 dengan service account kredensial `finance@zuma.id`:
-```
-GET https://sheets.googleapis.com/v4/spreadsheets/{DOC_ID}/values/Master 560!A:H
+**Cara C — Google Sheets API v4** (OpenClaw production):
+```python
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+creds = service_account.Credentials.from_service_account_file(
+    'service-account.json',
+    scopes=['https://www.googleapis.com/auth/spreadsheets.readonly'])
+service = build('sheets', 'v4', credentials=creds)
+result = service.spreadsheets().values().get(
+    spreadsheetId='1zmnWj_tGVRrHMktH3D7Zj1HAIZ3QUlksVocjpw0AywI',
+    range='Master 560!A:H').execute()
+# convert result['values'] ke dataframe
 ```
 
-Setelah dapat dataframe, build lookup:
+Setelah dapat dataframe, build lookup dict:
 ```python
 master['MID'] = master['MID'].astype(str).str.strip()
 mid_map = {r['MID']: {
     'Nama Toko': r['Nama Toko di EDC'],
-    'Cabang': r['Cabang'],         # 'Bali' atau 'Lombok'
-    'Term ID': r['Term ID']
+    'Cabang': r['Cabang']         # 'Bali' atau 'Lombok'
 } for _, r in master.iterrows()}
 ```
 
-**Kolom yang dipakai dari Master 560**: `MID` (11 digit), `Nama Toko di EDC`, `Cabang`, `Term ID`. Kolom lain (`Nama Departemen`, `Jenis EDC`, `Alamat EDC`, `Alamat Email Terdaftar`) optional — tidak dipakai di pipeline ini.
+Kolom yang dipakai: `MID`, `Nama Toko di EDC`, `Cabang`. Selain itu (Nama Departemen, Jenis EDC, Term ID, Alamat EDC, Email) optional.
 
 ### Step 2: Parse Yokke Merchant Statement
-File Yokke adalah XLSX 1 kolom berisi baris-baris CSV. Struktur:
-- Baris 1–5: metadata (MERCHANT STATEMENT, Report Date, Group, dll)
-- Baris 6: header CSV (`NMID,MID,Merchant Official,Trading Name,...,AMOUNT,MDR Amount,NET AMOUNT`)
-- Baris 7–N: **detail transaksi** (real data, TRXDATE = tanggal transaksi)
-- Baris `TOTAL`: grand total (skip)
-- Baris `SUMMARY GROUP` dan di bawahnya: **rekap per merchant dengan PAYMENT DATE = settlement date** (skip — bukan detail transaksi)
+
+File Yokke berbentuk XLSX dengan **satu kolom** yang berisi baris-baris CSV (unik, bukan XLSX tabular biasa). Struktur:
+
+- Baris 1–5: metadata (`MERCHANT STATEMENT`, `Report Date`, `Group`, `Group Name`, `DETAIL`)
+- Baris 6: header CSV: `NMID,MID,Merchant Official,Trading Name,Bank Account,Bank Account Name,TRXDATE,TRXTIME,Issuer Name,TID,Refference Number,Reff ID/Invoice No,AMOUNT,MDR Amount,NET AMOUNT`
+- Baris 7–N: **detail transaksi** (yang kita butuhkan)
+- Baris `TOTAL,,,,,,,,,,,,"X","Y","Z"`: grand total — skip
+- Baris `SUMMARY GROUP,,,,...`: separator — skip
+- Baris berikutnya: header summary (`NMID,MID,...,PAYMENT DATE,TOTAL AMOUNT,TOTAL MDR,TOTAL NET AMOUNT`)
+- Baris-baris summary per merchant dengan `PAYMENT DATE` = settlement date — skip
+- Baris `TOTAL` terakhir — skip
 
 Parsing:
 ```python
-import csv
+import pandas as pd, csv
 from io import StringIO
+
 raw = pd.read_excel(yokke_path, header=None, dtype=str)
+header_row = next(i for i, r in raw.iterrows() if 'NMID' in str(r[0]))
+
 rows = []
-header_row = next(i for i,r in raw.iterrows() if 'NMID' in str(r[0]))
 for i in range(header_row, len(raw)):
-    line = raw.iloc[i,0]
+    line = raw.iloc[i, 0]
     if pd.isna(line) or not str(line).strip(): continue
     for parsed in csv.reader(StringIO(str(line))):
-        if parsed and parsed[0].strip(): rows.append(parsed)
+        if parsed and parsed[0].strip():
+            rows.append(parsed)
+
 yokke_df = pd.DataFrame(rows[1:], columns=rows[0])
-# ONLY keep rows where MID is 11-digit (excludes TOTAL and SUMMARY header)
+
+# Filter 1: hanya baris dengan MID 11 digit (buang TOTAL rows)
 yokke_df = yokke_df[yokke_df['MID'].astype(str).str.match(r'^\d{11}$', na=False)]
+
+def to_float(s):
+    s = str(s).replace(',', '').strip()
+    return float(s) if s else 0.0
+
+yokke_df['AMOUNT_num'] = yokke_df['AMOUNT'].apply(to_float)
+yokke_df['MDR_num']    = yokke_df['MDR Amount'].apply(to_float)
+yokke_df['NET_num']    = yokke_df['NET AMOUNT'].apply(to_float)
+
+# Filter 2: buang baris summary group (kolom AMOUNT kosong karena offset)
+yokke_df = yokke_df[yokke_df['AMOUNT_num'] > 0].copy()
+
+# Parse date
+yokke_df['TRXDATE_parsed'] = pd.to_datetime(yokke_df['TRXDATE'], format='%d-%m-%Y')
 ```
 
-Convert AMOUNT/MDR/NET: strip comma → float. Parse TRXDATE as `%d-%m-%Y`.
+### Step 3: Enrich dengan Master 560 & Format Output
 
-**Filter lagi**: simpan hanya baris dengan AMOUNT > 0 (summary rows punya AMOUNT kosong walau MID 11 digit).
-
-### Step 3: Parse Acc_Statement
-XLS Mandiri eStatement — layout 16 kolom, header di row 11, data mulai row 12:
-
-| Col Index | Field |
-|---|---|
-| 1 | Posting Date (format `DD/MM/YYYY HH:MM:SS`) |
-| 4 | Remark |
-| 7 | Reference No |
-| 9 | Debit |
-| 11 | Credit |
-| 15 | Balance |
-
-Metadata (Opening Balance, Closing Balance, No of Debit/Credit, Total Amount Debited/Credited) ada di baris-baris terakhir — scan untuk label.
-
-Butuh `xlrd >= 2.0.1`:
-```python
-pd.read_excel('Acc_Statement_*.xls', header=None, dtype=str)
-```
-
-### Step 4: Extract MID dari Remark
-Dua pola utama di Remark Acc_Statement:
-
-**Pattern A — EDC Credit Card**: `71916643508/ZUMA KESIMAN/DPS    DR 0000029511812 KR 1420056089898 99106`
-```regex
-^(\d{11})/
-```
-
-**Pattern B — QRIS**: `7191664322999999999111111111111QRZUMA KA DR 0000029511812 KR ...`
-(11 digit MID + padding `9+1+` + `QR` + nama toko terpotong)
-```regex
-^(\d{11})9+1+QR
-```
-
-Fallback: `^(\d{11})`. Jika tidak match, MID = None (transaksi non-EDC seperti TRSF E-BANKING, biaya admin, dll — skill ini fokus ke EDC).
-
-### Step 5: Build Yokke Detail Lookup (untuk expand)
-Settlement T+1 artinya Yokke TRXDATE + 1 hari = Acc_Statement Posting Date.
-
-```python
-yokke_detail = {}  # key = (MID, settlement_date), value = list of Yokke detail rows
-for _, r in yokke_df.iterrows():
-    settle = r['TRXDATE_parsed'] + pd.Timedelta(days=1)
-    key = (r['MID'], settle.date())
-    yokke_detail.setdefault(key, []).append({
-        'TRXDATE': r['TRXDATE_parsed'], 'TRXTIME': r['TRXTIME'],
-        'Issuer': r['Issuer Name'], 'Ref': str(r['Refference Number']).lstrip("'"),
-        'AMOUNT': r['AMOUNT_num'], 'MDR': r['MDR_num'], 'NET': r['NET_num'],
-    })
-```
-
-### Step 6: Iterate Acc_Statement, Expand Matching Rows
-
-Untuk setiap baris Acc_Statement:
-
-1. Extract MID, lookup Cabang & Nama Toko dari `mid_map`
-2. Cek apakah baris ini QRIS (`^\d{11}9+1+QR` match) DAN `(MID, posting_date)` ada di `yokke_detail` DAN sum of NET ≈ Credit → **expand**
-3. Kalau expand: ganti 1 baris ini dengan N baris Yokke detail, setiap baris punya Tagihan=AMOUNT, Admin=MDR, Nominal=NET individual
-4. Kalau tidak: keep 1 baris, Tagihan/Admin/Nominal = None
-
-Running balance pada baris Yokke di-increment per NET supaya totalnya sama dengan Credit aslinya → Saldo Akhir tetap tie-out.
-
-### Step 7: Generate Keterangan
-Format standar: `Terima Penjualan EDC Mandiri {Nama Toko} {tanggal transaksi ID}`
-
-Tanggal transaksi = posting date − 1 hari (karena settlement T+1).
-
-Format tanggal Indonesia (tanpa leading zero):
 ```python
 BULAN = {1:'Januari', 2:'Februari', 3:'Maret', 4:'April', 5:'Mei', 6:'Juni',
          7:'Juli', 8:'Agustus', 9:'September', 10:'Oktober', 11:'November', 12:'Desember'}
-f"{dt.day} {BULAN[dt.month]}"   # e.g., "31 Maret", "16 April"
+
+out = []
+for _, r in yokke_df.iterrows():
+    mid = r['MID']
+    info = mid_map.get(mid, {})
+    nama_toko = info.get('Nama Toko') or r['Trading Name'].title()
+    cabang = info.get('Cabang', '')
+    tgl_trx = r['TRXDATE_parsed']
+    tgl_id = f"{tgl_trx.day} {BULAN[tgl_trx.month]}"
+    ket = f"Terima Penjualan EDC Mandiri {nama_toko} {tgl_id}"
+
+    out.append({
+        'Tanggal Transaksi': tgl_trx,
+        'Keterangan': ket,
+        'MID': mid,
+        'Cabang': cabang,
+        'Tagihan': r['AMOUNT_num'],
+        'Admin': r['MDR_num'],
+        'Nominal Setelah Admin': r['NET_num'],
+        'Nama Toko': nama_toko,
+        'Jumlah_Clean': r['NET_num'],
+        'Tgl Settle': tgl_trx + pd.Timedelta(days=1),
+        'TRXTIME': r['TRXTIME'],
+        'Issuer': r['Issuer Name'],
+        'Ref Number': str(r['Refference Number']).lstrip("'"),
+    })
+
+out_df = pd.DataFrame(out).sort_values(['MID', 'TRXTIME']).reset_index(drop=True)
 ```
 
-Contoh output:
-- Posting `01/04/2026` → `Terima Penjualan EDC Mandiri Zuma Kesiman 31 Maret`
-- Posting `17/04/2026` (Yokke rows) → `Terima Penjualan EDC Mandiri Zuma Gianyar 16 April`
+### Step 4: Write Excel dengan Styling
 
-### Step 8: Write Excel Output
+```python
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
 
-Urutan kolom final di sheet `result`:
-1. Tanggal Transaksi (date, format `dd/mm/yyyy`)
-2. Keterangan (format `Terima Penjualan EDC Mandiri ...`)
-3. MID (text `@`, 11 digit)
-4. Cabang (`Bali` / `Lombok`)
-5. Tagihan (number) — dari Yokke AMOUNT
-6. Admin (number) — dari Yokke MDR Amount
-7. Nominal Setelah Admin (number) — dari Yokke NET AMOUNT
-8. Nama Toko — dari Master 560 `Nama Toko di EDC`
-9. Jumlah_Clean (number, + untuk CR, − untuk DB)
-10. Saldo (number)
-11. Saldo_Clean (number)
+wb = Workbook()
+ws = wb.active
+ws.title = 'Yokke Detail'
 
-Styling (opsional tapi recommended):
-- Header row: font Arial bold white, fill dark blue `305496`
-- Baris Yokke detail: fill hijau pucat `E8F4D9`
-- Baris TOTAL (di sheet Yokke Detail): fill kuning pucat `FCE4A6`
-- Number format: `#,##0.00` untuk kolom numerik, `@` untuk MID, `dd/mm/yyyy` untuk tanggal
-- Freeze pane di row 2 (`A2`)
-- Column width: A=18, B=85, C=14, D=10, E=14, F=12, G=20, H=20, I=16, J=16, K=16
+# Title baris 1
+report_date = out_df['Tanggal Transaksi'].iloc[0].strftime('%d/%m/%Y')
+title = f"DETAIL TRANSAKSI YOKKE {report_date} (Settle di rekening H+1)"
+ws.cell(1, 1, title).font = Font(bold=True, size=13, color='FFFFFF')
+ws.cell(1, 1).fill = PatternFill('solid', start_color='1F4E79')
+ws.cell(1, 1).alignment = Alignment(horizontal='center')
+ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=13)
 
-## Reconciliation (WAJIB setelah generate)
+# Header row 2
+headers = list(out_df.columns)
+for c, h in enumerate(headers, 1):
+    cell = ws.cell(2, c, h)
+    cell.font = Font(name='Arial', bold=True, color='FFFFFF')
+    cell.fill = PatternFill('solid', start_color='305496')
+    cell.alignment = Alignment(horizontal='center', wrap_text=True)
 
-Tie-out berikut harus selalu match — kalau tidak, ada bug di parsing:
+# Data rows
+yokke_fill = PatternFill('solid', start_color='E8F4D9')
+for i, r in out_df.iterrows():
+    for c, h in enumerate(headers, 1):
+        cell = ws.cell(i + 3, c, r[h])
+        cell.font = Font(name='Arial', size=10)
+        cell.fill = yokke_fill
+        if h in ('Tagihan', 'Admin', 'Nominal Setelah Admin', 'Jumlah_Clean'):
+            cell.number_format = '#,##0.00'
+        elif h == 'MID':
+            cell.number_format = '@'
+        elif h in ('Tanggal Transaksi', 'Tgl Settle'):
+            cell.number_format = 'dd/mm/yyyy'
 
-1. `sum(Jumlah_Clean)` = `Total Amount Credited − Total Amount Debited` (dari footer Acc_Statement)
-2. `Saldo baris terakhir` = `Closing Balance` (dari footer Acc_Statement)
-3. `Opening Balance + sum(Jumlah_Clean)` = `Closing Balance`
-4. `sum(Tagihan Yokke) − sum(Admin Yokke)` = `sum(Nominal Setelah Admin Yokke)`
-5. `sum(Yokke NET by MID)` ≈ Credit di Acc_Statement baris settlement yang di-expand (selisih < Rp 1)
+# TOTAL row
+n = len(out_df)
+total_row = n + 3
+ws.cell(total_row, 1, 'TOTAL').font = Font(bold=True)
+for col_letter, col_idx in [('E', 5), ('F', 6), ('G', 7), ('I', 9)]:
+    ws.cell(total_row, col_idx, f"=SUM({col_letter}3:{col_letter}{total_row-1})")
+    ws.cell(total_row, col_idx).font = Font(bold=True)
+    ws.cell(total_row, col_idx).number_format = '#,##0.00'
+for c in range(1, 14):
+    ws.cell(total_row, c).fill = PatternFill('solid', start_color='FCE4A6')
 
-Kalau salah satu failed → print warning, JANGAN silent.
+# Column widths
+widths = {'A':14,'B':55,'C':14,'D':10,'E':16,'F':12,'G':20,
+          'H':22,'I':16,'J':12,'K':10,'L':12,'M':18}
+for col, w in widths.items():
+    ws.column_dimensions[col].width = w
+ws.freeze_panes = 'A3'
+
+wb.save(output_path)
+```
+
+Lalu recalc formulas supaya TOTAL keluar nilai. Kalau runtime tidak ada LibreOffice, compute manual dan hardcode TOTAL.
+
+## Reconciliation
+
+Tie-out wajib sebelum return file ke user:
+
+1. `sum(Tagihan) − sum(Admin)` = `sum(Nominal Setelah Admin)` — exact, tanpa selisih
+2. `sum(Tagihan)` di baris TOTAL output = `TOTAL AMOUNT` di baris TOTAL file Yokke asli
+3. `sum(Admin)` output = `TOTAL MDR` Yokke
+4. `sum(Nominal)` output = `TOTAL NET AMOUNT` Yokke
+5. `count(detail row)` output = count detail row Yokke (sebelum summary group)
+
+Kalau ada selisih → print warning per-MID delta. JANGAN silent.
 
 ## Edge Cases & Gotchas
 
-- **Yokke file hanya berisi sebagian tanggal**: normal. Baris Acc_Statement di tanggal yang tidak ada di Yokke akan punya Tagihan/Admin/Nominal kosong. JANGAN fabrikasi data.
-- **MID di Yokke 11 digit, di Acc_Statement juga 11 digit** — match langsung, tidak perlu truncate.
-- **Ada baris `SUMMARY GROUP` di Yokke dengan PAYMENT DATE = settlement date**. Baris ini punya MID 11 digit TAPI kolom AMOUNT/MDR/NET kosong — pastikan di-filter (gunakan AMOUNT > 0).
-- **Format Remark berubah di hari berbeda**: Apr 1–16 suffix `DR 0000029511812 KR 1420056089898 99106`, Apr 17+ suffix `CC Merchant Paymt SA DR 000002...`. Regex MID tetap sama (11 digit di awal).
-- **CC Merchant settlement (non-QRIS)** pada settlement date biasanya TIDAK ada di Yokke file yang user kasih — Yokke file sering hanya cover QRIS. Jangan paksa match; biarkan Tagihan/Admin kosong.
-- **Baris tanpa MID** (TRSF E-BANKING, BA JASA BCA VA, pajak otomatis, dll): tetap dimasukkan ke output, kolom MID/Cabang/Nama Toko kosong, Keterangan = Remark asli dari Acc_Statement.
-- **Nama bulan dalam Bahasa Indonesia**, bukan Inggris. "Maret" bukan "March".
-- **Tanggal tanpa leading zero**: "1 April" bukan "01 April" (match gaya LBH sheet Buku Bank).
+- **Baris SUMMARY GROUP punya MID 11 digit juga** (bukan detail!) — tapi `AMOUNT` kosong karena ada kolom `PAYMENT DATE` di offset berbeda. Filter dengan `AMOUNT_num > 0` untuk buang summary ini.
+- **MID di Yokke 11 digit**, sama format dengan Master 560 — lookup langsung tanpa transformasi.
+- **MID tidak ditemukan di Master 560**: fallback ke `Trading Name` dari Yokke (title-case). Print warning supaya user tahu perlu update Master EDC Bank di Google Sheets.
+- **Issuer Name bisa apa saja**: BCA, BRI, BNI, Mandiri, Danamon, BSI, Dana, BCA Digital, "PT. Bank S..." (truncated), dll. Jangan hard-code whitelist.
+- **TRXTIME format `HHMMSS`** (6 digit, tanpa separator). Contoh `092523` = 09:25:23. Biarkan as-is di output.
+- **Refference Number diawali `'`** (leading apostrophe — trick Excel supaya dibaca text). Strip dengan `.lstrip("'")`.
+- **Nama bulan Bahasa Indonesia**, bukan Inggris. "Maret" bukan "March".
+- **Tanggal tanpa leading zero** di Keterangan: "1 April" bukan "01 April".
 
-## Contoh Lengkap Keluaran
+## Contoh Output
 
-Input: Acc_Statement Apr 01–17 2026 + Yokke Bali 16 April
+Input: `Yokke_Bali_16_April.xlsx` (25 transaksi tgl 16 April 2026)
 
 ```
-Row | Tanggal    | Keterangan                                         | MID         | Cabang | Tagihan   | Admin  | Nominal   | Nama Toko        | Jumlah_C  | Saldo
-----+------------+----------------------------------------------------+-------------+--------+-----------+--------+-----------+------------------+-----------+----------------
-2   | 01/04/2026 | Terima Penjualan EDC Mandiri Zuma Kesiman 31 Maret | 71916643508 | Bali   |           |        |           | Zuma Kesiman     | 118,800   | 670,989,255.53
-3   | 01/04/2026 | Terima Penjualan EDC Mandiri Zuma Level 21 31 Maret| 71916643887 | Bali   |           |        |           | Zuma Level 21    | 198,701   | 671,187,956.53
+Row | Tanggal    | Keterangan                                         | MID         | Cabang | Tagihan   | Admin  | Nominal   | Nama Toko      | Jumlah_C | TRXTIME | Issuer  | Ref Number
+----+------------+----------------------------------------------------+-------------+--------+-----------+--------+-----------+----------------+----------+---------+---------+--------------
+3   | 16/04/2026 | Terima Penjualan EDC Mandiri Zuma Gianyar 16 April | 71916642985 | Bali   | 120,000   | 840    | 119,160   | Zuma Gianyar   | 119,160  | 092523  | Mandiri | 610609865578
+4   | 16/04/2026 | Terima Penjualan EDC Mandiri Zuma Gianyar 16 April | 71916642985 | Bali   | 119,000   | 833    | 118,167   | Zuma Gianyar   | 118,167  | 092804  | Danamon | 610609885986
+5   | 16/04/2026 | Terima Penjualan EDC Mandiri Zuma Gianyar 16 April | 71916642985 | Bali   | 579,000   | 4,053  | 574,947   | Zuma Gianyar   | 574,947  | 105623  | BRI     | 610610686286
 ...
-170 | 17/04/2026 | Terima Penjualan EDC Mandiri Zuma Gianyar 16 April | 71916642985 | Bali   | 120,000   | 840    | 119,160   | Zuma Gianyar     | 119,160   | 797,138,759.53
-171 | 17/04/2026 | Terima Penjualan EDC Mandiri Zuma Gianyar 16 April | 71916642985 | Bali   | 119,000   | 833    | 118,167   | Zuma Gianyar     | 118,167   | 797,256,926.53
-...
-```
-
-Footer:
-```
-Saldo Awal    : 670,870,455.53
-Mutasi Debet  : 0.00                0
-Mutasi Kredit : 133,416,640.00      176
-Saldo Akhir   : 804,287,095.53
+27  | 16/04/2026 | Terima Penjualan EDC Mandiri Zuma Mataram 16 April | 71916645598 | Lombok | 120,000   | 840    | 119,160   | Zuma Mataram   | 119,160  | 193929  | Dana    | ...
+28  | TOTAL      |                                                    |             |        | 5,704,000 | 39,928 | 5,664,072 |                | 5,664,072|         |         |
 ```
 
 ## Dependencies
 
 - `pandas`, `openpyxl` (XLSX read/write)
-- `xlrd >= 2.0.1` (untuk `.xls` Mandiri eStatement) → `pip install xlrd --break-system-packages`
+- Untuk fetch Google Sheets: `google-api-python-client` + `google-auth` (Cara C), atau akses internet ke `docs.google.com` (Cara B)
 - Python 3.10+
 
 ## Saat User Minta Variasi
 
-- **"tambahkan data hari X"** → minta file Yokke untuk tanggal X, rerun pipeline. Baris yang sebelumnya kosong akan terisi otomatis.
-- **"bagaimana cek keseragaman dengan Buku Bank 560 LBH"** → sheet `LBH Apr` / `LBH Mar` dst biasanya ada di workbook yang sama di Google Drive (cari di folder finance@zuma.id). Format mirip tapi sudah termasuk jurnal akuntansi (SIR/SI faktur, COA 110.12). Gunakan sebagai cross-check bukan input primer.
-- **"ganti Cabang jadi kode numerik"** → user mungkin merujuk template lama yang pakai 411/960/998 (kode jenis transaksi bank lain, bukan cabang). Konfirmasi dulu sebelum ganti — default pakai Bali/Lombok dari Master 560.
-- **"export per toko"** → tambahkan sheet per toko (pivot by Nama Toko), atau filter sheet `result` berdasarkan MID.
-- **"MID baru belum kedetect"** → kemungkinan toko baru belum ada di Master EDC Bank. Suruh user update Google Sheets dulu (tambah row baru dengan MID + Nama Toko + Cabang), lalu rerun skill — data otomatis ter-sync karena skill fetch live dari Sheets.
+- **"upload Yokke beberapa hari sekaligus"** → loop per file, concat dataframes, satu sheet gabungan. Kolom `Tanggal Transaksi` membedakan hari. Tambahkan subtotal per tanggal kalau perlu.
+- **"MID baru belum kedetect"** → user update Google Sheets `Master EDC Bank` (tambah row: MID + Nama Toko di EDC + Cabang). Rerun skill — sync otomatis.
+- **"bandingkan dengan settlement bank / Acc_Statement"** → di luar scope skill ini. Minta upload Acc_Statement Mandiri + pakai skill terpisah untuk reconciliation T+1.
+- **"export per toko"** → group by `MID`, simpan per toko di sheet terpisah atau file terpisah.
+- **"total per cabang"** → groupby `Cabang`, sum Tagihan/Admin/Nominal. Tambah sheet `Summary by Cabang`.
+- **"summary per issuer"** → groupby `Issuer`, count + sum. Berguna untuk analisa payment method mix (QRIS vs credit card).
